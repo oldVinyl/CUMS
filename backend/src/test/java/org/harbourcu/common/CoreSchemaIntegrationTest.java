@@ -47,6 +47,8 @@ class CoreSchemaIntegrationTest {
             .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version = '4' AND success", Integer.class))
             .isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version = '5' AND success", Integer.class))
+            .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM information_schema.columns WHERE table_name = 'members' AND column_name = 'phone'", Integer.class))
             .isZero();
     }
@@ -108,5 +110,23 @@ class CoreSchemaIntegrationTest {
             VALUES (?, ?, ?, ?)
             """, userId, roleId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 12, 31)))
             .hasMessageContaining("assignments_no_active_overlap");
+    }
+
+    @Test
+    @Transactional
+    void databaseRejectsMakerAsApprover() {
+        UUID makerId = UUID.randomUUID();
+        UUID requestId = UUID.randomUUID();
+        jdbc.update("INSERT INTO users (id, email, password_hash) VALUES (?, ?, 'fixture-hash')",
+            makerId, "test-" + makerId + "@invalid.example");
+        jdbc.update("""
+            INSERT INTO approval_requests (id, action_type, payload, made_by)
+            VALUES (?, 'LEDGER_POST', '{}'::jsonb, ?)
+            """, requestId, makerId);
+        assertThatThrownBy(() -> jdbc.update("""
+            INSERT INTO approval_decisions (request_id, approver_id, decision)
+            VALUES (?, ?, 'APPROVE')
+            """, requestId, makerId))
+            .hasMessageContaining("Maker cannot approve own request");
     }
 }

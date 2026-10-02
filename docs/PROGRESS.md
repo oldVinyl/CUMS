@@ -22,7 +22,7 @@ Check an item only after implementation and tests pass. This list mirrors the ma
 
 ## Phase 2 — Members and ledger
 - [ ] Member CRUD and encrypted fields
-- [ ] Immutable ledger, fiscal years, backdating, approvals
+- [ ] Immutable ledger, fiscal years, backdating, approvals (approval request/decision schema and database self-approval guard added; service and posting flows pending)
 - [ ] Attachment security and ledger UI
 
 ## Phase 3 — Investments
