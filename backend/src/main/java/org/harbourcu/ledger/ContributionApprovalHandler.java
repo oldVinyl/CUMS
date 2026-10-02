@@ -16,12 +16,15 @@ public class ContributionApprovalHandler implements ApprovalActionHandler {
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Africa/Accra");
     private final JdbcTemplate jdbc;
     private final PermissionService permissions;
+    private final FiscalYearLock fiscalYearLock;
 
     private record Contribution(UUID memberId, String type, BigDecimal amount) {}
 
-    public ContributionApprovalHandler(JdbcTemplate jdbc, PermissionService permissions) {
+    public ContributionApprovalHandler(JdbcTemplate jdbc, PermissionService permissions,
+                                       FiscalYearLock fiscalYearLock) {
         this.jdbc = jdbc;
         this.permissions = permissions;
+        this.fiscalYearLock = fiscalYearLock;
     }
 
     @Override
@@ -40,6 +43,7 @@ public class ContributionApprovalHandler implements ApprovalActionHandler {
 
     @Override
     public void execute(UUID requestId, UUID approverId, JsonNode payload) {
+        fiscalYearLock.requireOpen(LocalDate.now(BUSINESS_ZONE).getYear());
         UUID makerId = jdbc.queryForObject(
             "SELECT made_by FROM approval_requests WHERE id = ?", UUID.class, requestId);
         validateSubmission(makerId, payload);
