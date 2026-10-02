@@ -55,6 +55,16 @@ class RoleChangeApprovalIntegrationTest {
         UUID admin = user("ADMIN");
         UUID president = user("PRESIDENT");
         for (UUID target : new UUID[] {admin, president}) {
+            jdbc.update("""
+                UPDATE users SET status = 'DISABLED'
+                WHERE id <> ? AND id IN (
+                    SELECT a.user_id FROM user_role_assignments a
+                    JOIN roles r ON r.id = a.role_id
+                    WHERE r.code = (SELECT r2.code FROM user_role_assignments a2
+                                    JOIN roles r2 ON r2.id = a2.role_id
+                                    WHERE a2.user_id = ?)
+                )
+                """, target, target);
             UUID assignment = jdbc.queryForObject("""
                 SELECT id FROM user_role_assignments WHERE user_id = ?
                 """, UUID.class, target);

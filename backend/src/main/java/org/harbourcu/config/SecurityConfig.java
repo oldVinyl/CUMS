@@ -21,7 +21,8 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper json,
                                             Environment environment) throws Exception {
         return http
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/auth/**", "/api/v1/members"))
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/auth/**", "/api/v1/members",
+                "/api/v1/members/**"))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/api/v1/health", "/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/members", "/api/v1/members/*")

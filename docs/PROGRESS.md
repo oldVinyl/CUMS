@@ -15,7 +15,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
-- [x] Flyway V1–V10 core financial, role, approval, fiscal snapshot, authentication, and member identity migrations tested against PostgreSQL 16
+- [x] Flyway V1–V11 core financial, role, approval, fiscal snapshot, authentication, and member identity migrations tested against PostgreSQL 16
 - [ ] Add remaining workflow tables and migration tests
 - [x] Structured API validation and access errors with trace IDs
 - [x] Append-only ledger and audit triggers with database tests
@@ -47,7 +47,9 @@ Check an item only after implementation and tests pass. Each item is small enoug
 
 ## Phase 2 — Members and ledger
 - [x] Member create, list, and private detail read with encrypted fields, blind indexes, permission checks, CSRF, and integration tests
-- [ ] Member edit, deactivation, pagination/search, and complete record form
+- [x] Versioned member editing with encrypted-field replacement, stale-save conflict response, audit event, and tests
+- [x] Full create and edit member forms with validation controls and success/error toasts
+- [ ] Member deactivation and pagination/search
 - [x] Transactional maker-checker approval service with distinct approvers and atomic action execution
 - [x] Approved current-day seed/addition posting to the immutable ledger
 - [x] Approved current-day manual contribution reversal with exact negative amount and reason

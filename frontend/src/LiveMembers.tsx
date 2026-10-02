@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { ArrowRight, Plus, Users } from 'lucide-react'
 import type { Profile } from './auth-api'
 import { csrfCookie } from './auth-api'
@@ -8,7 +9,41 @@ type Summary = { id: string; memberNumber: string; fullName: string; status: str
 type Detail = Summary & { email: string | null; phone: string | null; idType: string | null;
   idNumber: string | null; dateOfBirth: string | null; address: string | null;
   nextOfKinName: string | null; nextOfKinPhone: string | null;
-  nextOfKinRelationship: string | null; joinDate: string }
+  nextOfKinRelationship: string | null; joinDate: string; version: number }
+type EditableFields = { fullName: string; email: string; phone: string; idType: string;
+  idNumber: string; dateOfBirth: string; address: string; nextOfKinName: string;
+  nextOfKinPhone: string; nextOfKinRelationship: string }
+
+const blankFields: EditableFields = { fullName: '', email: '', phone: '', idType: '',
+  idNumber: '', dateOfBirth: '', address: '', nextOfKinName: '',
+  nextOfKinPhone: '', nextOfKinRelationship: '' }
+
+function fromDetail(detail: Detail): EditableFields {
+  return { fullName: detail.fullName, email: detail.email ?? '', phone: detail.phone ?? '',
+    idType: detail.idType ?? '', idNumber: detail.idNumber ?? '',
+    dateOfBirth: detail.dateOfBirth ?? '', address: detail.address ?? '',
+    nextOfKinName: detail.nextOfKinName ?? '', nextOfKinPhone: detail.nextOfKinPhone ?? '',
+    nextOfKinRelationship: detail.nextOfKinRelationship ?? '' }
+}
+
+function MemberFields({ values, setValues }: {
+  values: EditableFields; setValues: Dispatch<SetStateAction<EditableFields>>
+}) {
+  const change = (key: keyof EditableFields, value: string) =>
+    setValues(current => ({ ...current, [key]: value }))
+  return <div className="member-form-grid">
+    <label>Full name<input value={values.fullName} maxLength={200} onChange={event => change('fullName', event.target.value)} required /></label>
+    <label>Email<input type="email" value={values.email} maxLength={320} onChange={event => change('email', event.target.value)} /></label>
+    <label>Phone<input value={values.phone} maxLength={40} onChange={event => change('phone', event.target.value)} /></label>
+    <label>Date of birth<input type="date" value={values.dateOfBirth} max={new Date().toISOString().slice(0, 10)} onChange={event => change('dateOfBirth', event.target.value)} /></label>
+    <label>ID type<input value={values.idType} maxLength={60} onChange={event => change('idType', event.target.value)} /></label>
+    <label>ID number<input value={values.idNumber} maxLength={120} onChange={event => change('idNumber', event.target.value)} /></label>
+    <label>Address<input value={values.address} maxLength={2000} onChange={event => change('address', event.target.value)} /></label>
+    <label>Next of kin<input value={values.nextOfKinName} maxLength={200} onChange={event => change('nextOfKinName', event.target.value)} /></label>
+    <label>Next of kin phone<input value={values.nextOfKinPhone} maxLength={40} onChange={event => change('nextOfKinPhone', event.target.value)} /></label>
+    <label>Relationship<input value={values.nextOfKinRelationship} maxLength={80} onChange={event => change('nextOfKinRelationship', event.target.value)} /></label>
+  </div>
+}
 
 async function apiError(response: Response) {
   const body = await response.json().catch(() => null) as { message?: string } | null
@@ -19,12 +54,13 @@ export default function LiveMembers({ profile }: { profile: Profile }) {
   const showToast = useToast()
   const [members, setMembers] = useState<Summary[]>([])
   const [selected, setSelected] = useState<Detail | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [fields, setFields] = useState<EditableFields>(blankFields)
+  const [editFields, setEditFields] = useState<EditableFields>(blankFields)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [number, setNumber] = useState('')
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
   const [joinDate, setJoinDate] = useState(new Date().toISOString().slice(0, 10))
   const canRead = profile.permissions.includes('MEMBER_READ')
   const canWrite = profile.permissions.includes('MEMBER_WRITE')
@@ -48,7 +84,10 @@ export default function LiveMembers({ profile }: { profile: Profile }) {
     try {
       const response = await fetch(`/api/v1/members/${id}`, { credentials: 'same-origin' })
       if (!response.ok) throw await apiError(response)
-      setSelected(await response.json() as Detail)
+      const detail = await response.json() as Detail
+      setSelected(detail)
+      setEditFields(fromDetail(detail))
+      setEditing(false)
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not open member', { tone: 'error' })
     }
@@ -61,11 +100,11 @@ export default function LiveMembers({ profile }: { profile: Profile }) {
       const response = await fetch('/api/v1/members', {
         method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfCookie() },
-        body: JSON.stringify({ memberNumber: number.trim(), fullName: name.trim(),
-          phone: phone.trim() || null, joinDate }),
+        body: JSON.stringify({ memberNumber: number.trim(), ...fields,
+          dateOfBirth: fields.dateOfBirth || null, joinDate }),
       })
       if (!response.ok) throw await apiError(response)
-      setNumber(''); setName(''); setPhone(''); setShowForm(false)
+      setNumber(''); setFields(blankFields); setShowForm(false)
       showToast('Member added', { tone: 'success' })
       await load()
     } catch (error) {
@@ -75,11 +114,33 @@ export default function LiveMembers({ profile }: { profile: Profile }) {
     }
   }
 
+  const saveEdit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selected) return
+    setSaving(true)
+    try {
+      const response = await fetch(`/api/v1/members/${selected.id}`, {
+        method: 'PUT', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfCookie() },
+        body: JSON.stringify({ version: selected.version, ...editFields,
+          dateOfBirth: editFields.dateOfBirth || null }),
+      })
+      if (!response.ok) throw await apiError(response)
+      showToast('Member updated', { tone: 'success' })
+      await view(selected.id)
+      await load()
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not update member', { tone: 'error' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return <><div className="page-heading"><div><div className="eyebrow">HARBOUR CREDIT UNION</div><h1>Members</h1><p>People and records in your union.</p></div>{canWrite && <button className="primary-button" type="button" onClick={() => setShowForm(!showForm)}><Plus size={18} /> {showForm ? 'Close form' : 'Add member'}</button>}</div>
     {!canRead ? <div className="surface empty-page"><Users size={32} /><h2>Member records are restricted</h2><p>Your current role does not include permission to view the union directory.</p></div> : <>
-      {showForm && <form className="surface member-form" onSubmit={create}><h2>New member</h2><p>Start with the core record. Private fields are encrypted when saved.</p><div className="member-form-grid"><label>Member number<input value={number} maxLength={40} onChange={event => setNumber(event.target.value)} required /></label><label>Full name<input value={name} maxLength={200} onChange={event => setName(event.target.value)} required /></label><label>Phone (optional)<input value={phone} maxLength={40} onChange={event => setPhone(event.target.value)} /></label><label>Join date<input type="date" value={joinDate} max={new Date().toISOString().slice(0, 10)} onChange={event => setJoinDate(event.target.value)} required /></label></div><button className="primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save member'} <ArrowRight size={17} /></button></form>}
+      {showForm && <form className="surface member-form" onSubmit={create}><h2>New member</h2><p>Private fields are encrypted when saved.</p><div className="member-form-grid"><label>Member number<input value={number} maxLength={40} onChange={event => setNumber(event.target.value)} required /></label><label>Join date<input type="date" value={joinDate} max={new Date().toISOString().slice(0, 10)} onChange={event => setJoinDate(event.target.value)} required /></label></div><MemberFields values={fields} setValues={setFields} /><button className="primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save member'} <ArrowRight size={17} /></button></form>}
       <section className="surface list-card"><div className="card-title-row"><div><h2>Member directory</h2><p>{loading ? 'Loading…' : `${members.length} members shown`}</p></div></div>{!loading && members.length === 0 ? <div className="empty-state"><Users size={28} /><strong>No members yet</strong><span>Add your first member to start the directory.</span></div> : <><div className="table-scroll"><table><thead><tr><th>Member</th><th>Member no.</th><th>Status</th><th>Details</th></tr></thead><tbody>{members.map(member => <tr key={member.id}><td><strong>{member.fullName}</strong></td><td>{member.memberNumber}</td><td>{member.status}</td><td><button className="text-button" onClick={() => void view(member.id)}>View <ArrowRight size={15} /></button></td></tr>)}</tbody></table></div><div className="mobile-member-list">{members.map(member => <div className="mobile-member" key={member.id}><div className="mobile-member-top"><div><strong>{member.fullName}</strong><small>{member.memberNumber}</small></div><span className="ratio">{member.status}</span></div><button className="text-button" onClick={() => void view(member.id)}>View details <ArrowRight size={15} /></button></div>)}</div></>}</section>
-      {selected && <section className="surface member-detail" aria-label="Member details"><div className="card-title-row"><div><h2>{selected.fullName}</h2><p>{selected.memberNumber}</p></div><button className="text-button" onClick={() => setSelected(null)}>Close</button></div><dl><div><dt>Phone</dt><dd>{selected.phone ?? 'Not provided'}</dd></div><div><dt>Email</dt><dd>{selected.email ?? 'Not provided'}</dd></div><div><dt>Join date</dt><dd>{selected.joinDate}</dd></div><div><dt>ID type</dt><dd>{selected.idType ?? 'Not provided'}</dd></div><div><dt>ID number</dt><dd>{selected.idNumber ?? 'Not provided'}</dd></div><div><dt>Address</dt><dd>{selected.address ?? 'Not provided'}</dd></div><div><dt>Next of kin</dt><dd>{selected.nextOfKinName ?? 'Not provided'}</dd></div></dl></section>}
+      {selected && <section className="surface member-detail" aria-label="Member details"><div className="card-title-row"><div><h2>{selected.fullName}</h2><p>{selected.memberNumber}</p></div><div className="member-detail-actions">{canWrite && <button className="text-button" onClick={() => { if (editing) setEditFields(fromDetail(selected)); setEditing(!editing) }}>{editing ? 'Cancel edit' : 'Edit member'}</button>}<button className="text-button" onClick={() => { setSelected(null); setEditing(false) }}>Close</button></div></div>{editing ? <form className="member-form" onSubmit={saveEdit}><MemberFields values={editFields} setValues={setEditFields} /><button className="primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save changes'} <ArrowRight size={17} /></button></form> : <dl><div><dt>Phone</dt><dd>{selected.phone ?? 'Not provided'}</dd></div><div><dt>Email</dt><dd>{selected.email ?? 'Not provided'}</dd></div><div><dt>Join date</dt><dd>{selected.joinDate}</dd></div><div><dt>Date of birth</dt><dd>{selected.dateOfBirth ?? 'Not provided'}</dd></div><div><dt>ID type</dt><dd>{selected.idType ?? 'Not provided'}</dd></div><div><dt>ID number</dt><dd>{selected.idNumber ?? 'Not provided'}</dd></div><div><dt>Address</dt><dd>{selected.address ?? 'Not provided'}</dd></div><div><dt>Next of kin</dt><dd>{selected.nextOfKinName ?? 'Not provided'}</dd></div><div><dt>Next of kin phone</dt><dd>{selected.nextOfKinPhone ?? 'Not provided'}</dd></div><div><dt>Relationship</dt><dd>{selected.nextOfKinRelationship ?? 'Not provided'}</dd></div></dl>}</section>}
     </>}
   </>
 }

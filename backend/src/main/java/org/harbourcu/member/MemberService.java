@@ -25,11 +25,17 @@ public class MemberService {
                                String nextOfKinName, String nextOfKinPhone,
                                String nextOfKinRelationship, LocalDate joinDate) {}
     public record Summary(UUID id, String memberNumber, String fullName, String status) {}
+    public record UpdateMember(long version, String fullName, String email,
+                               String phone, String idType, String idNumber,
+                               LocalDate dateOfBirth, String address,
+                               String nextOfKinName, String nextOfKinPhone,
+                               String nextOfKinRelationship) {}
     public record Detail(UUID id, String memberNumber, String fullName, String email,
                          String phone, String idType, String idNumber,
                          LocalDate dateOfBirth, String address,
                          String nextOfKinName, String nextOfKinPhone,
-                         String nextOfKinRelationship, LocalDate joinDate, String status) {}
+                         String nextOfKinRelationship, LocalDate joinDate, String status,
+                         long version) {}
     private record Kin(String name, String phone, String relationship) {}
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Africa/Accra");
@@ -55,6 +61,7 @@ public class MemberService {
         String number = required(input.memberNumber(), 40, "Member number");
         String name = required(input.fullName(), 200, "Full name");
         String email = optional(input.email(), 320);
+        validateEmail(email);
         String phone = optional(input.phone(), 40);
         String idType = optional(input.idType(), 60);
         String idNumber = optional(input.idNumber(), 120);
@@ -97,12 +104,57 @@ public class MemberService {
     }
 
     @Transactional
+    public long update(UUID actorId, UUID memberId, UpdateMember input) {
+        require(actorId, "MEMBER_WRITE");
+        if (memberId == null || input == null || input.version() < 0) {
+            throw new IllegalArgumentException("Member and version are required");
+        }
+        String name = required(input.fullName(), 200, "Full name");
+        String email = optional(input.email(), 320);
+        validateEmail(email);
+        String phone = optional(input.phone(), 40);
+        String idType = optional(input.idType(), 60);
+        String idNumber = optional(input.idNumber(), 120);
+        String address = optional(input.address(), 2000);
+        if (idNumber != null && idType == null) {
+            throw new IllegalArgumentException("ID type is required with an ID number");
+        }
+        List<LocalDate> dates = jdbc.query("SELECT join_date FROM members WHERE id = ?",
+            (row, ignored) -> row.getObject("join_date", LocalDate.class), memberId);
+        if (dates.isEmpty()) throw new IllegalArgumentException("Member not found");
+        LocalDate joinDate = dates.getFirst();
+        if (input.dateOfBirth() != null && !input.dateOfBirth().isBefore(joinDate)) {
+            throw new IllegalArgumentException("Date of birth must precede join date");
+        }
+        Kin kin = new Kin(optional(input.nextOfKinName(), 200),
+            optional(input.nextOfKinPhone(), 40), optional(input.nextOfKinRelationship(), 80));
+        int changed = jdbc.update("""
+            UPDATE members SET full_name = ?, email = ?, id_type = ?,
+              encrypted_id_number = ?, id_number_blind_index = ?,
+              encrypted_phone = ?, phone_blind_index = ?,
+              encrypted_date_of_birth = ?, encrypted_address = ?,
+              encrypted_next_of_kin = ?, version = version + 1, updated_at = now()
+            WHERE id = ? AND version = ?
+            """, name, email, idType, fields.encrypt(idNumber),
+            idNumber == null ? null : fields.blindIndex("member-id", idNumber.toUpperCase(Locale.ROOT)),
+            fields.encrypt(phone), phone == null ? null : fields.blindIndex("member-phone", normalizePhone(phone)),
+            fields.encrypt(input.dateOfBirth() == null ? null : input.dateOfBirth().toString()),
+            fields.encrypt(address), fields.encrypt(kin.name() == null && kin.phone() == null
+                && kin.relationship() == null ? null : toJson(kin)), memberId, input.version());
+        if (changed != 1) {
+            throw new IllegalStateException("Member was changed by another user. Reload and try again.");
+        }
+        audit.record(actorId, AuditService.Action.MEMBER_UPDATED, "MEMBER", memberId, null);
+        return input.version() + 1;
+    }
+
+    @Transactional
     public Detail get(UUID actorId, UUID memberId, String requestId) {
         require(actorId, "MEMBER_READ");
         List<Detail> rows = jdbc.query("""
             SELECT id, member_number, full_name, email, id_type, encrypted_id_number,
                    encrypted_phone, encrypted_date_of_birth, encrypted_address,
-                   encrypted_next_of_kin, join_date, status
+                   encrypted_next_of_kin, join_date, status, version
             FROM members WHERE id = ?
             """, (row, ignored) -> {
             byte[] kinCipher = row.getBytes("encrypted_next_of_kin");
@@ -116,7 +168,8 @@ public class MemberService {
                 dob == null ? null : LocalDate.parse(dob),
                 fields.decrypt(row.getBytes("encrypted_address")),
                 kin.name(), kin.phone(), kin.relationship(),
-                row.getObject("join_date", LocalDate.class), row.getString("status"));
+                row.getObject("join_date", LocalDate.class), row.getString("status"),
+                row.getLong("version"));
         }, memberId);
         if (rows.isEmpty()) throw new IllegalArgumentException("Member not found");
         audit.record(actorId, AuditService.Action.SENSITIVE_MEMBER_VIEW, "MEMBER", memberId, requestId);
@@ -144,6 +197,12 @@ public class MemberService {
 
     private String normalizePhone(String phone) {
         return phone.replaceAll("[\\s()-]", "");
+    }
+
+    private void validateEmail(String email) {
+        if (email != null && !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new IllegalArgumentException("Enter a valid email address");
+        }
     }
 
     private String toJson(Kin kin) {

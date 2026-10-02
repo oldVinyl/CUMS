@@ -60,6 +60,25 @@ class MemberControllerIntegrationTest {
         assertThat(jdbc.queryForObject("""
             SELECT count(*) FROM audit_log WHERE entity_id = ? AND action = 'SENSITIVE_MEMBER_VIEW'
             """, Integer.class, id)).isEqualTo(1);
+        String edit = json.writeValueAsString(Map.of("version", 0, "fullName", "Esi Updated",
+            "phone", "0209999000"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
+                "/api/v1/members/{id}", id)
+            .cookie(new Cookie("cu_access", officerTokens.access()))
+            .contentType(MediaType.APPLICATION_JSON).content(edit))
+            .andExpect(status().isForbidden());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
+                "/api/v1/members/{id}", id)
+            .cookie(new Cookie("cu_access", officerTokens.access()))
+            .header("X-CSRF-Token", officerTokens.csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(edit))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.version").value(1));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
+                "/api/v1/members/{id}", id)
+            .cookie(new Cookie("cu_access", officerTokens.access()))
+            .header("X-CSRF-Token", officerTokens.csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(edit))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MEMBER_CHANGED"));
     }
 
     private UUID user(String role) {

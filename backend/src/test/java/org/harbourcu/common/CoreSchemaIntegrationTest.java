@@ -57,6 +57,8 @@ class CoreSchemaIntegrationTest {
             .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version = '10' AND success", Integer.class))
             .isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version = '11' AND success", Integer.class))
+            .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM information_schema.columns WHERE table_name = 'members' AND column_name = 'phone'", Integer.class))
             .isZero();
     }

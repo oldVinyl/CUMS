@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Min;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,6 +42,17 @@ public class MemberController {
         }
     }
     public record Created(UUID id) {}
+    public record UpdateRequest(@Min(0) long version, @NotBlank String fullName,
+                                String email, String phone, String idType, String idNumber,
+                                LocalDate dateOfBirth, String address, String nextOfKinName,
+                                String nextOfKinPhone, String nextOfKinRelationship) {
+        MemberService.UpdateMember toService() {
+            return new MemberService.UpdateMember(version, fullName, email, phone, idType,
+                idNumber, dateOfBirth, address, nextOfKinName, nextOfKinPhone,
+                nextOfKinRelationship);
+        }
+    }
+    public record Updated(long version) {}
 
     private final MemberService members;
     private final SessionService sessions;
@@ -103,6 +116,31 @@ public class MemberController {
         }
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(@PathVariable UUID id, @Valid @RequestBody UpdateRequest body,
+                                     @CookieValue(name = "cu_access", required = false) String access,
+                                     @RequestHeader(name = "X-CSRF-Token", required = false) String csrf,
+                                     HttpServletRequest request) {
+        if (!sameOrigin(request)) return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", request);
+        SessionService.SessionIdentity identity = sessions.resolveAccess(access).orElse(null);
+        if (identity == null) return error(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", request);
+        if (!sessions.csrfMatches(identity.sessionId(), csrf)) {
+            return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", request);
+        }
+        try {
+            return ResponseEntity.ok(new Updated(members.update(identity.userId(), id, body.toService())));
+        } catch (SecurityException exception) {
+            return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", request);
+        } catch (DuplicateKeyException exception) {
+            return error(HttpStatus.CONFLICT, "MEMBER_EXISTS", request);
+        } catch (IllegalStateException exception) {
+            return error(HttpStatus.CONFLICT, "MEMBER_CHANGED", request);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(new ApiError("VALIDATION_ERROR",
+                exception.getMessage(), List.of(), TraceIdFilter.traceId(request)));
+        }
+    }
+
     private boolean sameOrigin(HttpServletRequest request) {
         String origin = request.getHeader("Origin");
         return origin == null || origin.equals(allowedOrigin);
@@ -113,6 +151,7 @@ public class MemberController {
             switch (code) {
                 case "AUTH_REQUIRED" -> "Please sign in to continue.";
                 case "MEMBER_EXISTS" -> "A member with this number or identity already exists.";
+                case "MEMBER_CHANGED" -> "This member was changed. Reload and try again.";
                 case "NOT_FOUND" -> "Member not found.";
                 default -> "You do not have permission to access this resource.";
             }, List.of(), TraceIdFilter.traceId(request)));

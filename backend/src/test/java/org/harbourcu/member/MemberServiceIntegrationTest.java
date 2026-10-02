@@ -56,6 +56,26 @@ class MemberServiceIntegrationTest {
             .isInstanceOf(DuplicateKeyException.class);
     }
 
+    @Test
+    @Transactional
+    void updateRequiresCurrentVersionAndReencryptsPrivateFields() {
+        UUID officer = userWithRole("TREASURER");
+        UUID id = members.create(officer, fixture(number()));
+        MemberService.UpdateMember edit = new MemberService.UpdateMember(0, "Ama Updated",
+            "ama.updated@invalid.example", "0209999000", "GHANA_CARD", "GHA-987-654",
+            LocalDate.of(1990, 1, 2), "New Street", "Ada Example", "0201234002", "Sibling");
+        assertThat(members.update(officer, id, edit)).isEqualTo(1);
+        MemberService.Detail detail = members.get(officer, id, "edit-test");
+        assertThat(detail.fullName()).isEqualTo("Ama Updated");
+        assertThat(detail.phone()).isEqualTo("0209999000");
+        assertThat(detail.version()).isEqualTo(1);
+        assertThatThrownBy(() -> members.update(officer, id, edit))
+            .isInstanceOf(IllegalStateException.class).hasMessageContaining("Reload");
+        assertThat(jdbc.queryForObject("""
+            SELECT count(*) FROM audit_log WHERE entity_id = ? AND action = 'MEMBER_UPDATED'
+            """, Integer.class, id)).isEqualTo(1);
+    }
+
     private MemberService.CreateMember fixture(String number) {
         return new MemberService.CreateMember(number, "Ama Example", "ama@invalid.example",
             "0201234001", "GHANA_CARD", "GHA-123-456", LocalDate.of(1990, 1, 2),

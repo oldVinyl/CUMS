@@ -89,4 +89,34 @@ describe('live member directory', () => {
     expect(await screen.findByText('0201234999')).toBeTruthy()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/members/member-1', { credentials: 'same-origin' })
   })
+
+  it('saves an edited record with its version and gives feedback', async () => {
+    let memberName = 'Esi Live'
+    const fetchMock = vi.fn((input: string, init?: RequestInit) => {
+      if (input.endsWith('/auth/me')) return Promise.resolve({ ok: true, json: async () => ({
+        userId: 'officer-1', email: 'officer@invalid.example',
+        permissions: ['MEMBER_READ', 'MEMBER_WRITE'],
+      }) })
+      if (input === '/api/v1/members') return Promise.resolve({ ok: true, json: async () => [
+        { id: 'member-1', memberNumber: 'CU-101', fullName: memberName, status: 'ACTIVE' },
+      ] })
+      if (init?.method === 'PUT') {
+        memberName = 'Esi Updated'
+        return Promise.resolve({ ok: true, json: async () => ({ version: 1 }) })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ id: 'member-1',
+        memberNumber: 'CU-101', fullName: memberName, status: 'ACTIVE', phone: null,
+        joinDate: '2025-01-01', version: memberName === 'Esi Live' ? 0 : 1 }) })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<MemoryRouter initialEntries={['/members']}><ToastProvider><App /></ToastProvider></MemoryRouter>)
+    expect((await screen.findAllByText('Esi Live')).length).toBeGreaterThan(0)
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0])
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit member' }))
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Esi Updated' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(await screen.findByText('Member updated')).toBeTruthy()
+    const put = fetchMock.mock.calls.find(call => call[1]?.method === 'PUT')
+    expect(JSON.parse(put?.[1]?.body as string).version).toBe(0)
+  })
 })
