@@ -54,6 +54,16 @@ class MemberControllerIntegrationTest {
             .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         UUID id = UUID.fromString(json.readTree(response).get("id").asText());
+        String generatedBody = json.writeValueAsString(Map.of("fullName", "Generated Member",
+            "joinDate", LocalDate.of(2025, 1, 1).toString()));
+        String generatedResponse = mvc.perform(post("/api/v1/members")
+            .cookie(new Cookie("cu_access", officerTokens.access()))
+            .header("X-CSRF-Token", officerTokens.csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(generatedBody))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        UUID generatedId = UUID.fromString(json.readTree(generatedResponse).get("id").asText());
+        assertThat(jdbc.queryForObject("SELECT member_number FROM members WHERE id = ?",
+            String.class, generatedId)).matches("CU-[0-9]{6,}");
         mvc.perform(get("/api/v1/members").param("search", number).param("size", "1")
             .cookie(new Cookie("cu_access", officerTokens.access())))
             .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].id").value(id.toString()))
@@ -64,6 +74,13 @@ class MemberControllerIntegrationTest {
         mvc.perform(get("/api/v1/members/{id}", id)
             .cookie(new Cookie("cu_access", officerTokens.access())))
             .andExpect(status().isOk()).andExpect(jsonPath("$.phone").value("0201234999"));
+        mvc.perform(get("/api/v1/members/{id}/balance", id).param("asAt", "2025-01-01")
+            .cookie(new Cookie("cu_access", officerTokens.access())))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.principal").value("0"))
+            .andExpect(jsonPath("$.equity").value("0"));
+        mvc.perform(get("/api/v1/members/{id}/balance", id).param("asAt", "9999-01-01")
+            .cookie(new Cookie("cu_access", officerTokens.access())))
+            .andExpect(status().isBadRequest());
         assertThat(jdbc.queryForObject("""
             SELECT count(*) FROM audit_log WHERE entity_id = ? AND action = 'SENSITIVE_MEMBER_VIEW'
             """, Integer.class, id)).isEqualTo(1);

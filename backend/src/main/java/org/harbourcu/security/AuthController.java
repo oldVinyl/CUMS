@@ -64,7 +64,9 @@ public class AuthController {
         try {
             return step(flow.begin(body.email(), body.password(), request.getRemoteAddr()));
         } catch (org.springframework.security.authentication.BadCredentialsException exception) {
-            return unauthorized(request);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiError(
+                "INVALID_CREDENTIALS", "Email or password was not accepted.", List.of(),
+                TraceIdFilter.traceId(request)));
         }
     }
 

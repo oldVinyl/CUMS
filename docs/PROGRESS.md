@@ -15,7 +15,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
-- [x] Flyway V1–V11 core financial, role, approval, fiscal snapshot, authentication, and member identity migrations tested against PostgreSQL 16
+- [x] Flyway V1–V12 core financial, role, approval, fiscal snapshot, authentication, and member identity migrations tested against PostgreSQL 16
 - [ ] Add remaining workflow tables and migration tests
 - [x] Structured API validation and access errors with trace IDs
 - [x] Append-only ledger and audit triggers with database tests
@@ -42,6 +42,9 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Protect against role expiry or account disable removing the last ADMIN or PRESIDENT; extend permission checks to later APIs
 - [x] Responsive frontend shell, light/dark theming, money formatter, feedback toasts, and Vinette credit
 - [x] Server-connected sign-in, password-change, and TOTP screens with toast feedback
+- [x] Scannable TOTP setup QR with a manual key fallback
+- [x] React Hot Toast themes for light/dark success, information, and error feedback with multiline detail and promise feedback for member mutations
+- [ ] Offer TOTP, passkey, and Google sign-in to every account, including first sign-in preference setup
 - [x] Signed-in member directory and creation form use live API with role-aware controls and toast feedback
 - [ ] Replace remaining preview pages with live permission-aware navigation and financial data
 
@@ -49,6 +52,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Member create, list, and private detail read with encrypted fields, blind indexes, permission checks, CSRF, and integration tests
 - [x] Versioned member editing with encrypted-field replacement, stale-save conflict response, audit event, and tests
 - [x] Full create and edit member forms with validation controls and success/error toasts
+- [x] Generate short unique member numbers in the backend; rotate the add-member icon into a close icon
+- [x] Show audited live approved member balances as at the selected date
 - [x] Permission-aware member directory search by name or number with bounded server pagination and navigation
 - [x] Versioned member deactivation/reactivation with linked portal-account disable, session revocation, audit events, confirmation UI, and tests
 - [x] Transactional maker-checker approval service with distinct approvers and atomic action execution

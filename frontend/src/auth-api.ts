@@ -2,6 +2,13 @@ export type AuthStage = 'AUTHENTICATED' | 'PASSWORD_CHANGE' | 'TOTP_SETUP' | 'TO
 export type AuthStep = { stage: AuthStage; challenge: string | null; secret: string | null; recoveryCodes: string[] | null }
 export type Profile = { userId: string; email: string; permissions: string[] }
 
+export function totpUri(secret: string, email: string) {
+  const issuer = 'Harbour Credit Union'
+  return `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(email)}`
+    + `?secret=${encodeURIComponent(secret)}&issuer=${encodeURIComponent(issuer)}`
+    + '&algorithm=SHA1&digits=6&period=30'
+}
+
 export async function authPost(path: string, body?: object): Promise<AuthStep> {
   const response = await fetch(`/api/v1/auth/${path}`, {
     method: 'POST', credentials: 'same-origin',

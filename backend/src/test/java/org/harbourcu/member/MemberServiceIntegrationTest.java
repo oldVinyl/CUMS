@@ -37,9 +37,14 @@ class MemberServiceIntegrationTest {
         assertThat(detail.nextOfKinName()).isEqualTo("Ada Example");
         assertThat(members.list(officer, number, 0, 25).items())
             .anyMatch(item -> item.id().equals(id));
+        MemberService.BalanceDetail balance = members.balance(officer, id,
+            LocalDate.of(2025, 1, 1), "balance-test");
+        assertThat(balance.principal()).isEqualTo("0");
+        assertThat(balance.equity()).isEqualTo("0");
         assertThat(jdbc.queryForList("""
             SELECT action FROM audit_log WHERE entity_id = ? ORDER BY occurred_at
-            """, String.class, id)).containsExactlyInAnyOrder("MEMBER_CREATED", "SENSITIVE_MEMBER_VIEW");
+            """, String.class, id)).containsExactlyInAnyOrder("MEMBER_CREATED", "SENSITIVE_MEMBER_VIEW",
+                "MEMBER_BALANCE_VIEW");
     }
 
     @Test
@@ -47,6 +52,9 @@ class MemberServiceIntegrationTest {
     void memberRoleCannotViewOrCreateUnionMemberRecords() {
         UUID memberUser = userWithRole("MEMBER");
         assertThatThrownBy(() -> members.list(memberUser, "", 0, 25))
+            .isInstanceOf(SecurityException.class);
+        assertThatThrownBy(() -> members.balance(memberUser, UUID.randomUUID(),
+            LocalDate.of(2025, 1, 1), "denied"))
             .isInstanceOf(SecurityException.class);
         assertThatThrownBy(() -> members.create(memberUser, fixture(number())))
             .isInstanceOf(SecurityException.class);
@@ -99,6 +107,24 @@ class MemberServiceIntegrationTest {
         assertThat(members.list(officer, prefix + "%", 0, 25).items()).isEmpty();
         assertThatThrownBy(() -> members.list(officer, "", -1, 25))
             .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @Transactional
+    void generatesShortUniqueMemberNumbersWhenNoneIsProvided() {
+        UUID officer = userWithRole("TREASURER");
+        UUID first = members.create(officer, new MemberService.CreateMember(null, "First Generated",
+            null, null, null, null, null, null, null, null, null,
+            LocalDate.of(2025, 1, 1)));
+        UUID second = members.create(officer, new MemberService.CreateMember(null, "Second Generated",
+            null, null, null, null, null, null, null, null, null,
+            LocalDate.of(2025, 1, 1)));
+        String firstNumber = jdbc.queryForObject("SELECT member_number FROM members WHERE id = ?",
+            String.class, first);
+        String secondNumber = jdbc.queryForObject("SELECT member_number FROM members WHERE id = ?",
+            String.class, second);
+        assertThat(firstNumber).matches("CU-[0-9]{6,}").hasSize(9);
+        assertThat(secondNumber).matches("CU-[0-9]{6,}").isNotEqualTo(firstNumber);
     }
 
     @Test

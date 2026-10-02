@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import org.harbourcu.ledger.LedgerBalanceService;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -26,6 +27,7 @@ public class MemberService {
                                String nextOfKinRelationship, LocalDate joinDate) {}
     public record Summary(UUID id, String memberNumber, String fullName, String status) {}
     public record Page(List<Summary> items, int page, int size, boolean hasNext) {}
+    public record BalanceDetail(LocalDate asAt, String principal, String income, String equity) {}
     public record UpdateMember(long version, String fullName, String email,
                                String phone, String idType, String idNumber,
                                LocalDate dateOfBirth, String address,
@@ -44,14 +46,17 @@ public class MemberService {
     private final FieldEncryption fields;
     private final PermissionService permissions;
     private final AuditService audit;
+    private final LedgerBalanceService balances;
     private final ObjectMapper json;
 
     public MemberService(JdbcTemplate jdbc, FieldEncryption fields,
-                         PermissionService permissions, AuditService audit, ObjectMapper json) {
+                         PermissionService permissions, AuditService audit,
+                         LedgerBalanceService balances, ObjectMapper json) {
         this.jdbc = jdbc;
         this.fields = fields;
         this.permissions = permissions;
         this.audit = audit;
+        this.balances = balances;
         this.json = json;
     }
 
@@ -59,7 +64,11 @@ public class MemberService {
     public UUID create(UUID actorId, CreateMember input) {
         require(actorId, "MEMBER_WRITE");
         if (input == null) throw new IllegalArgumentException("Member details are required");
-        String number = required(input.memberNumber(), 40, "Member number");
+        String number = optional(input.memberNumber(), 40);
+        if (number == null) {
+            Long next = jdbc.queryForObject("SELECT nextval('member_number_seq')", Long.class);
+            number = "CU-" + String.format(Locale.ROOT, "%06d", next);
+        }
         String name = required(input.fullName(), 200, "Full name");
         String email = optional(input.email(), 320);
         validateEmail(email);
@@ -113,6 +122,15 @@ public class MemberService {
             pattern, pattern, size + 1, page * size);
         return new Page(rows.size() > size ? rows.subList(0, size) : rows,
             page, size, rows.size() > size);
+    }
+
+    @Transactional
+    public BalanceDetail balance(UUID actorId, UUID memberId, LocalDate asAt, String requestId) {
+        require(actorId, "MEMBER_READ");
+        LedgerBalanceService.Balance balance = balances.asAt(memberId, asAt);
+        audit.record(actorId, AuditService.Action.MEMBER_BALANCE_VIEW, "MEMBER", memberId, requestId);
+        return new BalanceDetail(asAt, balance.principal().toPlainString(),
+            balance.income().toPlainString(), balance.equity().toPlainString());
     }
 
     @Transactional

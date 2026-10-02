@@ -16,6 +16,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/members")
 @ConditionalOnProperty(name = "APP_ENCRYPTION_KEY")
 public class MemberController {
-    public record CreateRequest(@NotBlank String memberNumber, @NotBlank String fullName,
+    public record CreateRequest(String memberNumber, @NotBlank String fullName,
                                 String email, String phone, String idType, String idNumber,
                                 LocalDate dateOfBirth, String address, String nextOfKinName,
                                 String nextOfKinPhone, String nextOfKinRelationship,
@@ -98,6 +99,25 @@ public class MemberController {
             return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", request);
         } catch (IllegalArgumentException exception) {
             return error(HttpStatus.NOT_FOUND, "NOT_FOUND", request);
+        }
+    }
+
+    @GetMapping("/{id}/balance")
+    public ResponseEntity<?> balance(@PathVariable UUID id,
+                                      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+                                      LocalDate asAt,
+                                      @CookieValue(name = "cu_access", required = false) String access,
+                                      HttpServletRequest request) {
+        SessionService.SessionIdentity identity = sessions.resolveAccess(access).orElse(null);
+        if (identity == null) return error(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", request);
+        try {
+            return ResponseEntity.ok(members.balance(identity.userId(), id, asAt,
+                TraceIdFilter.traceId(request)));
+        } catch (SecurityException exception) {
+            return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", request);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(new ApiError("VALIDATION_ERROR",
+                exception.getMessage(), List.of(), TraceIdFilter.traceId(request)));
         }
     }
 

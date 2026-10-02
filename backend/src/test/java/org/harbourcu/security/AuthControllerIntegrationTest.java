@@ -33,6 +33,18 @@ class AuthControllerIntegrationTest {
     @Autowired PasswordHasher passwords;
 
     @Test
+    void invalidLoginHasSpecificButAccountNeutralFeedback() throws Exception {
+        mvc.perform(post("/api/v1/auth/login")
+            .with(request -> { request.setRemoteAddr("192.0.2.91"); return request; })
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json.writeValueAsString(Map.of("email", "missing@invalid.example",
+                "password", "wrong password"))))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
+            .andExpect(jsonPath("$.message").value("Email or password was not accepted."));
+    }
+
+    @Test
     @Transactional
     void loginRefreshAndLogoutRequireCorrectOriginAndCsrf() throws Exception {
         UUID user = UUID.randomUUID();

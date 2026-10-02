@@ -58,18 +58,64 @@ describe('workspace preview', () => {
 
 describe('sign in', () => {
   it('shows a useful error when the backend rejects credentials', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: false, json: async () => ({ message: 'Authentication could not be completed. Please try again.' }),
-    }))
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false, json: async () => ({ message: 'Email or password was not accepted.' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
     render(<MemoryRouter initialEntries={['/sign-in']}><ToastProvider><App /></ToastProvider></MemoryRouter>)
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/v1/auth/me', expect.anything())
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'member@invalid.example' } })
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'wrong password' } })
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
-    expect(await screen.findByText('Authentication could not be completed. Please try again.')).toBeTruthy()
+    expect(await screen.findByText('Could not sign in')).toBeTruthy()
+    expect(await screen.findByText('Email or password was not accepted.')).toBeTruthy()
+  })
+
+  it('stays on sign-in when the completed flow has no browser session', async () => {
+    const fetchMock = vi.fn((input: string) => {
+      if (input.endsWith('/auth/login')) return Promise.resolve({ ok: true,
+        json: async () => ({ stage: 'AUTHENTICATED', challenge: null }) })
+      return Promise.resolve({ ok: false, json: async () => ({ code: 'AUTH_REQUIRED' }) })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<MemoryRouter initialEntries={['/sign-in']}><ToastProvider><App /></ToastProvider></MemoryRouter>)
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'member@invalid.example' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'test password' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    expect(await screen.findByText('Your session could not be confirmed. Please sign in again.')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeTruthy()
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/auth/me', { credentials: 'same-origin' })
   })
 })
 
 describe('live member directory', () => {
+  it('generates member numbers on the server and rotates the add icon', async () => {
+    const fetchMock = vi.fn((input: string, init?: RequestInit) => {
+      if (input.endsWith('/auth/me')) return Promise.resolve({ ok: true, json: async () => ({
+        userId: 'officer-1', email: 'officer@invalid.example',
+        permissions: ['MEMBER_READ', 'MEMBER_WRITE'],
+      }) })
+      if (init?.method === 'POST') return Promise.resolve({ ok: true,
+        json: async () => ({ id: 'member-2' }) })
+      return Promise.resolve({ ok: true, json: async () => ({
+        items: [], page: 0, size: 25, hasNext: false,
+      }) })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<MemoryRouter initialEntries={['/members']}><ToastProvider><App /></ToastProvider></MemoryRouter>)
+    await screen.findByText('No members yet')
+    const add = await screen.findByRole('button', { name: 'Add member' })
+    fireEvent.click(add)
+    expect(screen.getByRole('button', { name: 'Close form' }).querySelector('svg')
+      ?.classList.contains('open')).toBe(true)
+    expect(screen.queryByLabelText('Member number')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'New Member' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save member' }))
+    expect(await screen.findByText('Member added')).toBeTruthy()
+    const post = fetchMock.mock.calls.find(call => call[1]?.method === 'POST')
+    expect(JSON.parse(post?.[1]?.body as string)).not.toHaveProperty('memberNumber')
+  })
+
   it('searches server records and moves between pages', async () => {
     const fetchMock = vi.fn((input: string) => {
       if (input.endsWith('/auth/me')) return Promise.resolve({ ok: true, json: async () => ({
@@ -101,6 +147,9 @@ describe('live member directory', () => {
       if (input.startsWith('/api/v1/members?')) return Promise.resolve({ ok: true, json: async () => ({ items: [
         { id: 'member-1', memberNumber: 'CU-101', fullName: 'Esi Live', status: 'ACTIVE' },
       ], page: 0, size: 25, hasNext: false }) })
+      if (input.includes('/balance?')) return Promise.resolve({ ok: true, json: async () => ({
+        asAt: '2025-01-01', principal: '1234.5000', income: '100.0000', equity: '1334.5000',
+      }) })
       return Promise.resolve({ ok: true, json: async () => ({ id: 'member-1',
         memberNumber: 'CU-101', fullName: 'Esi Live', status: 'ACTIVE', phone: '0201234999',
         joinDate: '2025-01-01' }) })
@@ -110,6 +159,7 @@ describe('live member directory', () => {
     expect((await screen.findAllByText('Esi Live')).length).toBeGreaterThan(0)
     fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0])
     expect(await screen.findByText('0201234999')).toBeTruthy()
+    expect(await screen.findByText('GH₵ 1,334.50')).toBeTruthy()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/members/member-1', { credentials: 'same-origin' })
   })
 
@@ -123,6 +173,9 @@ describe('live member directory', () => {
       if (input.startsWith('/api/v1/members?')) return Promise.resolve({ ok: true, json: async () => ({ items: [
         { id: 'member-1', memberNumber: 'CU-101', fullName: memberName, status: 'ACTIVE' },
       ], page: 0, size: 25, hasNext: false }) })
+      if (input.includes('/balance?')) return Promise.resolve({ ok: true, json: async () => ({
+        asAt: '2025-01-01', principal: '0', income: '0', equity: '0',
+      }) })
       if (init?.method === 'PUT') {
         memberName = 'Esi Updated'
         return Promise.resolve({ ok: true, json: async () => ({ version: 1 }) })
@@ -153,6 +206,9 @@ describe('live member directory', () => {
       if (input.startsWith('/api/v1/members?')) return Promise.resolve({ ok: true, json: async () => ({
         items: [{ id: 'member-1', memberNumber: 'CU-101', fullName: 'Esi Live', status }],
         page: 0, size: 25, hasNext: false,
+      }) })
+      if (input.includes('/balance?')) return Promise.resolve({ ok: true, json: async () => ({
+        asAt: '2025-01-01', principal: '0', income: '0', equity: '0',
       }) })
       if (init?.method === 'PATCH') {
         status = 'INACTIVE'
