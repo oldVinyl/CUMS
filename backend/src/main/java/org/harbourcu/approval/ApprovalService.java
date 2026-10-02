@@ -70,6 +70,7 @@ public class ApprovalService {
         if (!permissions.hasPermission(approverId, "APPROVE")) {
             throw new IllegalArgumentException("Approver is not currently eligible");
         }
+        handlerFor(request.actionType()).validateApprover(approverId, request.payload());
         if (decision == Decision.REJECT && (comment == null || comment.isBlank())) {
             throw new IllegalArgumentException("Rejection requires a comment");
         }

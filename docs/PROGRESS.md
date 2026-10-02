@@ -17,7 +17,7 @@ Check an item only after implementation and tests pass. This list mirrors the ma
 ## Phase 1 — Foundation
 - [ ] Flyway baseline, errors, audit, encryption (V1–V3 core schema, derived balances, append-only ledger/audit triggers, AES-GCM field encryption, and structured API errors with tests done; remaining workflow tables and audit service pending)
 - [ ] Authentication, sessions, CSRF, rate limiting, TOTP
-- [ ] Roles, permissions, assignment rules (six roles, permission grants, database overlap protection, and immediate permission checks tested; endpoint authorization and last-admin/president safeguards pending)
+- [ ] Roles, permissions, assignment rules (six roles, permission grants, overlap protection, immediate permission checks, approved role changes, and last-admin/president revocation protection tested; authenticated endpoints and expiry/disable safeguards pending)
 - [ ] Responsive frontend shell, auth screens, theming, money formatter (shell, theme, toasts, formatter and preview done; auth screens pending)
 
 ## Phase 2 — Members and ledger
