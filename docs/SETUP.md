@@ -12,11 +12,13 @@ This document is updated as each phase becomes runnable. Current status is in [P
 
 ## 2. Local configuration
 
-Copy `.env.example` to `.env`. Windows PowerShell: `Copy-Item .env.example .env`; macOS/Linux: `cp .env.example .env`. Keep `.env` out of Git. Generate keys with `openssl rand -base64 32`, once for each secret, including `APP_ENCRYPTION_KEY`, `AUTH_THROTTLE_KEY`, and `JWT_SECRET`. Authentication is still under development; there is no seeded login yet.
+Copy `.env.example` to `.env`. Windows PowerShell: `Copy-Item .env.example .env`; macOS/Linux: `cp .env.example .env`. Keep `.env` out of Git. Generate separate 32-byte base64 keys for `APP_ENCRYPTION_KEY` and `AUTH_THROTTLE_KEY` with `openssl rand -base64 32`. Docker Compose reads `.env`; a locally run Spring Boot process needs the same values exported in its terminal. The default browser origin is `http://localhost:5173`. Cookies are secure by default; set `APP_COOKIE_SECURE=false` only for local HTTP development.
 
 ## 3. Start the app
 
-For now, run `docker compose up -d postgres`. MailHog is deferred until email notifications are implemented; keep its Compose service for that milestone. In `backend`, run `./mvnw spring-boot:run` (Windows: `.\mvnw.cmd spring-boot:run`); `http://localhost:8080/api/v1/health` should return `{ "status": "UP" }`. In `frontend`, run `npm ci` then `npm run dev`; open the Vite URL printed by the command, normally `http://localhost:5173`. The interface is currently an explicitly marked design preview; sample balances cannot be posted. Run `./mvnw test` in `backend` and `npm run lint; npm run test; npm run build` in `frontend` to check the current slice.
+For now, run `docker compose up -d postgres`. MailHog is deferred until email notifications are implemented; keep its Compose service for that milestone. In `backend`, run `./mvnw spring-boot:run` (Windows: `.\mvnw.cmd spring-boot:run`); `http://localhost:8080/api/v1/health` should return `{ "status": "UP" }`. In `frontend`, run `npm ci` then `npm run dev`; open the Vite URL printed by the command, normally `http://localhost:5173`. The interface is currently an explicitly marked design preview; sample balances cannot be posted. Run `./mvnw verify` in `backend` and `npm run lint; npm run test; npm run build` in `frontend` to check the current slice.
+
+To exercise sign-in locally, start the backend with `SPRING_PROFILES_ACTIVE=dev`, both generated keys, `APP_COOKIE_SECURE=false`, and a unique `DEV_BOOTSTRAP_EMAIL` and `DEV_BOOTSTRAP_PASSWORD` (at least 12 characters). The dev profile creates one ADMIN account when the email does not exist. The first login requires a password change and TOTP enrollment. Omit the bootstrap variables on later starts. This runner never runs outside the `dev` profile. Use the frontend's **Sign in** link. The sample financial pages remain a design preview even after signing in.
 
 When email notifications are ready, start MailHog with `docker compose up -d mailhog` and verify its SMTP and web ports. A previous Docker Hub pull failed with `unexpected EOF`; no email delivery test has passed yet.
 

@@ -25,6 +25,7 @@ class SessionServiceIntegrationTest {
         SessionService.SessionIdentity identity = sessions.resolveAccess(first.access()).orElseThrow();
         assertThat(identity.userId()).isEqualTo(userId);
         assertThat(sessions.csrfMatches(identity.sessionId(), first.csrf())).isTrue();
+        assertThat(sessions.csrfMatchesRefresh(first.refresh(), first.csrf())).isTrue();
         assertThat(sessions.csrfMatches(identity.sessionId(), "wrong")).isFalse();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM auth_sessions WHERE user_id = ?",
             Integer.class, userId)).isEqualTo(1);
@@ -34,6 +35,8 @@ class SessionServiceIntegrationTest {
         assertThat(sessions.resolveAccess(second.access())).isPresent();
         assertThat(sessions.csrfMatches(identity.sessionId(), first.csrf())).isFalse();
         assertThat(sessions.csrfMatches(identity.sessionId(), second.csrf())).isTrue();
+        assertThat(sessions.csrfMatchesRefresh(first.refresh(), first.csrf())).isTrue();
+        assertThat(sessions.csrfMatchesRefresh(first.refresh(), second.csrf())).isFalse();
 
         assertThat(sessions.rotate(first.refresh())).isEmpty();
         assertThat(sessions.resolveAccess(second.access())).isEmpty();

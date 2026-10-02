@@ -19,8 +19,9 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper json) throws Exception {
         return http
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/auth/**"))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/health", "/api/v1/health").permitAll()
+                .requestMatchers("/actuator/health", "/api/v1/health", "/api/v1/auth/**").permitAll()
                 .anyRequest().denyAll())
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable())

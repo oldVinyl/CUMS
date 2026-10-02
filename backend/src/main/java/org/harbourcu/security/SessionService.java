@@ -90,7 +90,8 @@ public class SessionService {
         }
         Tokens next = freshTokens();
         jdbc.update("""
-            INSERT INTO consumed_refresh_tokens (token_hash, session_id) VALUES (?, ?)
+            INSERT INTO consumed_refresh_tokens (token_hash, session_id, csrf_token_hash)
+            SELECT ?, id, csrf_token_hash FROM auth_sessions WHERE id = ?
             """, hash, session.id());
         jdbc.update("""
             UPDATE auth_sessions
@@ -134,6 +135,22 @@ public class SessionService {
             SELECT csrf_token_hash FROM auth_sessions WHERE id = ? AND revoked_at IS NULL
             """, (row, ignored) -> row.getBytes("csrf_token_hash"), sessionId);
         return !stored.isEmpty() && MessageDigest.isEqual(candidate, stored.getFirst());
+    }
+
+    public boolean csrfMatchesRefresh(String refreshToken, String csrfToken) {
+        byte[] refreshHash = tokenDigest(refreshToken);
+        byte[] csrfHash = tokenDigest(csrfToken);
+        if (refreshHash == null || csrfHash == null) {
+            return false;
+        }
+        List<byte[]> stored = jdbc.query("""
+            SELECT csrf_token_hash FROM auth_sessions
+            WHERE refresh_token_hash = ? AND revoked_at IS NULL
+              AND refresh_expires_at > now()
+            UNION ALL
+            SELECT csrf_token_hash FROM consumed_refresh_tokens WHERE token_hash = ?
+            """, (row, ignored) -> row.getBytes("csrf_token_hash"), refreshHash, refreshHash);
+        return stored.stream().anyMatch(hash -> hash != null && MessageDigest.isEqual(csrfHash, hash));
     }
 
     @Transactional

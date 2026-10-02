@@ -55,3 +55,16 @@ describe('workspace preview', () => {
     expect(writeText).toHaveBeenCalledWith('https://github.com/oldVinyl')
   })
 })
+
+describe('sign in', () => {
+  it('shows a useful error when the backend rejects credentials', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false, json: async () => ({ message: 'Authentication could not be completed. Please try again.' }),
+    }))
+    render(<MemoryRouter initialEntries={['/sign-in']}><ToastProvider><App /></ToastProvider></MemoryRouter>)
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'member@invalid.example' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'wrong password' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    expect(await screen.findByText('Authentication could not be completed. Please try again.')).toBeTruthy()
+  })
+})

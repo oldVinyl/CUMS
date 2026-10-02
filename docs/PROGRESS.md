@@ -15,7 +15,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
-- [x] Flyway V1–V7 core financial, role, approval, fiscal snapshot, and authentication-state migrations tested against PostgreSQL 16
+- [x] Flyway V1–V9 core financial, role, approval, fiscal snapshot, and authentication-state migrations tested against PostgreSQL 16
 - [ ] Add remaining workflow tables and migration tests
 - [x] Structured API validation and access errors with trace IDs
 - [x] Append-only ledger and audit triggers with database tests
@@ -27,13 +27,16 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] RFC 6238 TOTP code generation and adjacent-step verification with standard test vectors
 - [x] Database-backed login throttling and exponential account lockout with keyed identifier digests
 - [x] Password first-factor verification with generic failures and tests
-- [ ] Authenticated login challenge, browser cookies, CSRF enforcement, TOTP enrollment, and HTTP rate limiting
+- [x] Password-change and TOTP challenges with encrypted enrollment secrets, attempt limits, replay protection, and integration tests
+- [x] HTTP sign-in, refresh, logout, and profile endpoints with strict cookies, origin and CSRF checks, and integration tests
+- [ ] Complete HTTP rate limiting, recovery codes, logout everywhere, and authenticated route permission enforcement
 - [x] Seed six roles and permission grants; reject overlapping active assignments
 - [x] Read live permissions on each check; approved role changes take effect immediately
 - [x] Block revocation of the last active ADMIN or PRESIDENT through role-change approvals
 - [ ] Enforce permissions on authenticated endpoints and protect against expiry/disable removing the last officer
 - [x] Responsive frontend shell, light/dark theming, money formatter, feedback toasts, and Vinette credit
-- [ ] Auth screens and server-connected navigation
+- [x] Server-connected sign-in, password-change, and TOTP screens with toast feedback
+- [ ] Replace preview pages with live permission-aware navigation and financial data
 
 ## Phase 2 — Members and ledger
 - [ ] Member CRUD and encrypted fields

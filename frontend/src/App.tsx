@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
+import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, Bell, CalendarDays, ChartNoAxesCombined,
   ChevronDown, CircleHelp, ClipboardCheck, Copy, CreditCard, ExternalLink, FileChartColumnIncreasing,
@@ -10,6 +10,9 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { formatMoney } from './money'
 import { useToast } from './toast-context'
+import AuthPage from './AuthPage'
+import { currentProfile, logout } from './auth-api'
+import type { Profile } from './auth-api'
 
 type NavItem = { label: string; path: string; icon: LucideIcon }
 
@@ -116,6 +119,8 @@ function SimplePage({ title, subtitle, icon: Icon, heading, description }: { tit
 
 function App() {
   const showToast = useToast()
+  const navigate = useNavigate()
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [asAt, setAsAt] = useState(new Date().toISOString().slice(0, 10))
@@ -131,11 +136,23 @@ function App() {
   }
   const location = useLocation()
   useEffect(() => { setMenuOpen(false); setMoreOpen(false) }, [location.pathname])
+  useEffect(() => { currentProfile().then(setProfile).catch(() => {}) }, [])
+  const signedIn = () => { currentProfile().then(setProfile).catch(() => {}); navigate('/') }
+  const signOut = async () => {
+    try {
+      await logout()
+      setProfile(null)
+      showToast('Signed out', { tone: 'success' })
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not sign out', { tone: 'error' })
+    }
+  }
   const section = nav.find(item => item.path === location.pathname)?.label ?? 'Overview'
+  if (location.pathname === '/sign-in') return <AuthPage onAuthenticated={signedIn} />
   return <div className="app-shell">
     <aside className={`sidebar ${menuOpen ? 'open' : ''}`}><Sidebar close={() => setMenuOpen(false)} /></aside>
     {menuOpen && <button className="scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
-    <div className="main-area"><header className="topbar"><div className="topbar-left"><button className="icon-button desktop-hidden" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button><span className="breadcrumb"><span className="breadcrumb-root">Workspace <span>/</span></span><strong>{section}</strong></span></div><div className="topbar-right"><label className="date-control"><CalendarDays size={17} /><span>As at</span><input type="date" value={asAt} max={new Date().toISOString().slice(0, 10)} onChange={event => updateAsAt(event.target.value)} aria-label="As at date" /></label><ThemeButton /><button className="icon-button notification-button" aria-label="Notifications" onClick={() => showToast("No live notifications yet", { detail: "The inbox will update when approval workflows are connected." })}><Bell size={19} /><span /></button><div className="profile"><div className="profile-avatar">TR</div><div><strong>Treasurer</strong><span>Workspace preview</span></div><ChevronDown size={15} /></div></div></header>
+    <div className="main-area"><header className="topbar"><div className="topbar-left"><button className="icon-button desktop-hidden" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button><span className="breadcrumb"><span className="breadcrumb-root">Workspace <span>/</span></span><strong>{section}</strong></span></div><div className="topbar-right"><label className="date-control"><CalendarDays size={17} /><span>As at</span><input type="date" value={asAt} max={new Date().toISOString().slice(0, 10)} onChange={event => updateAsAt(event.target.value)} aria-label="As at date" /></label><ThemeButton /><button className="icon-button notification-button" aria-label="Notifications" onClick={() => showToast("No live notifications yet", { detail: "The inbox will update when approval workflows are connected." })}><Bell size={19} /><span /></button>{profile ? <button className="profile profile-action" onClick={signOut} title="Sign out"><div className="profile-avatar">{profile.email.slice(0, 2).toUpperCase()}</div><div><strong>{profile.email}</strong><span>Sign out</span></div><ChevronDown size={15} /></button> : <NavLink to="/sign-in" className="sign-in-link">Sign in <ArrowRight size={16} /></NavLink>}</div></header>
       <main className="content"><Routes><Route path="/" element={<Overview asAt={asAt} />} /><Route path="/members" element={<Members />} /><Route path="/investments" element={<SimplePage title="Investments" subtitle="Manage every treasury bill cycle with confidence." icon={Landmark} heading="Investment cycles will appear here" description="Create, preview, approve, and track maturity from one place once the ledger is connected." />} /><Route path="/payments" element={<SimplePage title="Payments" subtitle="Follow contributions from submission to confirmation." icon={CreditCard} heading="Payments will appear here" description="Online payments and receipt verification will be tied to the approval and ledger workflows." />} /><Route path="/approvals" element={<SimplePage title="Approvals" subtitle="A second pair of eyes for money movements." icon={ClipboardCheck} heading="Approval requests will appear here" description="Every money action will show its maker, exact impact, and decision history before posting." />} /><Route path="/reports" element={<SimplePage title="Reports" subtitle="Reliable figures for every point in time." icon={FileChartColumnIncreasing} heading="Reports will appear here" description="The dashboard, allocation statements, member statements, and exports will use the same ledger calculations." />} /><Route path="/settings" element={<SettingsPage />} /></Routes></main>
     </div>
     <nav className="bottom-nav" aria-label="Mobile navigation">{nav.slice(0, 4).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} end={path === '/'} className={({ isActive }) => `bottom-link${isActive ? ' active' : ''}`}><Icon size={20} /><span>{label}</span></NavLink>)}<button className={`bottom-link${moreOpen ? ' active' : ''}`} onClick={() => setMoreOpen(!moreOpen)}><Menu size={20} /><span>More</span></button></nav>
