@@ -20,7 +20,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Structured API validation and access errors with trace IDs
 - [x] Append-only ledger and audit triggers with database tests
 - [x] AES-256-GCM private-field encryption, versioned keys, and blind indexes with tests
-- [ ] Audit service and sensitive-access logging
+- [x] Data-minimal append-only audit service and authentication security events
+- [ ] Sensitive member access, file download, and export audit hooks when those endpoints are added
 - [x] Argon2id password hashing and basic common-password policy with tests
 - [x] Session, login-attempt, and TOTP recovery-code tables
 - [x] Opaque access/refresh/CSRF token service with hashed storage, rotation, replay revocation, and tests

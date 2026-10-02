@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
 import org.harbourcu.common.FieldEncryption;
+import org.harbourcu.common.AuditService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,11 +34,12 @@ public class AuthFlowService {
     private final TotpCodes totp;
     private final FieldEncryption fields;
     private final RecoveryCodeService recoveryCodes;
+    private final AuditService audit;
     private final SecureRandom random = new SecureRandom();
 
     public AuthFlowService(JdbcTemplate jdbc, PasswordLoginService login, PasswordHasher passwords,
                            SessionService sessions, TotpCodes totp, FieldEncryption fields,
-                           RecoveryCodeService recoveryCodes) {
+                           RecoveryCodeService recoveryCodes, AuditService audit) {
         this.jdbc = jdbc;
         this.login = login;
         this.passwords = passwords;
@@ -45,6 +47,7 @@ public class AuthFlowService {
         this.totp = totp;
         this.fields = fields;
         this.recoveryCodes = recoveryCodes;
+        this.audit = audit;
     }
 
     public Step begin(String email, String password, String remoteIp) {
@@ -69,6 +72,8 @@ public class AuthFlowService {
                              force_password_change = false WHERE id = ?
             """, newHash, challenge.userId());
         sessions.revokeAll(challenge.userId());
+        audit.record(challenge.userId(), AuditService.Action.PASSWORD_CHANGED,
+            "USER", challenge.userId(), null);
         consumeAll(challenge.userId());
         Boolean enabled = jdbc.queryForObject("SELECT totp_enabled_at IS NOT NULL FROM users WHERE id = ?",
             Boolean.class, challenge.userId());
@@ -125,6 +130,8 @@ public class AuthFlowService {
             return Optional.empty();
         }
         consumeAll(challenge.userId());
+        audit.record(challenge.userId(), AuditService.Action.TOTP_ENABLED,
+            "USER", challenge.userId(), null);
         return Optional.of(new Enrollment(sessions.create(challenge.userId()),
             recoveryCodes.issue(challenge.userId())));
     }
@@ -137,6 +144,8 @@ public class AuthFlowService {
         }
         if (recoveryCodes.consume(challenge.userId(), code)) {
             consumeAll(challenge.userId());
+            audit.record(challenge.userId(), AuditService.Action.RECOVERY_CODE_USED,
+                "USER", challenge.userId(), null);
             return Optional.of(sessions.create(challenge.userId()));
         }
         byte[] secret = secret(challenge.userId());

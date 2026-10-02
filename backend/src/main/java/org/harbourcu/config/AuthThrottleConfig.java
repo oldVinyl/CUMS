@@ -8,6 +8,7 @@ import org.harbourcu.security.SessionService;
 import org.harbourcu.security.TotpCodes;
 import org.harbourcu.security.RecoveryCodeService;
 import org.harbourcu.common.FieldEncryption;
+import org.harbourcu.common.AuditService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,8 +35,8 @@ public class AuthThrottleConfig {
     AuthFlowService authFlowService(JdbcTemplate jdbc, PasswordLoginService login,
                                     PasswordHasher passwords, SessionService sessions,
                                     TotpCodes totp, FieldEncryption fields,
-                                    RecoveryCodeService recoveryCodes) {
+                                    RecoveryCodeService recoveryCodes, AuditService audit) {
         return new AuthFlowService(jdbc, login, passwords, sessions, totp, fields,
-            recoveryCodes);
+            recoveryCodes, audit);
     }
 }

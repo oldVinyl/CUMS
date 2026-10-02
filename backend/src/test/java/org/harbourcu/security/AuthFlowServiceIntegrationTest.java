@@ -82,6 +82,9 @@ class AuthFlowServiceIntegrationTest {
         AuthFlowService.Step another = flow.begin(email(officer), NEW_PASSWORD, "192.0.2.46");
         assertThat(flow.verifyTotp(another.challenge(), enrollment.recoveryCodes().getFirst()))
             .isEmpty();
+        assertThat(jdbc.queryForList("SELECT action FROM audit_log WHERE actor_id = ? ORDER BY occurred_at",
+            String.class, officer)).containsExactlyInAnyOrder(
+                "PASSWORD_CHANGED", "TOTP_ENABLED", "RECOVERY_CODE_USED");
     }
 
     @Test

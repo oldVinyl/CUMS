@@ -92,6 +92,9 @@ class AuthControllerIntegrationTest {
         mvc.perform(get("/api/v1/auth/me")
             .cookie(new Cookie("cu_access", cookie(second, "cu_access"))))
             .andExpect(status().isUnauthorized());
+        assertThat(jdbc.queryForObject("""
+            SELECT count(*) FROM audit_log WHERE actor_id = ? AND action = 'LOGOUT_ALL'
+            """, Integer.class, user)).isEqualTo(1);
     }
 
     private String cookie(MvcResult result, String name) {

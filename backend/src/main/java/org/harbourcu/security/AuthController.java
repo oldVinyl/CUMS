@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 import org.harbourcu.common.ApiError;
 import org.harbourcu.common.TraceIdFilter;
+import org.harbourcu.common.AuditService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -38,15 +39,18 @@ public class AuthController {
     private final AuthFlowService flow;
     private final SessionService sessions;
     private final JdbcTemplate jdbc;
+    private final AuditService audit;
     private final String allowedOrigin;
     private final boolean secureCookies;
 
     public AuthController(AuthFlowService flow, SessionService sessions, JdbcTemplate jdbc,
+                          AuditService audit,
                           @Value("${APP_ALLOWED_ORIGIN:http://localhost:5173}") String allowedOrigin,
                           @Value("${APP_COOKIE_SECURE:true}") boolean secureCookies) {
         this.flow = flow;
         this.sessions = sessions;
         this.jdbc = jdbc;
+        this.audit = audit;
         this.allowedOrigin = allowedOrigin;
         this.secureCookies = secureCookies;
     }
@@ -132,6 +136,8 @@ public class AuthController {
         if (identity == null) return unauthorized(request);
         if (!sessions.csrfMatches(identity.sessionId(), csrf)) return forbidden(request);
         sessions.revokeAll(identity.userId());
+        audit.record(identity.userId(), AuditService.Action.LOGOUT_ALL,
+            "USER", identity.userId(), TraceIdFilter.traceId(request));
         return clearCookies();
     }
 
