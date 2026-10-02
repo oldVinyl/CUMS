@@ -2,6 +2,9 @@ package org.harbourcu.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -10,13 +13,26 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
+@AutoConfigureMockMvc
 class CoreSchemaIntegrationTest {
     @Autowired
     JdbcTemplate jdbc;
+    @Autowired
+    MockMvc mvc;
+
+    @Test
+    void protectedRouteReturnsStructuredAccessError() throws Exception {
+        mvc.perform(get("/api/v1/members"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code").value("ACCESS_DENIED"))
+            .andExpect(jsonPath("$.traceId").isNotEmpty());
+    }
 
     @Test
     void migrationCreatesCurrentFiscalYearAndCoreTables() {
