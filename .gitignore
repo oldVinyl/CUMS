@@ -7,6 +7,7 @@
 **/coverage/
 **/playwright-report/
 **/test-results/
+**/.jqwik-database
 .idea/
 .vscode/
 *.log
@@ -16,4 +17,3 @@ backups/
 *.sql.gz
 *.age
 *.gpg
-

@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: credit-union-management-system
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/cums}
+    username: ${DB_USER:cums}
+    password: ${DB_PASSWORD:local-dev-only}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+
