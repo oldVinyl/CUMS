@@ -15,6 +15,7 @@ import { currentProfile, linkGoogle, logout } from './auth-api'
 import type { Profile } from './auth-api'
 import LiveMembers from './LiveMembers'
 import GoogleButton from './GoogleButton'
+import { registerPasskey } from './passkey-api'
 
 type NavItem = { label: string; path: string; icon: LucideIcon }
 
@@ -95,6 +96,7 @@ function Members() {
 
 function SettingsPage({ profile, signOutAll }: { profile: Profile | null; signOutAll: () => void }) {
   const showToast = useToast()
+  const [passkeyBusy, setPasskeyBusy] = useState(false)
   const github = 'https://github.com/oldVinyl'
   const copyGithub = async () => {
     try {
@@ -110,7 +112,7 @@ function SettingsPage({ profile, signOutAll }: { profile: Profile | null; signOu
     <PreviewBanner />
     <div className="settings-grid">
       <section className="surface settings-placeholder"><span className="settings-icon"><Settings size={25} /></span><h2>Organisation settings</h2><p>Approval rules, rollover policy, payment methods, and branding will be available here when the secure backend is connected.</p><span className="phase-label">Configuration is in progress</span></section>
-      {profile && <section className="surface settings-placeholder"><span className="settings-icon"><ShieldCheck size={25} /></span><h2>Account security</h2><p>Signed in as {profile.email}. Link Google for another sign-in option, or end every active session if you have lost a device.</p><GoogleButton mode="link" onCredential={idToken => { void linkGoogle(idToken).then(() => showToast('Google account linked', { tone: 'success' })).catch(error => showToast('Could not link Google', { detail: error instanceof Error ? error.message : 'Please try again.', tone: 'error' })) }} /><button type="button" className="secondary-button" onClick={signOutAll}>Sign out on all devices</button></section>}
+      {profile && <section className="surface settings-placeholder"><span className="settings-icon"><ShieldCheck size={25} /></span><h2>Account security</h2><p>Signed in as {profile.email}. {profile.preferredSignInMethod && <>Preferred sign-in: {profile.preferredSignInMethod === 'TOTP' ? 'authenticator app' : profile.preferredSignInMethod === 'PASSKEY' ? 'passkey' : 'Google'}. </>}Add a passkey or link Google for another sign-in option. End every active session if you have lost a device.</p><button type="button" className="secondary-button" disabled={passkeyBusy} onClick={() => { setPasskeyBusy(true); void registerPasskey().then(() => showToast('Passkey added', { tone: 'success' })).catch(error => showToast('Could not add passkey', { detail: error instanceof Error ? error.message : 'Please try again.', tone: 'error' })).finally(() => setPasskeyBusy(false)) }}>{passkeyBusy ? 'Please wait…' : 'Add a passkey'}</button><GoogleButton mode="link" onCredential={idToken => { void linkGoogle(idToken).then(() => showToast('Google account linked', { tone: 'success' })).catch(error => showToast('Could not link Google', { detail: error instanceof Error ? error.message : 'Please try again.', tone: 'error' })) }} /><button type="button" className="secondary-button" onClick={signOutAll}>Sign out on all devices</button></section>}
       <section className="surface creator-card" aria-labelledby="creator-title"><div className="creator-mark" aria-hidden="true">V<span>.</span></div><span className="creator-eyebrow">MADE WITH CARE</span><h2 id="creator-title">Built by Vinette</h2><p>By Vinyl. Thoughtful tools for the people who keep communities moving.</p><div className="creator-actions"><a href={github} target="_blank" rel="noopener noreferrer" className="creator-link">github.com/oldVinyl <ExternalLink size={16} /></a><button type="button" className="copy-link" onClick={copyGithub}><Copy size={16} /> Copy link</button></div></section>
     </div>
   </>

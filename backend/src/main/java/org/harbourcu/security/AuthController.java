@@ -35,7 +35,8 @@ public class AuthController {
     public record CodeRequest(@NotBlank String challenge, @NotBlank String code) {}
     public record AuthStep(String stage, String challenge, String secret,
                            List<String> recoveryCodes) {}
-    public record Profile(UUID userId, String email, List<String> permissions) {}
+    public record Profile(UUID userId, String email, List<String> permissions,
+                          String preferredSignInMethod) {}
 
     private final AuthFlowService flow;
     private final SessionService sessions;
@@ -161,8 +162,10 @@ public class AuthController {
         if (identity == null) return unauthorized(request);
         String email = jdbc.queryForObject("SELECT email FROM users WHERE id = ?", String.class,
             identity.userId());
+        String preferred = jdbc.queryForObject("SELECT preferred_sign_in_method FROM users WHERE id = ?",
+            String.class, identity.userId());
         return ResponseEntity.ok(new Profile(identity.userId(), email,
-            permissions.currentPermissions(identity.userId())));
+            permissions.currentPermissions(identity.userId()), preferred));
     }
 
     private ResponseEntity<AuthStep> step(AuthFlowService.Step result) {

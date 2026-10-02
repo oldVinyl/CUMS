@@ -187,6 +187,11 @@ public class AuthFlowService {
         return Optional.of(challenge.userId());
     }
 
+    public Optional<UUID> alternativeSetupUser(String challengeToken) {
+        Challenge challenge = activeChallenge(challengeToken, "TOTP_SETUP");
+        return challenge == null ? Optional.empty() : Optional.of(challenge.userId());
+    }
+
     private String issue(UUID userId, String purpose) {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
