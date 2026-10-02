@@ -25,6 +25,7 @@ public class MemberService {
                                String nextOfKinName, String nextOfKinPhone,
                                String nextOfKinRelationship, LocalDate joinDate) {}
     public record Summary(UUID id, String memberNumber, String fullName, String status) {}
+    public record Page(List<Summary> items, int page, int size, boolean hasNext) {}
     public record UpdateMember(long version, String fullName, String email,
                                String phone, String idType, String idNumber,
                                LocalDate dateOfBirth, String address,
@@ -94,13 +95,24 @@ public class MemberService {
         return id;
     }
 
-    public List<Summary> list(UUID actorId) {
+    public Page list(UUID actorId, String search, int page, int size) {
         require(actorId, "MEMBER_READ");
-        return jdbc.query("""
+        if (page < 0 || page > 10000 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("Invalid page or page size");
+        }
+        String term = optional(search, 100);
+        String pattern = term == null ? "%" : "%" + term.toLowerCase(Locale.ROOT)
+            .replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+        List<Summary> rows = jdbc.query("""
             SELECT id, member_number, full_name, status FROM members
-            ORDER BY member_number LIMIT 500
+            WHERE lower(member_number) LIKE ? ESCAPE '\\'
+               OR lower(full_name) LIKE ? ESCAPE '\\'
+            ORDER BY member_number, id LIMIT ? OFFSET ?
             """, (row, ignored) -> new Summary(row.getObject("id", UUID.class),
-            row.getString("member_number"), row.getString("full_name"), row.getString("status")));
+            row.getString("member_number"), row.getString("full_name"), row.getString("status")),
+            pattern, pattern, size + 1, page * size);
+        return new Page(rows.size() > size ? rows.subList(0, size) : rows,
+            page, size, rows.size() > size);
     }
 
     @Transactional

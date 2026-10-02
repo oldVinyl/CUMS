@@ -54,6 +54,13 @@ class MemberControllerIntegrationTest {
             .contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         UUID id = UUID.fromString(json.readTree(response).get("id").asText());
+        mvc.perform(get("/api/v1/members").param("search", number).param("size", "1")
+            .cookie(new Cookie("cu_access", officerTokens.access())))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].id").value(id.toString()))
+            .andExpect(jsonPath("$.hasNext").value(false));
+        mvc.perform(get("/api/v1/members").param("page", "-1")
+            .cookie(new Cookie("cu_access", officerTokens.access())))
+            .andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/members/{id}", id)
             .cookie(new Cookie("cu_access", officerTokens.access())))
             .andExpect(status().isOk()).andExpect(jsonPath("$.phone").value("0201234999"));

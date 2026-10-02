@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -66,14 +67,20 @@ public class MemberController {
     }
 
     @GetMapping
-    public ResponseEntity<?> list(@CookieValue(name = "cu_access", required = false) String access,
+    public ResponseEntity<?> list(@RequestParam(defaultValue = "") String search,
+                                   @RequestParam(defaultValue = "0") int page,
+                                   @RequestParam(defaultValue = "25") int size,
+                                   @CookieValue(name = "cu_access", required = false) String access,
                                    HttpServletRequest request) {
         SessionService.SessionIdentity identity = sessions.resolveAccess(access).orElse(null);
         if (identity == null) return error(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", request);
         try {
-            return ResponseEntity.ok(members.list(identity.userId()));
+            return ResponseEntity.ok(members.list(identity.userId(), search, page, size));
         } catch (SecurityException exception) {
             return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", request);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(new ApiError("VALIDATION_ERROR",
+                exception.getMessage(), List.of(), TraceIdFilter.traceId(request)));
         }
     }
 

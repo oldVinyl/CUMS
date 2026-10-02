@@ -21,7 +21,8 @@ class MemberServiceIntegrationTest {
     @Transactional
     void createsEncryptedMemberAndAuditsPrivateRead() {
         UUID officer = userWithRole("TREASURER");
-        UUID id = members.create(officer, fixture(number()));
+        String number = number();
+        UUID id = members.create(officer, fixture(number));
         byte[] encryptedPhone = jdbc.queryForObject(
             "SELECT encrypted_phone FROM members WHERE id = ?", byte[].class, id);
         assertThat(new String(encryptedPhone, java.nio.charset.StandardCharsets.UTF_8))
@@ -32,7 +33,8 @@ class MemberServiceIntegrationTest {
         assertThat(detail.phone()).isEqualTo("0201234001");
         assertThat(detail.idNumber()).isEqualTo("GHA-123-456");
         assertThat(detail.nextOfKinName()).isEqualTo("Ada Example");
-        assertThat(members.list(officer)).anyMatch(item -> item.id().equals(id));
+        assertThat(members.list(officer, number, 0, 25).items())
+            .anyMatch(item -> item.id().equals(id));
         assertThat(jdbc.queryForList("""
             SELECT action FROM audit_log WHERE entity_id = ? ORDER BY occurred_at
             """, String.class, id)).containsExactlyInAnyOrder("MEMBER_CREATED", "SENSITIVE_MEMBER_VIEW");
@@ -42,7 +44,8 @@ class MemberServiceIntegrationTest {
     @Transactional
     void memberRoleCannotViewOrCreateUnionMemberRecords() {
         UUID memberUser = userWithRole("MEMBER");
-        assertThatThrownBy(() -> members.list(memberUser)).isInstanceOf(SecurityException.class);
+        assertThatThrownBy(() -> members.list(memberUser, "", 0, 25))
+            .isInstanceOf(SecurityException.class);
         assertThatThrownBy(() -> members.create(memberUser, fixture(number())))
             .isInstanceOf(SecurityException.class);
     }
@@ -74,6 +77,26 @@ class MemberServiceIntegrationTest {
         assertThat(jdbc.queryForObject("""
             SELECT count(*) FROM audit_log WHERE entity_id = ? AND action = 'MEMBER_UPDATED'
             """, Integer.class, id)).isEqualTo(1);
+    }
+
+    @Test
+    @Transactional
+    void searchAndPaginationReturnStablePagesAndTreatWildcardsLiterally() {
+        UUID officer = userWithRole("TREASURER");
+        String prefix = "CU-PAGE-" + UUID.randomUUID().toString().substring(0, 8);
+        for (int i = 0; i < 3; i++) {
+            jdbc.update("INSERT INTO members (member_number, full_name, join_date) VALUES (?, ?, ?)",
+                prefix + i, "Page Fixture " + i, LocalDate.of(2025, 1, 1));
+        }
+        MemberService.Page first = members.list(officer, prefix, 0, 2);
+        assertThat(first.items()).extracting(MemberService.Summary::memberNumber)
+            .containsExactly(prefix + "0", prefix + "1");
+        assertThat(first.hasNext()).isTrue();
+        assertThat(members.list(officer, prefix, 1, 2).items())
+            .extracting(MemberService.Summary::memberNumber).containsExactly(prefix + "2");
+        assertThat(members.list(officer, prefix + "%", 0, 25).items()).isEmpty();
+        assertThatThrownBy(() -> members.list(officer, "", -1, 25))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     private MemberService.CreateMember fixture(String number) {

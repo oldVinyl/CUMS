@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
 import { ToastProvider } from './toast'
@@ -70,14 +70,37 @@ describe('sign in', () => {
 })
 
 describe('live member directory', () => {
+  it('searches server records and moves between pages', async () => {
+    const fetchMock = vi.fn((input: string) => {
+      if (input.endsWith('/auth/me')) return Promise.resolve({ ok: true, json: async () => ({
+        userId: 'officer-1', email: 'officer@invalid.example', permissions: ['MEMBER_READ'],
+      }) })
+      const page = new URL(input, 'http://localhost').searchParams.get('page')
+      return Promise.resolve({ ok: true, json: async () => ({ items: [
+        { id: 'member-1', memberNumber: 'CU-101', fullName: 'Esi Live', status: 'ACTIVE' },
+      ], page: Number(page), size: 25, hasNext: page === '0' }) })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<MemoryRouter initialEntries={['/members']}><ToastProvider><App /></ToastProvider></MemoryRouter>)
+    expect((await screen.findAllByText('Esi Live')).length).toBeGreaterThan(0)
+    fireEvent.change(screen.getByLabelText('Search by name or member number'),
+      { target: { value: 'CU-101' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/members?page=0&size=25&search=CU-101', { credentials: 'same-origin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/members?page=1&size=25&search=CU-101', { credentials: 'same-origin' }))
+  })
+
   it('uses server records after authentication and opens an audited detail route', async () => {
     const fetchMock = vi.fn((input: string) => {
       if (input.endsWith('/auth/me')) return Promise.resolve({ ok: true, json: async () => ({
         userId: 'officer-1', email: 'officer@invalid.example', permissions: ['MEMBER_READ'],
       }) })
-      if (input === '/api/v1/members') return Promise.resolve({ ok: true, json: async () => [
+      if (input.startsWith('/api/v1/members?')) return Promise.resolve({ ok: true, json: async () => ({ items: [
         { id: 'member-1', memberNumber: 'CU-101', fullName: 'Esi Live', status: 'ACTIVE' },
-      ] })
+      ], page: 0, size: 25, hasNext: false }) })
       return Promise.resolve({ ok: true, json: async () => ({ id: 'member-1',
         memberNumber: 'CU-101', fullName: 'Esi Live', status: 'ACTIVE', phone: '0201234999',
         joinDate: '2025-01-01' }) })
@@ -97,9 +120,9 @@ describe('live member directory', () => {
         userId: 'officer-1', email: 'officer@invalid.example',
         permissions: ['MEMBER_READ', 'MEMBER_WRITE'],
       }) })
-      if (input === '/api/v1/members') return Promise.resolve({ ok: true, json: async () => [
+      if (input.startsWith('/api/v1/members?')) return Promise.resolve({ ok: true, json: async () => ({ items: [
         { id: 'member-1', memberNumber: 'CU-101', fullName: memberName, status: 'ACTIVE' },
-      ] })
+      ], page: 0, size: 25, hasNext: false }) })
       if (init?.method === 'PUT') {
         memberName = 'Esi Updated'
         return Promise.resolve({ ok: true, json: async () => ({ version: 1 }) })
