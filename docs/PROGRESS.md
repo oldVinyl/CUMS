@@ -25,7 +25,9 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Session, login-attempt, and TOTP recovery-code tables
 - [x] Opaque access/refresh/CSRF token service with hashed storage, rotation, replay revocation, and tests
 - [x] RFC 6238 TOTP code generation and adjacent-step verification with standard test vectors
-- [ ] Login, rotating sessions, CSRF, rate limiting, account lockout, and TOTP
+- [x] Database-backed login throttling and exponential account lockout with keyed identifier digests
+- [x] Password first-factor verification with generic failures and tests
+- [ ] Authenticated login challenge, browser cookies, CSRF enforcement, TOTP enrollment, and HTTP rate limiting
 - [x] Seed six roles and permission grants; reject overlapping active assignments
 - [x] Read live permissions on each check; approved role changes take effect immediately
 - [x] Block revocation of the last active ADMIN or PRESIDENT through role-change approvals

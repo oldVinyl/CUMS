@@ -12,7 +12,7 @@ This document is updated as each phase becomes runnable. Current status is in [P
 
 ## 2. Local configuration
 
-Copy `.env.example` to `.env`. Windows PowerShell: `Copy-Item .env.example .env`; macOS/Linux: `cp .env.example .env`. Keep `.env` out of Git. Generate keys with `openssl rand -base64 32`, once for each secret. Authentication is still under development; there is no seeded login yet.
+Copy `.env.example` to `.env`. Windows PowerShell: `Copy-Item .env.example .env`; macOS/Linux: `cp .env.example .env`. Keep `.env` out of Git. Generate keys with `openssl rand -base64 32`, once for each secret, including `APP_ENCRYPTION_KEY`, `AUTH_THROTTLE_KEY`, and `JWT_SECRET`. Authentication is still under development; there is no seeded login yet.
 
 ## 3. Start the app
 
