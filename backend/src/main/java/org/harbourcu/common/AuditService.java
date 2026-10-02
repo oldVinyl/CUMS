@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuditService {
     public enum Action {
         PASSWORD_CHANGED, TOTP_ENABLED, RECOVERY_CODE_USED, LOGOUT_ALL, MEMBER_CREATED, MEMBER_UPDATED,
+        MEMBER_DEACTIVATED, MEMBER_REACTIVATED,
         SENSITIVE_MEMBER_VIEW, FILE_DOWNLOADED, EXPORT_DOWNLOADED
     }
 

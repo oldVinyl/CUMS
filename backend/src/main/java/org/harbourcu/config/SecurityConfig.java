@@ -25,7 +25,8 @@ public class SecurityConfig {
                 "/api/v1/members/**"))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/api/v1/health", "/api/v1/auth/**").permitAll()
-                .requestMatchers("/api/v1/members", "/api/v1/members/*")
+                .requestMatchers("/api/v1/members", "/api/v1/members/*",
+                    "/api/v1/members/*/status")
                     .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                         environment.containsProperty("APP_ENCRYPTION_KEY")))
                 .anyRequest().denyAll())

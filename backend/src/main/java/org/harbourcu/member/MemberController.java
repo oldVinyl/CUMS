@@ -19,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -54,6 +55,7 @@ public class MemberController {
         }
     }
     public record Updated(long version) {}
+    public record StatusRequest(@Min(0) long version, @NotBlank String status) {}
 
     private final MemberService members;
     private final SessionService sessions;
@@ -142,6 +144,32 @@ public class MemberController {
             return error(HttpStatus.CONFLICT, "MEMBER_EXISTS", request);
         } catch (IllegalStateException exception) {
             return error(HttpStatus.CONFLICT, "MEMBER_CHANGED", request);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(new ApiError("VALIDATION_ERROR",
+                exception.getMessage(), List.of(), TraceIdFilter.traceId(request)));
+        }
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> changeStatus(@PathVariable UUID id,
+                                           @Valid @RequestBody StatusRequest body,
+                                           @CookieValue(name = "cu_access", required = false) String access,
+                                           @RequestHeader(name = "X-CSRF-Token", required = false) String csrf,
+                                           HttpServletRequest request) {
+        if (!sameOrigin(request)) return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", request);
+        SessionService.SessionIdentity identity = sessions.resolveAccess(access).orElse(null);
+        if (identity == null) return error(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", request);
+        if (!sessions.csrfMatches(identity.sessionId(), csrf)) {
+            return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", request);
+        }
+        try {
+            return ResponseEntity.ok(new Updated(members.changeStatus(identity.userId(), id,
+                body.version(), body.status())));
+        } catch (SecurityException exception) {
+            return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", request);
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError("MEMBER_STATUS_CONFLICT",
+                exception.getMessage(), List.of(), TraceIdFilter.traceId(request)));
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().body(new ApiError("VALIDATION_ERROR",
                 exception.getMessage(), List.of(), TraceIdFilter.traceId(request)));

@@ -142,4 +142,34 @@ describe('live member directory', () => {
     const put = fetchMock.mock.calls.find(call => call[1]?.method === 'PUT')
     expect(JSON.parse(put?.[1]?.body as string).version).toBe(0)
   })
+
+  it('confirms deactivation and shows the API result', async () => {
+    let status = 'ACTIVE'
+    const fetchMock = vi.fn((input: string, init?: RequestInit) => {
+      if (input.endsWith('/auth/me')) return Promise.resolve({ ok: true, json: async () => ({
+        userId: 'officer-1', email: 'officer@invalid.example',
+        permissions: ['MEMBER_READ', 'MEMBER_WRITE'],
+      }) })
+      if (input.startsWith('/api/v1/members?')) return Promise.resolve({ ok: true, json: async () => ({
+        items: [{ id: 'member-1', memberNumber: 'CU-101', fullName: 'Esi Live', status }],
+        page: 0, size: 25, hasNext: false,
+      }) })
+      if (init?.method === 'PATCH') {
+        status = 'INACTIVE'
+        return Promise.resolve({ ok: true, json: async () => ({ version: 1 }) })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ id: 'member-1',
+        memberNumber: 'CU-101', fullName: 'Esi Live', status, joinDate: '2025-01-01',
+        version: status === 'ACTIVE' ? 0 : 1 }) })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<MemoryRouter initialEntries={['/members']}><ToastProvider><App /></ToastProvider></MemoryRouter>)
+    expect((await screen.findAllByText('Esi Live')).length).toBeGreaterThan(0)
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0])
+    fireEvent.click(await screen.findByRole('button', { name: 'Deactivate' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm deactivation' }))
+    expect(await screen.findByText('Member deactivated')).toBeTruthy()
+    const patch = fetchMock.mock.calls.find(call => call[1]?.method === 'PATCH')
+    expect(JSON.parse(patch?.[1]?.body as string)).toEqual({ version: 0, status: 'INACTIVE' })
+  })
 })

@@ -60,6 +60,7 @@ export default function LiveMembers({ profile }: { profile: Profile }) {
   const [hasNext, setHasNext] = useState(false)
   const [selected, setSelected] = useState<Detail | null>(null)
   const [editing, setEditing] = useState(false)
+  const [confirmStatus, setConfirmStatus] = useState(false)
   const [fields, setFields] = useState<EditableFields>(blankFields)
   const [editFields, setEditFields] = useState<EditableFields>(blankFields)
   const [loading, setLoading] = useState(true)
@@ -97,6 +98,7 @@ export default function LiveMembers({ profile }: { profile: Profile }) {
       setSelected(detail)
       setEditFields(fromDetail(detail))
       setEditing(false)
+      setConfirmStatus(false)
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not open member', { tone: 'error' })
     }
@@ -145,11 +147,35 @@ export default function LiveMembers({ profile }: { profile: Profile }) {
     }
   }
 
+  const changeStatus = async () => {
+    if (!selected) return
+    const nextStatus = selected.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+    setSaving(true)
+    try {
+      const response = await fetch(`/api/v1/members/${selected.id}/status`, {
+        method: 'PATCH', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfCookie() },
+        body: JSON.stringify({ version: selected.version, status: nextStatus }),
+      })
+      if (!response.ok) throw await apiError(response)
+      showToast(nextStatus === 'ACTIVE' ? 'Member reactivated' : 'Member deactivated',
+        { tone: 'success' })
+      await view(selected.id)
+      await load()
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not change member status',
+        { tone: 'error' })
+    } finally {
+      setSaving(false)
+      setConfirmStatus(false)
+    }
+  }
+
   return <><div className="page-heading"><div><div className="eyebrow">HARBOUR CREDIT UNION</div><h1>Members</h1><p>People and records in your union.</p></div>{canWrite && <button className="primary-button" type="button" onClick={() => setShowForm(!showForm)}><Plus size={18} /> {showForm ? 'Close form' : 'Add member'}</button>}</div>
     {!canRead ? <div className="surface empty-page"><Users size={32} /><h2>Member records are restricted</h2><p>Your current role does not include permission to view the union directory.</p></div> : <>
       {showForm && <form className="surface member-form" onSubmit={create}><h2>New member</h2><p>Private fields are encrypted when saved.</p><div className="member-form-grid"><label>Member number<input value={number} maxLength={40} onChange={event => setNumber(event.target.value)} required /></label><label>Join date<input type="date" value={joinDate} max={new Date().toISOString().slice(0, 10)} onChange={event => setJoinDate(event.target.value)} required /></label></div><MemberFields values={fields} setValues={setFields} /><button className="primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save member'} <ArrowRight size={17} /></button></form>}
       <section className="surface list-card"><div className="card-title-row"><div><h2>Member directory</h2><p>{loading ? 'Loading…' : `${members.length} members shown · page ${page + 1}`}</p></div></div><form className="member-search" onSubmit={event => { event.preventDefault(); setPage(0); setSearch(searchInput.trim()) }}><label htmlFor="member-search-input">Search by name or member number</label><div><input id="member-search-input" type="search" value={searchInput} maxLength={100} onChange={event => setSearchInput(event.target.value)} placeholder="Name or member number" /><button className="secondary-button" type="submit"><Search size={17} /> Search</button></div></form>{!loading && members.length === 0 ? <div className="empty-state"><Users size={28} /><strong>{search ? 'No matching members' : 'No members yet'}</strong><span>{search ? 'Try a different name or member number.' : 'Add your first member to start the directory.'}</span></div> : <><div className="table-scroll"><table><thead><tr><th>Member</th><th>Member no.</th><th>Status</th><th>Details</th></tr></thead><tbody>{members.map(member => <tr key={member.id}><td><strong>{member.fullName}</strong></td><td>{member.memberNumber}</td><td>{member.status}</td><td><button className="text-button" onClick={() => void view(member.id)}>View <ArrowRight size={15} /></button></td></tr>)}</tbody></table></div><div className="mobile-member-list">{members.map(member => <div className="mobile-member" key={member.id}><div className="mobile-member-top"><div><strong>{member.fullName}</strong><small>{member.memberNumber}</small></div><span className="ratio">{member.status}</span></div><button className="text-button" onClick={() => void view(member.id)}>View details <ArrowRight size={15} /></button></div>)}</div></>}{(page > 0 || hasNext) && <nav className="member-pagination" aria-label="Member pages"><button className="secondary-button" type="button" disabled={loading || page === 0} onClick={() => setPage(current => current - 1)}>Previous</button><span>Page {page + 1}</span><button className="secondary-button" type="button" disabled={loading || !hasNext} onClick={() => setPage(current => current + 1)}>Next</button></nav>}</section>
-      {selected && <section className="surface member-detail" aria-label="Member details"><div className="card-title-row"><div><h2>{selected.fullName}</h2><p>{selected.memberNumber}</p></div><div className="member-detail-actions">{canWrite && <button className="text-button" onClick={() => { if (editing) setEditFields(fromDetail(selected)); setEditing(!editing) }}>{editing ? 'Cancel edit' : 'Edit member'}</button>}<button className="text-button" onClick={() => { setSelected(null); setEditing(false) }}>Close</button></div></div>{editing ? <form className="member-form" onSubmit={saveEdit}><MemberFields values={editFields} setValues={setEditFields} /><button className="primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save changes'} <ArrowRight size={17} /></button></form> : <dl><div><dt>Phone</dt><dd>{selected.phone ?? 'Not provided'}</dd></div><div><dt>Email</dt><dd>{selected.email ?? 'Not provided'}</dd></div><div><dt>Join date</dt><dd>{selected.joinDate}</dd></div><div><dt>Date of birth</dt><dd>{selected.dateOfBirth ?? 'Not provided'}</dd></div><div><dt>ID type</dt><dd>{selected.idType ?? 'Not provided'}</dd></div><div><dt>ID number</dt><dd>{selected.idNumber ?? 'Not provided'}</dd></div><div><dt>Address</dt><dd>{selected.address ?? 'Not provided'}</dd></div><div><dt>Next of kin</dt><dd>{selected.nextOfKinName ?? 'Not provided'}</dd></div><div><dt>Next of kin phone</dt><dd>{selected.nextOfKinPhone ?? 'Not provided'}</dd></div><div><dt>Relationship</dt><dd>{selected.nextOfKinRelationship ?? 'Not provided'}</dd></div></dl>}</section>}
+      {selected && <section className="surface member-detail" aria-label="Member details"><div className="card-title-row"><div><h2>{selected.fullName}</h2><p>{selected.memberNumber} · {selected.status}</p></div><div className="member-detail-actions">{canWrite && <button className="text-button" onClick={() => { if (editing) setEditFields(fromDetail(selected)); setEditing(!editing); setConfirmStatus(false) }}>{editing ? 'Cancel edit' : 'Edit member'}</button>}{canWrite && !editing && <button className="text-button" onClick={() => setConfirmStatus(!confirmStatus)}>{selected.status === 'ACTIVE' ? 'Deactivate' : 'Reactivate'}</button>}<button className="text-button" onClick={() => { setSelected(null); setEditing(false); setConfirmStatus(false) }}>Close</button></div></div>{confirmStatus && <div className="member-status-confirm"><p>{selected.status === 'ACTIVE' ? 'Deactivate this member? A linked portal account will be disabled and signed out.' : 'Reactivate this member record? A disabled portal account will need separate re-enabling.'}</p><button className="secondary-button" type="button" onClick={() => setConfirmStatus(false)}>Cancel</button><button className="primary-button" type="button" disabled={saving} onClick={() => void changeStatus()}>{saving ? 'Saving…' : `Confirm ${selected.status === 'ACTIVE' ? 'deactivation' : 'reactivation'}`}</button></div>}{editing ? <form className="member-form" onSubmit={saveEdit}><MemberFields values={editFields} setValues={setEditFields} /><button className="primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save changes'} <ArrowRight size={17} /></button></form> : <dl><div><dt>Phone</dt><dd>{selected.phone ?? 'Not provided'}</dd></div><div><dt>Email</dt><dd>{selected.email ?? 'Not provided'}</dd></div><div><dt>Join date</dt><dd>{selected.joinDate}</dd></div><div><dt>Date of birth</dt><dd>{selected.dateOfBirth ?? 'Not provided'}</dd></div><div><dt>ID type</dt><dd>{selected.idType ?? 'Not provided'}</dd></div><div><dt>ID number</dt><dd>{selected.idNumber ?? 'Not provided'}</dd></div><div><dt>Address</dt><dd>{selected.address ?? 'Not provided'}</dd></div><div><dt>Next of kin</dt><dd>{selected.nextOfKinName ?? 'Not provided'}</dd></div><div><dt>Next of kin phone</dt><dd>{selected.nextOfKinPhone ?? 'Not provided'}</dd></div><div><dt>Relationship</dt><dd>{selected.nextOfKinRelationship ?? 'Not provided'}</dd></div></dl>}</section>}
     </>}
   </>
 }

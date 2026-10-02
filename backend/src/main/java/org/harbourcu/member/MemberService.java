@@ -116,6 +116,59 @@ public class MemberService {
     }
 
     @Transactional
+    public long changeStatus(UUID actorId, UUID memberId, long version, String targetStatus) {
+        require(actorId, "MEMBER_WRITE");
+        if (memberId == null || version < 0
+            || (!"ACTIVE".equals(targetStatus) && !"INACTIVE".equals(targetStatus))) {
+            throw new IllegalArgumentException("Member, version, and status are required");
+        }
+        List<String> current = jdbc.query("SELECT status FROM members WHERE id = ? FOR UPDATE",
+            (row, ignored) -> row.getString("status"), memberId);
+        if (current.isEmpty()) throw new IllegalArgumentException("Member not found");
+        if (current.getFirst().equals(targetStatus)) {
+            throw new IllegalStateException("Member already has this status");
+        }
+        if ("INACTIVE".equals(targetStatus)) {
+            jdbc.query("SELECT id FROM roles WHERE code IN ('ADMIN', 'PRESIDENT') ORDER BY code FOR UPDATE",
+                (row, ignored) -> row.getObject("id", UUID.class));
+            Boolean privileged = jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1 FROM users u
+                    JOIN user_role_assignments a ON a.user_id = u.id
+                    JOIN roles r ON r.id = a.role_id
+                    WHERE u.member_id = ? AND u.status = 'ACTIVE'
+                      AND a.revoked_at IS NULL AND a.start_date <= current_date
+                      AND (a.end_date IS NULL OR a.end_date >= current_date)
+                      AND r.code IN ('ADMIN', 'PRESIDENT')
+                )
+                """, Boolean.class, memberId);
+            if (Boolean.TRUE.equals(privileged)) {
+                throw new IllegalStateException("Remove the linked administrator or president role first");
+            }
+        }
+        int changed = jdbc.update("""
+            UPDATE members SET status = ?, version = version + 1, updated_at = now()
+            WHERE id = ? AND version = ?
+            """, targetStatus, memberId, version);
+        if (changed != 1) {
+            throw new IllegalStateException("Member was changed by another user. Reload and try again.");
+        }
+        if ("INACTIVE".equals(targetStatus)) {
+            jdbc.update("UPDATE users SET status = 'DISABLED', updated_at = now() WHERE member_id = ?",
+                memberId);
+            jdbc.update("""
+                UPDATE auth_sessions SET revoked_at = now()
+                WHERE user_id IN (SELECT id FROM users WHERE member_id = ?)
+                  AND revoked_at IS NULL
+                """, memberId);
+        }
+        audit.record(actorId, "INACTIVE".equals(targetStatus)
+            ? AuditService.Action.MEMBER_DEACTIVATED : AuditService.Action.MEMBER_REACTIVATED,
+            "MEMBER", memberId, null);
+        return version + 1;
+    }
+
+    @Transactional
     public long update(UUID actorId, UUID memberId, UpdateMember input) {
         require(actorId, "MEMBER_WRITE");
         if (memberId == null || input == null || input.version() < 0) {

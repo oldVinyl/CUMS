@@ -50,7 +50,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Versioned member editing with encrypted-field replacement, stale-save conflict response, audit event, and tests
 - [x] Full create and edit member forms with validation controls and success/error toasts
 - [x] Permission-aware member directory search by name or number with bounded server pagination and navigation
-- [ ] Member deactivation
+- [x] Versioned member deactivation/reactivation with linked portal-account disable, session revocation, audit events, confirmation UI, and tests
 - [x] Transactional maker-checker approval service with distinct approvers and atomic action execution
 - [x] Approved current-day seed/addition posting to the immutable ledger
 - [x] Approved current-day manual contribution reversal with exact negative amount and reason

@@ -86,6 +86,18 @@ class MemberControllerIntegrationTest {
             .header("X-CSRF-Token", officerTokens.csrf())
             .contentType(MediaType.APPLICATION_JSON).content(edit))
             .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MEMBER_CHANGED"));
+        String inactive = json.writeValueAsString(Map.of("version", 1, "status", "INACTIVE"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(
+                "/api/v1/members/{id}/status", id)
+            .cookie(new Cookie("cu_access", officerTokens.access()))
+            .contentType(MediaType.APPLICATION_JSON).content(inactive))
+            .andExpect(status().isForbidden());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(
+                "/api/v1/members/{id}/status", id)
+            .cookie(new Cookie("cu_access", officerTokens.access()))
+            .header("X-CSRF-Token", officerTokens.csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(inactive))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.version").value(2));
     }
 
     private UUID user(String role) {

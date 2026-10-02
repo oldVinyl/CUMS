@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDate;
 import java.util.UUID;
+import org.harbourcu.security.SessionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 class MemberServiceIntegrationTest {
     @Autowired MemberService members;
     @Autowired JdbcTemplate jdbc;
+    @Autowired SessionService sessions;
 
     @Test
     @Transactional
@@ -97,6 +99,38 @@ class MemberServiceIntegrationTest {
         assertThat(members.list(officer, prefix + "%", 0, 25).items()).isEmpty();
         assertThatThrownBy(() -> members.list(officer, "", -1, 25))
             .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @Transactional
+    void deactivationDisablesLinkedPortalAccountAndRevokesItsSession() {
+        UUID officer = userWithRole("TREASURER");
+        UUID id = members.create(officer, fixture(number()));
+        UUID portal = UUID.randomUUID();
+        jdbc.update("INSERT INTO users (id, member_id, email, password_hash) VALUES (?, ?, ?, 'fixture-hash')",
+            portal, id, "portal-" + portal + "@invalid.example");
+        SessionService.Tokens tokens = sessions.create(portal);
+        assertThat(members.changeStatus(officer, id, 0, "INACTIVE")).isEqualTo(1);
+        assertThat(members.get(officer, id, "status-test").status()).isEqualTo("INACTIVE");
+        assertThat(jdbc.queryForObject("SELECT status FROM users WHERE id = ?", String.class, portal))
+            .isEqualTo("DISABLED");
+        assertThat(sessions.resolveAccess(tokens.access())).isEmpty();
+        assertThatThrownBy(() -> members.changeStatus(officer, id, 0, "ACTIVE"))
+            .isInstanceOf(IllegalStateException.class);
+        assertThat(members.changeStatus(officer, id, 1, "ACTIVE")).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT status FROM users WHERE id = ?", String.class, portal))
+            .isEqualTo("DISABLED");
+    }
+
+    @Test
+    @Transactional
+    void linkedAdministratorMustHaveRoleRemovedBeforeDeactivation() {
+        UUID officer = userWithRole("TREASURER");
+        UUID id = members.create(officer, fixture(number()));
+        UUID admin = userWithRole("ADMIN");
+        jdbc.update("UPDATE users SET member_id = ? WHERE id = ?", id, admin);
+        assertThatThrownBy(() -> members.changeStatus(officer, id, 0, "INACTIVE"))
+            .isInstanceOf(IllegalStateException.class).hasMessageContaining("administrator");
     }
 
     private MemberService.CreateMember fixture(String number) {
