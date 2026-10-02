@@ -3,12 +3,13 @@ import type { ReactNode } from 'react'
 import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, Bell, CalendarDays, ChartNoAxesCombined,
-  ChevronDown, CircleHelp, ClipboardCheck, CreditCard, FileChartColumnIncreasing,
+  ChevronDown, CircleHelp, ClipboardCheck, Copy, CreditCard, ExternalLink, FileChartColumnIncreasing,
   Landmark, LayoutDashboard, Menu, Moon, Plus, Search, Settings, ShieldCheck, Sun,
   Users, WalletCards, X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { formatMoney } from './money'
+import { useToast } from './toast-context'
 
 type NavItem = { label: string; path: string; icon: LucideIcon }
 
@@ -30,12 +31,13 @@ const previewMembers = [
 ]
 
 function ThemeButton() {
+  const showToast = useToast()
   const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && matchMedia('(prefers-color-scheme: dark)').matches))
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light'
     localStorage.setItem('theme', dark ? 'dark' : 'light')
   }, [dark])
-  return <button className="icon-button" aria-label={`Switch to ${dark ? 'light' : 'dark'} theme`} onClick={() => setDark(!dark)}>{dark ? <Sun size={19} /> : <Moon size={19} />}</button>
+  return <button className="icon-button" aria-label={`Switch to ${dark ? 'light' : 'dark'} theme`} onClick={() => { setDark(!dark); showToast(`${dark ? 'Light' : 'Dark'} theme on`, { tone: 'success' }) }}>{dark ? <Sun size={19} /> : <Moon size={19} />}</button>
 }
 
 function Sidebar({ close }: { close: () => void }) {
@@ -54,7 +56,7 @@ function PageHeader({ title, subtitle, action }: { title: string; subtitle: stri
 }
 
 function PreviewBanner() {
-  return <div className="preview-banner" role="status"><span className="preview-dot" /><div><strong>Design preview</strong><span>Figures and member names on this screen are sample data. Financial actions are unavailable until the secure backend is complete.</span></div></div>
+  return <div className="preview-banner" role="status"><span className="preview-dot" /><div><strong>Design preview</strong><span>This workspace uses sample figures and member names. Financial actions are unavailable until the secure backend is complete.</span></div></div>
 }
 
 function Overview({ asAt }: { asAt: string }) {
@@ -86,11 +88,34 @@ function Members() {
   return <><PageHeader title="Members" subtitle="A clear view of everyone in the union." action={<button className="primary-button" disabled><Plus size={18} /> Add member</button>} /><PreviewBanner /><div className="surface list-card"><div className="list-toolbar"><div><h2>Member directory</h2><p>{filtered.length} sample members</p></div><label className="search-box"><Search size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search members" aria-label="Search members" /></label></div>{filtered.length ? <MemberTable members={filtered} /> : <div className="empty-state"><Users size={28} /><strong>No matching members</strong><span>Try another name or member number.</span></div>}</div></>
 }
 
+function SettingsPage() {
+  const showToast = useToast()
+  const github = 'https://github.com/oldVinyl'
+  const copyGithub = async () => {
+    try {
+      await navigator.clipboard.writeText(github)
+      showToast('GitHub link copied', { tone: 'success' })
+    } catch {
+      showToast('Could not copy the link', { detail: 'Use the GitHub link below instead.', tone: 'error' })
+    }
+  }
+
+  return <>
+    <PageHeader title="Settings" subtitle="Your union’s policies and workspace details." />
+    <PreviewBanner />
+    <div className="settings-grid">
+      <section className="surface settings-placeholder"><span className="settings-icon"><Settings size={25} /></span><h2>Organisation settings</h2><p>Approval rules, rollover policy, payment methods, and branding will be available here when the secure backend is connected.</p><span className="phase-label">Configuration is in progress</span></section>
+      <section className="surface creator-card" aria-labelledby="creator-title"><div className="creator-mark" aria-hidden="true">V<span>.</span></div><span className="creator-eyebrow">MADE WITH CARE</span><h2 id="creator-title">Built by Vinette</h2><p>By Vinyl. Thoughtful tools for the people who keep communities moving.</p><div className="creator-actions"><a href={github} target="_blank" rel="noopener noreferrer" className="creator-link">github.com/oldVinyl <ExternalLink size={16} /></a><button type="button" className="copy-link" onClick={copyGithub}><Copy size={16} /> Copy link</button></div></section>
+    </div>
+  </>
+}
+
 function SimplePage({ title, subtitle, icon: Icon, heading, description }: { title: string; subtitle: string; icon: LucideIcon; heading: string; description: string }) {
   return <><PageHeader title={title} subtitle={subtitle} /><PreviewBanner /><div className="surface empty-page"><div className="empty-illustration"><Icon size={34} strokeWidth={1.6} /></div><h2>{heading}</h2><p>{description}</p><span className="phase-label">Financial workflows are being implemented</span></div></>
 }
 
 function App() {
+  const showToast = useToast()
   const [menuOpen, setMenuOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [asAt, setAsAt] = useState(new Date().toISOString().slice(0, 10))
@@ -100,8 +125,8 @@ function App() {
   return <div className="app-shell">
     <aside className={`sidebar ${menuOpen ? 'open' : ''}`}><Sidebar close={() => setMenuOpen(false)} /></aside>
     {menuOpen && <button className="scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
-    <div className="main-area"><header className="topbar"><div className="topbar-left"><button className="icon-button desktop-hidden" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button><span className="breadcrumb"><span className="breadcrumb-root">Workspace <span>/</span></span><strong>{section}</strong></span></div><div className="topbar-right"><label className="date-control"><CalendarDays size={17} /><span>As at</span><input type="date" value={asAt} max={new Date().toISOString().slice(0, 10)} onChange={event => setAsAt(event.target.value)} aria-label="As at date" /></label><ThemeButton /><button className="icon-button notification-button" aria-label="Notifications"><Bell size={19} /><span /></button><div className="profile"><div className="profile-avatar">TR</div><div><strong>Treasurer</strong><span>Workspace preview</span></div><ChevronDown size={15} /></div></div></header>
-      <main className="content"><Routes><Route path="/" element={<Overview asAt={asAt} />} /><Route path="/members" element={<Members />} /><Route path="/investments" element={<SimplePage title="Investments" subtitle="Manage every treasury bill cycle with confidence." icon={Landmark} heading="Investment cycles will appear here" description="Create, preview, approve, and track maturity from one place once the ledger is connected." />} /><Route path="/payments" element={<SimplePage title="Payments" subtitle="Follow contributions from submission to confirmation." icon={CreditCard} heading="Payments will appear here" description="Online payments and receipt verification will be tied to the approval and ledger workflows." />} /><Route path="/approvals" element={<SimplePage title="Approvals" subtitle="A second pair of eyes for money movements." icon={ClipboardCheck} heading="Approval requests will appear here" description="Every money action will show its maker, exact impact, and decision history before posting." />} /><Route path="/reports" element={<SimplePage title="Reports" subtitle="Reliable figures for every point in time." icon={FileChartColumnIncreasing} heading="Reports will appear here" description="The dashboard, allocation statements, member statements, and exports will use the same ledger calculations." />} /><Route path="/settings" element={<SimplePage title="Settings" subtitle="Keep the union’s policies in one place." icon={Settings} heading="Organisation settings will appear here" description="Approval rules, rollover policy, payment methods, and branding will be configurable with an audit trail." />} /></Routes></main>
+    <div className="main-area"><header className="topbar"><div className="topbar-left"><button className="icon-button desktop-hidden" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button><span className="breadcrumb"><span className="breadcrumb-root">Workspace <span>/</span></span><strong>{section}</strong></span></div><div className="topbar-right"><label className="date-control"><CalendarDays size={17} /><span>As at</span><input type="date" value={asAt} max={new Date().toISOString().slice(0, 10)} onChange={event => { setAsAt(event.target.value); showToast("Preview date changed", { detail: "Sample balances do not change with the date yet." }) }} aria-label="As at date" /></label><ThemeButton /><button className="icon-button notification-button" aria-label="Notifications" onClick={() => showToast("No live notifications yet", { detail: "The inbox will update when approval workflows are connected." })}><Bell size={19} /><span /></button><div className="profile"><div className="profile-avatar">TR</div><div><strong>Treasurer</strong><span>Workspace preview</span></div><ChevronDown size={15} /></div></div></header>
+      <main className="content"><Routes><Route path="/" element={<Overview asAt={asAt} />} /><Route path="/members" element={<Members />} /><Route path="/investments" element={<SimplePage title="Investments" subtitle="Manage every treasury bill cycle with confidence." icon={Landmark} heading="Investment cycles will appear here" description="Create, preview, approve, and track maturity from one place once the ledger is connected." />} /><Route path="/payments" element={<SimplePage title="Payments" subtitle="Follow contributions from submission to confirmation." icon={CreditCard} heading="Payments will appear here" description="Online payments and receipt verification will be tied to the approval and ledger workflows." />} /><Route path="/approvals" element={<SimplePage title="Approvals" subtitle="A second pair of eyes for money movements." icon={ClipboardCheck} heading="Approval requests will appear here" description="Every money action will show its maker, exact impact, and decision history before posting." />} /><Route path="/reports" element={<SimplePage title="Reports" subtitle="Reliable figures for every point in time." icon={FileChartColumnIncreasing} heading="Reports will appear here" description="The dashboard, allocation statements, member statements, and exports will use the same ledger calculations." />} /><Route path="/settings" element={<SettingsPage />} /></Routes></main>
     </div>
     <nav className="bottom-nav" aria-label="Mobile navigation">{nav.slice(0, 4).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} end={path === '/'} className={({ isActive }) => `bottom-link${isActive ? ' active' : ''}`}><Icon size={20} /><span>{label}</span></NavLink>)}<button className={`bottom-link${moreOpen ? ' active' : ''}`} onClick={() => setMoreOpen(!moreOpen)}><Menu size={20} /><span>More</span></button></nav>
     {moreOpen && <div className="more-sheet"><div className="sheet-top"><strong>More</strong><button className="icon-button" aria-label="Close more menu" onClick={() => setMoreOpen(false)}><X size={19} /></button></div>{nav.slice(4).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} className="sheet-link"><Icon size={20} />{label}<ArrowRight size={17} /></NavLink>)}</div>}
