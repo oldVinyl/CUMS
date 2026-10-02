@@ -97,6 +97,22 @@ class AuthControllerIntegrationTest {
             """, Integer.class, user)).isEqualTo(1);
     }
 
+    @Test
+    void tooManyAuthRequestsFromOneIpReturn429() throws Exception {
+        String body = json.writeValueAsString(Map.of("challenge", "invalid", "code", "123456"));
+        for (int attempt = 0; attempt < 20; attempt++) {
+            mvc.perform(post("/api/v1/auth/totp/verify")
+                .with(request -> { request.setRemoteAddr("192.0.2.90"); return request; })
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
+        }
+        mvc.perform(post("/api/v1/auth/totp/verify")
+            .with(request -> { request.setRemoteAddr("192.0.2.90"); return request; })
+            .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
+    }
+
     private String cookie(MvcResult result, String name) {
         return result.getResponse().getHeaders("Set-Cookie").stream()
             .filter(value -> value.startsWith(name + "="))
