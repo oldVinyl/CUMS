@@ -15,13 +15,14 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
-- [x] Flyway V1–V6 core financial, role, approval, and fiscal snapshot migrations tested against PostgreSQL 16
+- [x] Flyway V1–V7 core financial, role, approval, fiscal snapshot, and authentication-state migrations tested against PostgreSQL 16
 - [ ] Add remaining workflow tables and migration tests
 - [x] Structured API validation and access errors with trace IDs
 - [x] Append-only ledger and audit triggers with database tests
 - [x] AES-256-GCM private-field encryption, versioned keys, and blind indexes with tests
 - [ ] Audit service and sensitive-access logging
 - [x] Argon2id password hashing and basic common-password policy with tests
+- [x] Session, login-attempt, and TOTP recovery-code tables
 - [ ] Login, rotating sessions, CSRF, rate limiting, account lockout, and TOTP
 - [x] Seed six roles and permission grants; reject overlapping active assignments
 - [x] Read live permissions on each check; approved role changes take effect immediately
