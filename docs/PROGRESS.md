@@ -1,6 +1,6 @@
 # Progress
 
-Check an item only after implementation and tests pass. This list mirrors the master brief's phase plan.
+Check an item only after implementation and tests pass. Each item is small enough to show partial phase progress accurately.
 
 ## Phase 0 — Setup
 - [x] Initialize Git and `.gitignore`
@@ -15,14 +15,29 @@ Check an item only after implementation and tests pass. This list mirrors the ma
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
-- [ ] Flyway baseline, errors, audit, encryption (V1–V3 core schema, derived balances, append-only ledger/audit triggers, AES-GCM field encryption, and structured API errors with tests done; remaining workflow tables and audit service pending)
-- [ ] Authentication, sessions, CSRF, rate limiting, TOTP
-- [ ] Roles, permissions, assignment rules (six roles, permission grants, overlap protection, immediate permission checks, approved role changes, and last-admin/president revocation protection tested; authenticated endpoints and expiry/disable safeguards pending)
-- [ ] Responsive frontend shell, auth screens, theming, money formatter (shell, theme, toasts, formatter and preview done; auth screens pending)
+- [x] Flyway V1–V6 core financial, role, approval, and fiscal snapshot migrations tested against PostgreSQL 16
+- [ ] Add remaining workflow tables and migration tests
+- [x] Structured API validation and access errors with trace IDs
+- [x] Append-only ledger and audit triggers with database tests
+- [x] AES-256-GCM private-field encryption, versioned keys, and blind indexes with tests
+- [ ] Audit service and sensitive-access logging
+- [x] Argon2id password hashing and basic common-password policy with tests
+- [ ] Login, rotating sessions, CSRF, rate limiting, account lockout, and TOTP
+- [x] Seed six roles and permission grants; reject overlapping active assignments
+- [x] Read live permissions on each check; approved role changes take effect immediately
+- [x] Block revocation of the last active ADMIN or PRESIDENT through role-change approvals
+- [ ] Enforce permissions on authenticated endpoints and protect against expiry/disable removing the last officer
+- [x] Responsive frontend shell, light/dark theming, money formatter, feedback toasts, and Vinette credit
+- [ ] Auth screens and server-connected navigation
 
 ## Phase 2 — Members and ledger
 - [ ] Member CRUD and encrypted fields
-- [ ] Immutable ledger, fiscal years, backdating, approvals (approval service, current-day posting/reversal, date-bounded balances, and approved year-end close with snapshots tested; historical corrections, period unlock, and backdating pending)
+- [x] Transactional maker-checker approval service with distinct approvers and atomic action execution
+- [x] Approved current-day seed/addition posting to the immutable ledger
+- [x] Approved current-day manual contribution reversal with exact negative amount and reason
+- [x] Member balances computed from ledger entries through an as-at date
+- [x] Approved year-end close with balance-forward snapshots and fiscal-year locking
+- [ ] Historical corrections, backdating impact preview, period unlock, and snapshot recomputation
 - [ ] Attachment security and ledger UI
 
 ## Phase 3 — Investments
@@ -31,7 +46,8 @@ Check an item only after implementation and tests pass. This list mirrors the ma
 - [ ] Sheet A screen and fixture test
 
 ## Phase 4 — Dashboards and exports
-- [ ] As-at dashboard and snapshots
+- [x] Persist balance-forward snapshots at approved year-end close
+- [ ] As-at dashboard, Sheet B calculations, and filters
 - [ ] Sheet B fixture test, statements, xlsx/PDF, charts
 
 ## Phase 5 — Payments
