@@ -45,6 +45,8 @@ class CoreSchemaIntegrationTest {
             .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version = '3' AND success", Integer.class))
             .isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version = '4' AND success", Integer.class))
+            .isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM information_schema.columns WHERE table_name = 'members' AND column_name = 'phone'", Integer.class))
             .isZero();
     }
@@ -74,5 +76,37 @@ class CoreSchemaIntegrationTest {
         jdbc.update("INSERT INTO audit_log (id, action, entity_type) VALUES (?, 'TEST', 'FIXTURE')", auditId);
         assertThatThrownBy(() -> jdbc.update("DELETE FROM audit_log WHERE id = ?", auditId))
             .hasMessageContaining("append-only");
+    }
+
+    @Test
+    void administratorCannotApproveMoneyByDefault() {
+        assertThat(jdbc.queryForObject("""
+            SELECT count(*) FROM role_permissions rp
+            JOIN roles r ON r.id = rp.role_id
+            JOIN permissions p ON p.id = rp.permission_id
+            WHERE r.code = 'ADMIN' AND p.code = 'APPROVE'
+            """, Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("""
+            SELECT count(*) FROM role_permissions rp
+            JOIN roles r ON r.id = rp.role_id
+            JOIN permissions p ON p.id = rp.permission_id
+            WHERE r.code IN ('PRESIDENT', 'VICE_PRESIDENT', 'TREASURER') AND p.code = 'APPROVE'
+            """, Integer.class)).isEqualTo(3);
+    }
+
+    @Test
+    @Transactional
+    void activeRoleDatesCannotOverlap() {
+        UUID userId = UUID.randomUUID();
+        UUID roleId = jdbc.queryForObject("SELECT id FROM roles WHERE code = 'TREASURER'", UUID.class);
+        jdbc.update("INSERT INTO users (id, email, password_hash) VALUES (?, ?, 'fixture-hash')",
+            userId, "test-" + userId + "@invalid.example");
+        jdbc.update("INSERT INTO user_role_assignments (user_id, role_id, start_date, end_date) VALUES (?, ?, ?, ?)",
+            userId, roleId, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+        assertThatThrownBy(() -> jdbc.update("""
+            INSERT INTO user_role_assignments (user_id, role_id, start_date, end_date)
+            VALUES (?, ?, ?, ?)
+            """, userId, roleId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 12, 31)))
+            .hasMessageContaining("assignments_no_active_overlap");
     }
 }
