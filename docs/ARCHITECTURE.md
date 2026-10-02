@@ -21,3 +21,4 @@ The interface uses a navy frame (#083a4f), teal controls (#407e8c), aqua surface
 - Treat the UI as a view of the backend, never as the source of balances or permissions.
 - All data in seeds and tests is obviously fake.
 - `V1__core_financial_schema.sql` establishes members, users, role assignments, fiscal years, investments, payments, ledger entries, and audit records. The `member_balances` view derives balances from the ledger; database triggers reject ledger and audit updates or deletes. Later versioned migrations will add workflow-specific tables as those features are implemented.
+- `V2__encrypt_member_private_fields.sql` stores private member fields as ciphertext and keeps HMAC blind indexes for exact-match lookup. The AES-256-GCM field format starts with a version byte and uses a fresh nonce for each value. The application creates this service when `APP_ENCRYPTION_KEY` is configured; member data write paths must require it.

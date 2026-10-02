@@ -15,7 +15,7 @@ Check an item only after implementation and tests pass. This list mirrors the ma
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
-- [ ] Flyway baseline, errors, audit, encryption (V1 core schema, derived balances, append-only ledger/audit triggers and PostgreSQL integration tests done; remaining tables, API errors and encryption pending)
+- [ ] Flyway baseline, errors, audit, encryption (V1/V2 core schema, derived balances, append-only ledger/audit triggers and AES-GCM field encryption with tests done; remaining tables and API errors pending)
 - [ ] Authentication, sessions, CSRF, rate limiting, TOTP
 - [ ] Roles, permissions, assignment rules
 - [ ] Responsive frontend shell, auth screens, theming, money formatter (shell, theme, toasts, formatter and preview done; auth screens pending)
