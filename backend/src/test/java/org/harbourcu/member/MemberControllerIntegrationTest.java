@@ -1,0 +1,75 @@
+package org.harbourcu.member;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Cookie;
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.UUID;
+import org.harbourcu.security.SessionService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+@SpringBootTest(properties = "APP_ENCRYPTION_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+@AutoConfigureMockMvc
+class MemberControllerIntegrationTest {
+    @Autowired MockMvc mvc;
+    @Autowired ObjectMapper json;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired SessionService sessions;
+
+    @Test
+    @Transactional
+    void requiresSessionPermissionAndCsrfForMemberWrites() throws Exception {
+        mvc.perform(get("/api/v1/members")).andExpect(status().isUnauthorized());
+        UUID officer = user("TREASURER");
+        UUID ordinary = user("MEMBER");
+        SessionService.Tokens officerTokens = sessions.create(officer);
+        SessionService.Tokens memberTokens = sessions.create(ordinary);
+        mvc.perform(get("/api/v1/members").cookie(new Cookie("cu_access", memberTokens.access())))
+            .andExpect(status().isForbidden());
+        String number = "CU-WEB-" + UUID.randomUUID().toString().substring(0, 12);
+        String body = json.writeValueAsString(Map.of("memberNumber", number,
+            "fullName", "Esi Example", "joinDate", LocalDate.of(2025, 1, 1).toString(),
+            "phone", "0201234999"));
+        mvc.perform(post("/api/v1/members")
+            .cookie(new Cookie("cu_access", officerTokens.access()))
+            .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden());
+        String response = mvc.perform(post("/api/v1/members")
+            .cookie(new Cookie("cu_access", officerTokens.access()))
+            .header("Origin", "http://localhost:5173")
+            .header("X-CSRF-Token", officerTokens.csrf())
+            .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        UUID id = UUID.fromString(json.readTree(response).get("id").asText());
+        mvc.perform(get("/api/v1/members/{id}", id)
+            .cookie(new Cookie("cu_access", officerTokens.access())))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.phone").value("0201234999"));
+        assertThat(jdbc.queryForObject("""
+            SELECT count(*) FROM audit_log WHERE entity_id = ? AND action = 'SENSITIVE_MEMBER_VIEW'
+            """, Integer.class, id)).isEqualTo(1);
+    }
+
+    private UUID user(String role) {
+        UUID id = UUID.randomUUID();
+        jdbc.update("INSERT INTO users (id, email, password_hash) VALUES (?, ?, 'fixture-hash')",
+            id, "web-member-" + id + "@invalid.example");
+        jdbc.update("""
+            INSERT INTO user_role_assignments (user_id, role_id, start_date)
+            SELECT ?, id, current_date - 1 FROM roles WHERE code = ?
+            """, id, role);
+        return id;
+    }
+}

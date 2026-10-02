@@ -1,6 +1,6 @@
 export type AuthStage = 'AUTHENTICATED' | 'PASSWORD_CHANGE' | 'TOTP_SETUP' | 'TOTP_VERIFY'
 export type AuthStep = { stage: AuthStage; challenge: string | null; secret: string | null; recoveryCodes: string[] | null }
-export type Profile = { userId: string; email: string }
+export type Profile = { userId: string; email: string; permissions: string[] }
 
 export async function authPost(path: string, body?: object): Promise<AuthStep> {
   const response = await fetch(`/api/v1/auth/${path}`, {
@@ -20,7 +20,7 @@ export async function currentProfile(): Promise<Profile | null> {
   return response.ok ? response.json() as Promise<Profile> : null
 }
 
-function csrfCookie() {
+export function csrfCookie() {
   return document.cookie.split('; ').find(cookie => cookie.startsWith('cu_csrf='))?.split('=')[1] ?? ''
 }
 

@@ -11,17 +11,22 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper json) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper json,
+                                            Environment environment) throws Exception {
         return http
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/auth/**"))
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/auth/**", "/api/v1/members"))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/api/v1/health", "/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/v1/members", "/api/v1/members/*")
+                    .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
+                        environment.containsProperty("APP_ENCRYPTION_KEY")))
                 .anyRequest().denyAll())
             .formLogin(form -> form.disable())
             .httpBasic(basic -> basic.disable())

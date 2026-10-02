@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.harbourcu.common.ApiError;
 import org.harbourcu.common.TraceIdFilter;
 import org.harbourcu.common.AuditService;
+import org.harbourcu.role.PermissionService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -34,23 +35,25 @@ public class AuthController {
     public record CodeRequest(@NotBlank String challenge, @NotBlank String code) {}
     public record AuthStep(String stage, String challenge, String secret,
                            List<String> recoveryCodes) {}
-    public record Profile(UUID userId, String email) {}
+    public record Profile(UUID userId, String email, List<String> permissions) {}
 
     private final AuthFlowService flow;
     private final SessionService sessions;
     private final JdbcTemplate jdbc;
     private final AuditService audit;
+    private final PermissionService permissions;
     private final String allowedOrigin;
     private final boolean secureCookies;
 
     public AuthController(AuthFlowService flow, SessionService sessions, JdbcTemplate jdbc,
-                          AuditService audit,
+                          AuditService audit, PermissionService permissions,
                           @Value("${APP_ALLOWED_ORIGIN:http://localhost:5173}") String allowedOrigin,
                           @Value("${APP_COOKIE_SECURE:true}") boolean secureCookies) {
         this.flow = flow;
         this.sessions = sessions;
         this.jdbc = jdbc;
         this.audit = audit;
+        this.permissions = permissions;
         this.allowedOrigin = allowedOrigin;
         this.secureCookies = secureCookies;
     }
@@ -156,7 +159,8 @@ public class AuthController {
         if (identity == null) return unauthorized(request);
         String email = jdbc.queryForObject("SELECT email FROM users WHERE id = ?", String.class,
             identity.userId());
-        return ResponseEntity.ok(new Profile(identity.userId(), email));
+        return ResponseEntity.ok(new Profile(identity.userId(), email,
+            permissions.currentPermissions(identity.userId())));
     }
 
     private ResponseEntity<AuthStep> step(AuthFlowService.Step result) {

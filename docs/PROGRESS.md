@@ -15,13 +15,14 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
-- [x] Flyway V1–V9 core financial, role, approval, fiscal snapshot, and authentication-state migrations tested against PostgreSQL 16
+- [x] Flyway V1–V10 core financial, role, approval, fiscal snapshot, authentication, and member identity migrations tested against PostgreSQL 16
 - [ ] Add remaining workflow tables and migration tests
 - [x] Structured API validation and access errors with trace IDs
 - [x] Append-only ledger and audit triggers with database tests
 - [x] AES-256-GCM private-field encryption, versioned keys, and blind indexes with tests
 - [x] Data-minimal append-only audit service and authentication security events
-- [ ] Sensitive member access, file download, and export audit hooks when those endpoints are added
+- [x] Sensitive member-detail reads audited without storing private values in the event
+- [ ] File download and export audit hooks when those endpoints are added
 - [x] Argon2id password hashing and basic common-password policy with tests
 - [x] Session, login-attempt, and TOTP recovery-code tables
 - [x] Opaque access/refresh/CSRF token service with hashed storage, rotation, replay revocation, and tests
@@ -37,13 +38,16 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Seed six roles and permission grants; reject overlapping active assignments
 - [x] Read live permissions on each check; approved role changes take effect immediately
 - [x] Block revocation of the last active ADMIN or PRESIDENT through role-change approvals
-- [ ] Enforce permissions on authenticated endpoints and protect against expiry/disable removing the last officer
+- [x] Enforce current role permissions and session ownership on member API endpoints
+- [ ] Protect against role expiry or account disable removing the last ADMIN or PRESIDENT; extend permission checks to later APIs
 - [x] Responsive frontend shell, light/dark theming, money formatter, feedback toasts, and Vinette credit
 - [x] Server-connected sign-in, password-change, and TOTP screens with toast feedback
-- [ ] Replace preview pages with live permission-aware navigation and financial data
+- [x] Signed-in member directory and creation form use live API with role-aware controls and toast feedback
+- [ ] Replace remaining preview pages with live permission-aware navigation and financial data
 
 ## Phase 2 — Members and ledger
-- [ ] Member CRUD and encrypted fields
+- [x] Member create, list, and private detail read with encrypted fields, blind indexes, permission checks, CSRF, and integration tests
+- [ ] Member edit, deactivation, pagination/search, and complete record form
 - [x] Transactional maker-checker approval service with distinct approvers and atomic action execution
 - [x] Approved current-day seed/addition posting to the immutable ledger
 - [x] Approved current-day manual contribution reversal with exact negative amount and reason
