@@ -68,3 +68,25 @@ describe('sign in', () => {
     expect(await screen.findByText('Authentication could not be completed. Please try again.')).toBeTruthy()
   })
 })
+
+describe('live member directory', () => {
+  it('uses server records after authentication and opens an audited detail route', async () => {
+    const fetchMock = vi.fn((input: string) => {
+      if (input.endsWith('/auth/me')) return Promise.resolve({ ok: true, json: async () => ({
+        userId: 'officer-1', email: 'officer@invalid.example', permissions: ['MEMBER_READ'],
+      }) })
+      if (input === '/api/v1/members') return Promise.resolve({ ok: true, json: async () => [
+        { id: 'member-1', memberNumber: 'CU-101', fullName: 'Esi Live', status: 'ACTIVE' },
+      ] })
+      return Promise.resolve({ ok: true, json: async () => ({ id: 'member-1',
+        memberNumber: 'CU-101', fullName: 'Esi Live', status: 'ACTIVE', phone: '0201234999',
+        joinDate: '2025-01-01' }) })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<MemoryRouter initialEntries={['/members']}><ToastProvider><App /></ToastProvider></MemoryRouter>)
+    expect((await screen.findAllByText('Esi Live')).length).toBeGreaterThan(0)
+    fireEvent.click(screen.getAllByRole('button', { name: /view/i })[0])
+    expect(await screen.findByText('0201234999')).toBeTruthy()
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/members/member-1', { credentials: 'same-origin' })
+  })
+})
