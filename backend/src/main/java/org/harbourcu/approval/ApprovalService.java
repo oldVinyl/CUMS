@@ -91,7 +91,7 @@ public class ApprovalService {
             SELECT count(*) FROM approval_decisions WHERE request_id = ? AND decision = 'APPROVE'
             """, Integer.class, requestId);
         if (approvals != null && approvals >= request.requiredApprovals()) {
-            handlerFor(request.actionType()).execute(requestId, request.payload());
+            handlerFor(request.actionType()).execute(requestId, approverId, request.payload());
             resolve(requestId, "APPROVED");
         }
     }

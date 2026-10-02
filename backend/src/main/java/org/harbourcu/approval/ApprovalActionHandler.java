@@ -9,5 +9,5 @@ public interface ApprovalActionHandler {
 
     void validateSubmission(UUID makerId, JsonNode payload);
 
-    void execute(UUID requestId, JsonNode payload);
+    void execute(UUID requestId, UUID approverId, JsonNode payload);
 }

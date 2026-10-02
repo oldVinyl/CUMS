@@ -40,7 +40,7 @@ class ApprovalServiceIntegrationTest {
                 }
 
                 @Override
-                public void execute(UUID requestId, JsonNode payload) {
+                public void execute(UUID requestId, UUID approverId, JsonNode payload) {
                     if (payload.path("fail").asBoolean()) {
                         throw new IllegalStateException("Fixture execution failed");
                     }
