@@ -33,6 +33,16 @@ describe('workspace preview', () => {
     expect(screen.getByText('Dark theme on')).toBeTruthy()
   })
 
+  it('explains preview date changes and rejects an empty date', () => {
+    renderApp()
+    const date = screen.getByLabelText('As at date')
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+    fireEvent.change(date, { target: { value: yesterday } })
+    expect(screen.getByText('Preview date changed')).toBeTruthy()
+    fireEvent.change(date, { target: { value: '' } })
+    expect(screen.getByText('Choose a valid as-at date')).toBeTruthy()
+  })
+
   it('credits Vinette and links to Vinyl’s GitHub', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
