@@ -1,5 +1,5 @@
 export type AuthStage = 'AUTHENTICATED' | 'PASSWORD_CHANGE' | 'TOTP_SETUP' | 'TOTP_VERIFY'
-export type AuthStep = { stage: AuthStage; challenge: string | null; secret: string | null }
+export type AuthStep = { stage: AuthStage; challenge: string | null; secret: string | null; recoveryCodes: string[] | null }
 export type Profile = { userId: string; email: string }
 
 export async function authPost(path: string, body?: object): Promise<AuthStep> {
@@ -24,8 +24,8 @@ function csrfCookie() {
   return document.cookie.split('; ').find(cookie => cookie.startsWith('cu_csrf='))?.split('=')[1] ?? ''
 }
 
-export async function logout() {
-  const response = await fetch('/api/v1/auth/logout', {
+export async function logout(allDevices = false) {
+  const response = await fetch(`/api/v1/auth/${allDevices ? 'logout-all' : 'logout'}`, {
     method: 'POST', credentials: 'same-origin',
     headers: { 'X-CSRF-Token': csrfCookie() },
   })

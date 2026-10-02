@@ -72,6 +72,28 @@ class AuthControllerIntegrationTest {
             .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    @Transactional
+    void logoutAllRevokesOtherSessions() throws Exception {
+        UUID user = UUID.randomUUID();
+        String email = "web-" + user + "@invalid.example";
+        jdbc.update("INSERT INTO users (id, email, password_hash, force_password_change) VALUES (?, ?, ?, false)",
+            user, email, passwords.hashNewPassword("Flow compass boat 2026!"));
+        String body = json.writeValueAsString(Map.of("email", email,
+            "password", "Flow compass boat 2026!"));
+        MvcResult first = mvc.perform(post("/api/v1/auth/login")
+            .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk()).andReturn();
+        MvcResult second = mvc.perform(post("/api/v1/auth/login")
+            .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk()).andReturn();
+        mvc.perform(post("/api/v1/auth/logout-all")
+            .cookie(new Cookie("cu_access", cookie(first, "cu_access")))
+            .header("X-CSRF-Token", cookie(first, "cu_csrf")))
+            .andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/auth/me")
+            .cookie(new Cookie("cu_access", cookie(second, "cu_access"))))
+            .andExpect(status().isUnauthorized());
+    }
+
     private String cookie(MvcResult result, String name) {
         return result.getResponse().getHeaders("Set-Cookie").stream()
             .filter(value -> value.startsWith(name + "="))

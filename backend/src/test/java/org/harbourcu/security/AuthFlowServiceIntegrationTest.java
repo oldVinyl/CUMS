@@ -62,7 +62,9 @@ class AuthFlowServiceIntegrationTest {
             byte[].class, officer);
         byte[] secret = Base64.getDecoder().decode(fields.decrypt(stored));
         String code = totp.atStep(secret, Instant.now().getEpochSecond() / 30, 6);
-        SessionService.Tokens tokens = flow.confirmTotpSetup(setup.challenge(), code).orElseThrow();
+        AuthFlowService.Enrollment enrollment = flow.confirmTotpSetup(setup.challenge(), code).orElseThrow();
+        SessionService.Tokens tokens = enrollment.tokens();
+        assertThat(enrollment.recoveryCodes()).hasSize(10).doesNotHaveDuplicates();
         assertThat(sessions.resolveAccess(tokens.access())).isPresent();
         assertThat(flow.confirmTotpSetup(setup.challenge(), code)).isEmpty();
 
@@ -73,6 +75,13 @@ class AuthFlowServiceIntegrationTest {
             SELECT attempts FROM auth_challenges WHERE user_id = ? AND purpose = 'TOTP_VERIFY'
             ORDER BY created_at DESC LIMIT 1
             """, Integer.class, officer)).isEqualTo(1);
+
+        SessionService.Tokens recovered = flow.verifyTotp(verify.challenge(),
+            enrollment.recoveryCodes().getFirst()).orElseThrow();
+        assertThat(sessions.resolveAccess(recovered.access())).isPresent();
+        AuthFlowService.Step another = flow.begin(email(officer), NEW_PASSWORD, "192.0.2.46");
+        assertThat(flow.verifyTotp(another.challenge(), enrollment.recoveryCodes().getFirst()))
+            .isEmpty();
     }
 
     @Test

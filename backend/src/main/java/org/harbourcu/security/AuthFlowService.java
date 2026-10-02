@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthFlowService {
     public enum Stage { AUTHENTICATED, PASSWORD_CHANGE, TOTP_SETUP, TOTP_VERIFY }
     public record Step(Stage stage, String challenge, SessionService.Tokens tokens) {}
+    public record Enrollment(SessionService.Tokens tokens, List<String> recoveryCodes) {}
 
     private record Challenge(UUID id, UUID userId, String purpose, Instant expiresAt,
                              Instant consumedAt, int attempts, String userStatus) {}
@@ -31,16 +32,19 @@ public class AuthFlowService {
     private final SessionService sessions;
     private final TotpCodes totp;
     private final FieldEncryption fields;
+    private final RecoveryCodeService recoveryCodes;
     private final SecureRandom random = new SecureRandom();
 
     public AuthFlowService(JdbcTemplate jdbc, PasswordLoginService login, PasswordHasher passwords,
-                           SessionService sessions, TotpCodes totp, FieldEncryption fields) {
+                           SessionService sessions, TotpCodes totp, FieldEncryption fields,
+                           RecoveryCodeService recoveryCodes) {
         this.jdbc = jdbc;
         this.login = login;
         this.passwords = passwords;
         this.sessions = sessions;
         this.totp = totp;
         this.fields = fields;
+        this.recoveryCodes = recoveryCodes;
     }
 
     public Step begin(String email, String password, String remoteIp) {
@@ -98,7 +102,7 @@ public class AuthFlowService {
     }
 
     @Transactional
-    public Optional<SessionService.Tokens> confirmTotpSetup(String challengeToken, String code) {
+    public Optional<Enrollment> confirmTotpSetup(String challengeToken, String code) {
         Challenge challenge = activeChallenge(challengeToken, "TOTP_SETUP");
         if (challenge == null) {
             return Optional.empty();
@@ -121,7 +125,8 @@ public class AuthFlowService {
             return Optional.empty();
         }
         consumeAll(challenge.userId());
-        return Optional.of(sessions.create(challenge.userId()));
+        return Optional.of(new Enrollment(sessions.create(challenge.userId()),
+            recoveryCodes.issue(challenge.userId())));
     }
 
     @Transactional
@@ -129,6 +134,10 @@ public class AuthFlowService {
         Challenge challenge = activeChallenge(challengeToken, "TOTP_VERIFY");
         if (challenge == null) {
             return Optional.empty();
+        }
+        if (recoveryCodes.consume(challenge.userId(), code)) {
+            consumeAll(challenge.userId());
+            return Optional.of(sessions.create(challenge.userId()));
         }
         byte[] secret = secret(challenge.userId());
         OptionalLong step = secret == null ? OptionalLong.empty()

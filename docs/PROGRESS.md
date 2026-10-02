@@ -28,8 +28,10 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Database-backed login throttling and exponential account lockout with keyed identifier digests
 - [x] Password first-factor verification with generic failures and tests
 - [x] Password-change and TOTP challenges with encrypted enrollment secrets, attempt limits, replay protection, and integration tests
+- [x] One-time recovery codes issued at TOTP enrollment, stored as hashes, and accepted once for account recovery
 - [x] HTTP sign-in, refresh, logout, and profile endpoints with strict cookies, origin and CSRF checks, and integration tests
-- [ ] Complete HTTP rate limiting, recovery codes, logout everywhere, and authenticated route permission enforcement
+- [x] Account-wide session revocation and authenticated sign-out-on-all-devices action
+- [ ] Complete HTTP rate limiting, recovery-code regeneration, and authenticated route permission enforcement
 - [x] Seed six roles and permission grants; reject overlapping active assignments
 - [x] Read live permissions on each check; approved role changes take effect immediately
 - [x] Block revocation of the last active ADMIN or PRESIDENT through role-change approvals
