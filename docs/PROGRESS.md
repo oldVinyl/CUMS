@@ -23,6 +23,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Audit service and sensitive-access logging
 - [x] Argon2id password hashing and basic common-password policy with tests
 - [x] Session, login-attempt, and TOTP recovery-code tables
+- [x] Opaque access/refresh/CSRF token service with hashed storage, rotation, replay revocation, and tests
 - [ ] Login, rotating sessions, CSRF, rate limiting, account lockout, and TOTP
 - [x] Seed six roles and permission grants; reject overlapping active assignments
 - [x] Read live permissions on each check; approved role changes take effect immediately
