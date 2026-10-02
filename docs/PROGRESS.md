@@ -22,7 +22,7 @@ Check an item only after implementation and tests pass. This list mirrors the ma
 
 ## Phase 2 — Members and ledger
 - [ ] Member CRUD and encrypted fields
-- [ ] Immutable ledger, fiscal years, backdating, approvals (approval service, approved current-day contributions, and as-at balances across leap and fiscal-year boundaries tested; reversal workflow, period operations, and backdating pending)
+- [ ] Immutable ledger, fiscal years, backdating, approvals (approval service, current-day contribution posting and reversal, and date-bounded balances tested; historical corrections, period operations, and backdating pending)
 - [ ] Attachment security and ledger UI
 
 ## Phase 3 — Investments

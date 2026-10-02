@@ -81,6 +81,52 @@ class ContributionApprovalIntegrationTest {
             .hasMessageContaining("Fiscal year is not open");
     }
 
+    @Test
+    @Transactional
+    void approvedReversalExactlyOffsetsTodaysManualContribution() {
+        UUID member = member("ACTIVE");
+        UUID maker = user("TREASURER");
+        UUID checker = user("TREASURER");
+        UUID post = approvals.submit("LEDGER_POST", payload(member, "ADDITION", "25.75"), maker, 1);
+        approvals.decide(post, checker, Decision.APPROVE, null);
+        UUID original = jdbc.queryForObject("SELECT id FROM ledger_entries WHERE reference = ?",
+            UUID.class, "APR-" + post);
+        assertThat(balance(member)).isEqualByComparingTo("25.75");
+
+        var reversalPayload = json.createObjectNode()
+            .put("entryId", original.toString()).put("reason", "Fixture duplicate correction");
+        UUID reversal = approvals.submit("LEDGER_REVERSE", reversalPayload, maker, 1);
+        assertThat(balance(member)).isEqualByComparingTo("25.75");
+        approvals.decide(reversal, checker, Decision.APPROVE, null);
+        assertThat(balance(member)).isEqualByComparingTo("0");
+        assertThat(jdbc.queryForObject("""
+            SELECT amount FROM ledger_entries WHERE reversal_of = ?
+            """, BigDecimal.class, original)).isEqualByComparingTo("-25.75");
+        assertThatThrownBy(() -> approvals.submit("LEDGER_REVERSE", reversalPayload, maker, 1))
+            .hasMessageContaining("already been reversed");
+    }
+
+    @Test
+    @Transactional
+    void reversalRequiresReasonAndPermission() {
+        UUID member = member("ACTIVE");
+        UUID maker = user("TREASURER");
+        UUID checker = user("TREASURER");
+        UUID ordinaryMember = user("MEMBER");
+        UUID post = approvals.submit("LEDGER_POST", payload(member, "SEED", "10.00"), maker, 1);
+        approvals.decide(post, checker, Decision.APPROVE, null);
+        UUID original = jdbc.queryForObject("SELECT id FROM ledger_entries WHERE reference = ?",
+            UUID.class, "APR-" + post);
+        var missingReason = json.createObjectNode()
+            .put("entryId", original.toString()).put("reason", " ");
+        assertThatThrownBy(() -> approvals.submit("LEDGER_REVERSE", missingReason, maker, 1))
+            .hasMessageContaining("reason are required");
+        var valid = json.createObjectNode()
+            .put("entryId", original.toString()).put("reason", "Fixture correction");
+        assertThatThrownBy(() -> approvals.submit("LEDGER_REVERSE", valid, ordinaryMember, 1))
+            .hasMessageContaining("Maker cannot reverse");
+    }
+
     private com.fasterxml.jackson.databind.JsonNode payload(UUID member, String type, String amount) {
         return json.createObjectNode().put("memberId", member.toString())
             .put("type", type).put("amount", amount);
