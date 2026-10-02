@@ -10,12 +10,12 @@ Check an item only after implementation and tests pass. This list mirrors the ma
 - [x] React/Vite skeleton
 - [x] CI workflow, gitleaks configuration, ESLint
 - [x] Start PostgreSQL 16 and verify API health and protected-route denial against it
-- [ ] Confirm MailHog starts (Docker Hub pull failed with an unexpected EOF; retry when the network is stable)
+- [ ] Confirm MailHog starts (deferred at the owner's request after repeated Docker Hub pull failures; revisit before email notifications and Phase 8 acceptance)
 - [ ] Testcontainers PostgreSQL smoke test (local dependency download failed; PostgreSQL startup was verified manually)
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
-- [ ] Flyway baseline, errors, audit, encryption
+- [ ] Flyway baseline, errors, audit, encryption (V1 core schema, derived balances, append-only ledger/audit triggers and PostgreSQL integration tests done; remaining tables, API errors and encryption pending)
 - [ ] Authentication, sessions, CSRF, rate limiting, TOTP
 - [ ] Roles, permissions, assignment rules
 - [ ] Responsive frontend shell, auth screens, theming, money formatter (shell, theme, toasts, formatter and preview done; auth screens pending)

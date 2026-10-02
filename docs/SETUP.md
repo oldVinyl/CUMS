@@ -16,9 +16,9 @@ Copy `.env.example` to `.env`. Windows PowerShell: `Copy-Item .env.example .env`
 
 ## 3. Start the app
 
-Run `docker compose up -d` and expect PostgreSQL and MailHog to become healthy. In `backend`, run `./mvnw spring-boot:run` (Windows: `.\mvnw.cmd spring-boot:run`); `http://localhost:8080/api/v1/health` should return `{ "status": "UP" }`. In `frontend`, run `npm ci` then `npm run dev`; open the Vite URL printed by the command, normally `http://localhost:5173`. The interface is currently an explicitly marked design preview; sample balances cannot be posted. Run `./mvnw test` in `backend` and `npm run lint; npm run test; npm run build` in `frontend` to check the current slice.
+For now, run `docker compose up -d postgres`. MailHog is deferred until email notifications are implemented; keep its Compose service for that milestone. In `backend`, run `./mvnw spring-boot:run` (Windows: `.\mvnw.cmd spring-boot:run`); `http://localhost:8080/api/v1/health` should return `{ "status": "UP" }`. In `frontend`, run `npm ci` then `npm run dev`; open the Vite URL printed by the command, normally `http://localhost:5173`. The interface is currently an explicitly marked design preview; sample balances cannot be posted. Run `./mvnw test` in `backend` and `npm run lint; npm run test; npm run build` in `frontend` to check the current slice.
 
-If Docker Hub reports `unexpected EOF` while pulling MailHog, rerun `docker compose pull mailhog` and then `docker compose up -d`; the PostgreSQL service can be started independently with `docker compose up -d postgres` while the pull is retried.
+When email notifications are ready, start MailHog with `docker compose up -d mailhog` and verify its SMTP and web ports. A previous Docker Hub pull failed with `unexpected EOF`; no email delivery test has passed yet.
 
 ## 4. Repository and production services
 

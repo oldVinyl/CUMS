@@ -20,4 +20,4 @@ The interface uses a navy frame (#083a4f), teal controls (#407e8c), aqua surface
 - Distinguish economic `effective_date` from immutable `recorded_at`.
 - Treat the UI as a view of the backend, never as the source of balances or permissions.
 - All data in seeds and tests is obviously fake.
-
+- `V1__core_financial_schema.sql` establishes members, users, role assignments, fiscal years, investments, payments, ledger entries, and audit records. The `member_balances` view derives balances from the ledger; database triggers reject ledger and audit updates or deletes. Later versioned migrations will add workflow-specific tables as those features are implemented.
