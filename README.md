@@ -6,3 +6,4 @@ Ghana cedi credit union management system. The authoritative build requirements 
 
 See [docs/SETUP.md](docs/SETUP.md). The repository uses Java 21/Spring Boot, PostgreSQL 16, and React 18/TypeScript/Vite.
 
+The current interface is a **design preview with sample figures**. Review the [desktop](docs/ui-preview-1440.png) and [mobile](docs/ui-preview-375.png) captures. Financial actions are disabled while the secure workflows are built.
