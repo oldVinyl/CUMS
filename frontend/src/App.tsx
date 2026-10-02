@@ -11,9 +11,10 @@ import type { LucideIcon } from 'lucide-react'
 import { formatMoney } from './money'
 import { useToast } from './toast-context'
 import AuthPage from './AuthPage'
-import { currentProfile, logout } from './auth-api'
+import { currentProfile, linkGoogle, logout } from './auth-api'
 import type { Profile } from './auth-api'
 import LiveMembers from './LiveMembers'
+import GoogleButton from './GoogleButton'
 
 type NavItem = { label: string; path: string; icon: LucideIcon }
 
@@ -109,7 +110,7 @@ function SettingsPage({ profile, signOutAll }: { profile: Profile | null; signOu
     <PreviewBanner />
     <div className="settings-grid">
       <section className="surface settings-placeholder"><span className="settings-icon"><Settings size={25} /></span><h2>Organisation settings</h2><p>Approval rules, rollover policy, payment methods, and branding will be available here when the secure backend is connected.</p><span className="phase-label">Configuration is in progress</span></section>
-      {profile && <section className="surface settings-placeholder"><span className="settings-icon"><ShieldCheck size={25} /></span><h2>Account security</h2><p>Signed in as {profile.email}. End every active session if you have lost a device or need to secure your account.</p><button type="button" className="secondary-button" onClick={signOutAll}>Sign out on all devices</button></section>}
+      {profile && <section className="surface settings-placeholder"><span className="settings-icon"><ShieldCheck size={25} /></span><h2>Account security</h2><p>Signed in as {profile.email}. Link Google for another sign-in option, or end every active session if you have lost a device.</p><GoogleButton mode="link" onCredential={idToken => { void linkGoogle(idToken).then(() => showToast('Google account linked', { tone: 'success' })).catch(error => showToast('Could not link Google', { detail: error instanceof Error ? error.message : 'Please try again.', tone: 'error' })) }} /><button type="button" className="secondary-button" onClick={signOutAll}>Sign out on all devices</button></section>}
       <section className="surface creator-card" aria-labelledby="creator-title"><div className="creator-mark" aria-hidden="true">V<span>.</span></div><span className="creator-eyebrow">MADE WITH CARE</span><h2 id="creator-title">Built by Vinette</h2><p>By Vinyl. Thoughtful tools for the people who keep communities moving.</p><div className="creator-actions"><a href={github} target="_blank" rel="noopener noreferrer" className="creator-link">github.com/oldVinyl <ExternalLink size={16} /></a><button type="button" className="copy-link" onClick={copyGithub}><Copy size={16} /> Copy link</button></div></section>
     </div>
   </>

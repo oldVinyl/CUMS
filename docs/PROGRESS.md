@@ -15,7 +15,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
-- [x] Flyway V1–V12 core financial, role, approval, fiscal snapshot, authentication, and member identity migrations tested against PostgreSQL 16
+- [x] Flyway V1–V13 core financial, role, approval, fiscal snapshot, authentication, member identity, and Google link migrations tested against PostgreSQL 16
 - [ ] Add remaining workflow tables and migration tests
 - [x] Structured API validation and access errors with trace IDs
 - [x] Append-only ledger and audit triggers with database tests
@@ -43,6 +43,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Responsive frontend shell, light/dark theming, money formatter, feedback toasts, and Vinette credit
 - [x] Server-connected sign-in, password-change, and TOTP screens with toast feedback
 - [x] Scannable TOTP setup QR with a manual key fallback
+- [x] Google ID token verification, one-use nonce, explicit account linking, and gated UI for configured client IDs
+- [x] Require every account to choose a protected sign-in method on first sign-in
 - [x] React Hot Toast themes for light/dark success, information, and error feedback with multiline detail and promise feedback for member mutations
 - [ ] Offer TOTP, passkey, and Google sign-in to every account, including first sign-in preference setup
 - [x] Signed-in member directory and creation form use live API with role-aware controls and toast feedback

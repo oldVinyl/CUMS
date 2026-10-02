@@ -38,3 +38,15 @@ export async function logout(allDevices = false) {
   })
   if (!response.ok) throw new Error('Could not sign out. Please try again.')
 }
+
+export async function linkGoogle(idToken: string) {
+  const response = await fetch('/api/v1/auth/google/link', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfCookie() },
+    body: JSON.stringify({ idToken }),
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => null) as { message?: string } | null
+    throw new Error(error?.message ?? 'Could not link Google. Please try again.')
+  }
+}

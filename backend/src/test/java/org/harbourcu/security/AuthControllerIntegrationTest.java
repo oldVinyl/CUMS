@@ -10,6 +10,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Base64;
+import java.time.Instant;
+import org.harbourcu.common.FieldEncryption;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -31,6 +34,9 @@ class AuthControllerIntegrationTest {
     @Autowired ObjectMapper json;
     @Autowired JdbcTemplate jdbc;
     @Autowired PasswordHasher passwords;
+    @Autowired FieldEncryption fields;
+    @Autowired TotpCodes totp;
+    @Autowired SessionService sessions;
 
     @Test
     void invalidLoginHasSpecificButAccountNeutralFeedback() throws Exception {
@@ -58,12 +64,27 @@ class AuthControllerIntegrationTest {
         MvcResult login = mvc.perform(post("/api/v1/auth/login")
             .header("Origin", "http://localhost:5173")
             .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.stage").value("TOTP_SETUP"))
+            .andReturn();
+        String challenge = json.readTree(login.getResponse().getContentAsString())
+            .get("challenge").asText();
+        mvc.perform(post("/api/v1/auth/totp/setup")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json.writeValueAsString(Map.of("challenge", challenge))))
+            .andExpect(status().isOk());
+        byte[] encrypted = jdbc.queryForObject("SELECT totp_secret_ciphertext FROM users WHERE id = ?",
+            byte[].class, user);
+        byte[] secret = Base64.getDecoder().decode(fields.decrypt(encrypted));
+        String code = totp.atStep(secret, Instant.now().getEpochSecond() / 30, 6);
+        MvcResult enrolled = mvc.perform(post("/api/v1/auth/totp/confirm")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json.writeValueAsString(Map.of("challenge", challenge, "code", code))))
             .andExpect(status().isOk()).andExpect(jsonPath("$.stage").value("AUTHENTICATED"))
             .andReturn();
-        String access = cookie(login, "cu_access");
-        String refresh = cookie(login, "cu_refresh");
-        String csrf = cookie(login, "cu_csrf");
-        assertThat(login.getResponse().getHeaders("Set-Cookie"))
+        String access = cookie(enrolled, "cu_access");
+        String refresh = cookie(enrolled, "cu_refresh");
+        String csrf = cookie(enrolled, "cu_csrf");
+        assertThat(enrolled.getResponse().getHeaders("Set-Cookie"))
             .anySatisfy(header -> assertThat(header).contains("HttpOnly", "SameSite=Strict"));
         mvc.perform(get("/api/v1/auth/me").cookie(new Cookie("cu_access", access)))
             .andExpect(status().isOk()).andExpect(jsonPath("$.userId").value(user.toString()));
@@ -91,18 +112,14 @@ class AuthControllerIntegrationTest {
         String email = "web-" + user + "@invalid.example";
         jdbc.update("INSERT INTO users (id, email, password_hash, force_password_change) VALUES (?, ?, ?, false)",
             user, email, passwords.hashNewPassword("Flow compass boat 2026!"));
-        String body = json.writeValueAsString(Map.of("email", email,
-            "password", "Flow compass boat 2026!"));
-        MvcResult first = mvc.perform(post("/api/v1/auth/login")
-            .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk()).andReturn();
-        MvcResult second = mvc.perform(post("/api/v1/auth/login")
-            .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk()).andReturn();
+        SessionService.Tokens first = sessions.create(user);
+        SessionService.Tokens second = sessions.create(user);
         mvc.perform(post("/api/v1/auth/logout-all")
-            .cookie(new Cookie("cu_access", cookie(first, "cu_access")))
-            .header("X-CSRF-Token", cookie(first, "cu_csrf")))
+            .cookie(new Cookie("cu_access", first.access()))
+            .header("X-CSRF-Token", first.csrf()))
             .andExpect(status().isNoContent());
         mvc.perform(get("/api/v1/auth/me")
-            .cookie(new Cookie("cu_access", cookie(second, "cu_access"))))
+            .cookie(new Cookie("cu_access", second.access())))
             .andExpect(status().isUnauthorized());
         assertThat(jdbc.queryForObject("""
             SELECT count(*) FROM audit_log WHERE actor_id = ? AND action = 'LOGOUT_ALL'

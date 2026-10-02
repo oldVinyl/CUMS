@@ -123,7 +123,8 @@ public class AuthFlowService {
             return Optional.empty();
         }
         int changed = jdbc.update("""
-            UPDATE users SET totp_enabled_at = now(), last_totp_step = ?
+            UPDATE users SET totp_enabled_at = now(), last_totp_step = ?,
+                             preferred_sign_in_method = coalesce(preferred_sign_in_method, 'TOTP')
             WHERE id = ? AND totp_enabled_at IS NULL
             """, step.getAsLong(), challenge.userId());
         if (changed != 1) {
@@ -175,23 +176,15 @@ public class AuthFlowService {
         if (totpEnabled) {
             return new Step(Stage.TOTP_VERIFY, issue(userId, "TOTP_VERIFY"), null);
         }
-        if (officer(userId)) {
-            return new Step(Stage.TOTP_SETUP, issue(userId, "TOTP_SETUP"), null);
-        }
-        return new Step(Stage.AUTHENTICATED, null, sessions.create(userId));
+        return new Step(Stage.TOTP_SETUP, issue(userId, "TOTP_SETUP"), null);
     }
 
-    private boolean officer(UUID userId) {
-        Boolean result = jdbc.queryForObject("""
-            SELECT EXISTS (
-                SELECT 1 FROM user_role_assignments a
-                JOIN roles r ON r.id = a.role_id
-                WHERE a.user_id = ? AND r.code <> 'MEMBER' AND a.revoked_at IS NULL
-                  AND a.start_date <= (now() AT TIME ZONE 'Africa/Accra')::date
-                  AND (a.end_date IS NULL OR a.end_date >= (now() AT TIME ZONE 'Africa/Accra')::date)
-            )
-            """, Boolean.class, userId);
-        return Boolean.TRUE.equals(result);
+    @Transactional
+    public Optional<UUID> consumeAlternativeSetup(String challengeToken) {
+        Challenge challenge = activeChallenge(challengeToken, "TOTP_SETUP");
+        if (challenge == null) return Optional.empty();
+        consumeAll(challenge.userId());
+        return Optional.of(challenge.userId());
     }
 
     private String issue(UUID userId, String purpose) {

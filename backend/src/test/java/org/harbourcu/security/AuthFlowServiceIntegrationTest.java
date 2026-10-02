@@ -89,11 +89,11 @@ class AuthFlowServiceIntegrationTest {
 
     @Test
     @Transactional
-    void ordinaryUserGetsSessionAfterPasswordAndBadCodesExhaustChallenge() {
+    void ordinaryUserMustChooseSignInMethodAndBadCodesExhaustChallenge() {
         UUID member = user(false);
-        AuthFlowService.Step direct = flow.begin(email(member), INITIAL_PASSWORD, "192.0.2.44");
-        assertThat(direct.stage()).isEqualTo(AuthFlowService.Stage.AUTHENTICATED);
-        assertThat(sessions.resolveAccess(direct.tokens().access())).isPresent();
+        AuthFlowService.Step setupForMember = flow.begin(email(member), INITIAL_PASSWORD, "192.0.2.44");
+        assertThat(setupForMember.stage()).isEqualTo(AuthFlowService.Stage.TOTP_SETUP);
+        assertThat(setupForMember.tokens()).isNull();
 
         UUID officer = user(false);
         jdbc.update("""

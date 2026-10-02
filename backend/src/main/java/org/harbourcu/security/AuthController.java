@@ -172,7 +172,7 @@ public class AuthController {
         return ResponseEntity.ok(new AuthStep(result.stage().name(), result.challenge(), null, null));
     }
 
-    private ResponseEntity<AuthStep> authenticated(SessionService.Tokens tokens) {
+    ResponseEntity<AuthStep> authenticated(SessionService.Tokens tokens) {
         return authenticated(tokens, null);
     }
 
