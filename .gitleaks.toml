@@ -1,0 +1,9 @@
+title = "Credit union secret scan"
+
+[allowlist]
+  description = "Documented fake placeholder values"
+  regexes = [
+    '''replace-with-openssl-rand-base64-32''',
+    '''replace-with-test-secret-if-used'''
+  ]
+

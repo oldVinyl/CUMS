@@ -12,13 +12,12 @@ This document is updated as each phase becomes runnable. Current status is in [P
 
 ## 2. Local configuration
 
-Copy `.env.example` to `.env` after it exists in Phase 0. Windows PowerShell: `Copy-Item .env.example .env`; macOS/Linux: `cp .env.example .env`. Keep `.env` out of Git. Generate keys with `openssl rand -base64 32`, once for each secret. The initial admin email and password will come only from environment variables.
+Copy `.env.example` to `.env`. Windows PowerShell: `Copy-Item .env.example .env`; macOS/Linux: `cp .env.example .env`. Keep `.env` out of Git. Generate keys with `openssl rand -base64 32`, once for each secret. Authentication is still under development; there is no seeded login yet.
 
 ## 3. Start the app
 
-After Phase 0 is complete: run `docker compose up -d` and expect PostgreSQL and MailHog to become healthy. Run `./mvnw spring-boot:run` in `backend` (Windows: `.\mvnw.cmd spring-boot:run`) and `npm install; npm run dev` in `frontend`. Open the Vite URL printed by the command. Until authentication is complete, only the health endpoint is useful.
+Run `docker compose up -d` and expect PostgreSQL and MailHog to become healthy. In `backend`, run `./mvnw spring-boot:run` (Windows: `.\mvnw.cmd spring-boot:run`); `http://localhost:8080/api/v1/health` should return `{ "status": "UP" }`. In `frontend`, run `npm ci` then `npm run dev`; open the Vite URL printed by the command, normally `http://localhost:5173`. The interface is currently an explicitly marked design preview; sample balances cannot be posted. Run `./mvnw test` in `backend` and `npm run lint; npm run test; npm run build` in `frontend` to check the current slice.
 
 ## 4. Repository and production services
 
 Create a **private** repository in GitHub (`New repository` → `Private`), add the remote with `git remote add origin <private-repo-url>`, then `git push -u origin main`. In GitHub, review `Settings → Security → Code security and analysis` for secret scanning and `Settings → Security → Advanced Security` or Dependabot settings as available to the account. Production setup, Paystack test/live keys, SMTP, S3-compatible storage, backups, and first-day onboarding instructions will be completed alongside their implemented features.
-
