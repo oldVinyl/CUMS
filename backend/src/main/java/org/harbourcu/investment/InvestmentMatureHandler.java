@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class InvestmentMatureHandler implements ApprovalActionHandler {
     private record Maturity(UUID id, BigDecimal actualProceeds) {}
-    private record Cycle(String status, LocalDate maturityDate, BigDecimal cost) {}
+    private record Cycle(String status, LocalDate maturityDate, BigDecimal cost, int revision) {}
     private record Row(UUID memberId, BigDecimal participation, BigDecimal costShare) {}
 
     private final JdbcTemplate jdbc;
@@ -38,12 +38,7 @@ public class InvestmentMatureHandler implements ApprovalActionHandler {
         Maturity maturity = parse(payload);
         Cycle cycle = load(maturity.id(), true);
         requireMaturable(cycle);
-        Boolean pending = jdbc.queryForObject("""
-            SELECT EXISTS (SELECT 1 FROM approval_requests
-                WHERE action_type = 'INVESTMENT_MATURE' AND status = 'PENDING'
-                  AND payload ->> 'investmentId' = ?)
-            """, Boolean.class, maturity.id().toString());
-        if (Boolean.TRUE.equals(pending)) throw new IllegalStateException("Maturity already awaits approval");
+        investments.requireNoPending(maturity.id());
     }
 
     @Override
@@ -77,9 +72,9 @@ public class InvestmentMatureHandler implements ApprovalActionHandler {
             BigDecimal income = actualShare.subtract(row.costShare());
             jdbc.update("""
                 INSERT INTO investment_maturity_allocations
-                    (investment_id, member_id, actual_maturity_share, actual_income_share)
-                VALUES (?, ?, ?, ?)
-                """, maturity.id(), row.memberId(), actualShare, income);
+                    (investment_id, member_id, actual_maturity_share, actual_income_share, revision)
+                VALUES (?, ?, ?, ?, ?)
+                """, maturity.id(), row.memberId(), actualShare, income, cycle.revision());
             if (income.signum() != 0) {
                 jdbc.update("""
                     INSERT INTO ledger_entries
@@ -104,10 +99,10 @@ public class InvestmentMatureHandler implements ApprovalActionHandler {
 
     private Cycle load(UUID id, boolean lock) {
         List<Cycle> rows = jdbc.query("""
-            SELECT status, maturity_date, cost FROM investments WHERE id = ?
+            SELECT status, maturity_date, cost, revision FROM investments WHERE id = ?
             """ + (lock ? " FOR UPDATE" : ""), (row, ignored) ->
             new Cycle(row.getString("status"), row.getDate("maturity_date").toLocalDate(),
-                row.getBigDecimal("cost")), id);
+                row.getBigDecimal("cost"), row.getInt("revision")), id);
         if (rows.isEmpty()) throw new IllegalArgumentException("Investment not found");
         return rows.getFirst();
     }

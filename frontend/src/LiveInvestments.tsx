@@ -18,6 +18,7 @@ type Summary = {
   maturityValue: string;
   actualProceeds: string | null;
   status: string;
+  revision: number;
 };
 type Allocation = {
   memberId: string;
@@ -38,6 +39,7 @@ type Detail = {
     actualMaturityShare: string;
     actualIncomeShare: string;
   }[];
+  history?: { revision: number; reason: string; status: string; purchaseDate: string; maturityDate: string }[];
   pool: string;
   costDifference: string;
   expectedIncome: string;
@@ -48,6 +50,8 @@ type Pending = {
   investmentId: string;
   makerId: string;
   actionType: string;
+  reason: string | null;
+  replacementMaturityDate: string | null;
   institution: string | null;
   purchaseDate: string;
   cost: string;
@@ -99,6 +103,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
   const showPromiseToast = usePromiseToast();
   const canRead = profile.permissions.includes("INVESTMENT_READ");
   const canWrite = profile.permissions.includes("INVESTMENT_WRITE");
+  const canReverse = canWrite && profile.permissions.includes("CYCLE_REPOST");
   const canApprove = profile.permissions.includes("APPROVE") && canRead;
   const [items, setItems] = useState<Summary[]>([]);
   const [pending, setPending] = useState<Pending[]>([]);
@@ -109,6 +114,9 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
   const [settleConfirm, setSettleConfirm] = useState(false);
   const [discardConfirm, setDiscardConfirm] = useState(false);
   const [discardReason, setDiscardReason] = useState("");
+  const [reverseOpen, setReverseOpen] = useState(false);
+  const [reverseReason, setReverseReason] = useState("");
+  const [replacementMaturity, setReplacementMaturity] = useState("");
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [decisionComment, setDecisionComment] = useState("");
@@ -154,6 +162,9 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
     try {
       const result = await request<Detail>(`/${id}`);
       setEditing(null);
+      setReverseOpen(false);
+      setReverseReason("");
+      setReplacementMaturity(result.investment.maturityDate > businessToday() ? result.investment.maturityDate : "");
       setDiscardConfirm(false);
       setDiscardReason("");
       setActualProceeds(String(result.investment.maturityValue));
@@ -187,7 +198,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
               { policy: rolloverPolicy, draft })
           : request<{ id: string }>("", "POST", draft),
         {
-          loading: "Creating investment draft…",
+          loading: "Creating investment draftâ€¦",
           success: "Draft created",
           error: "Could not create draft",
         },
@@ -210,7 +221,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
       await showPromiseToast(
         request(`/${detail.investment.id}/submit`, "POST"),
         {
-          loading: "Sending for approval…",
+          loading: "Sending for approvalâ€¦",
           success: "Approval requested",
           error: "Could not request approval",
         },
@@ -235,7 +246,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
           { amount: editAmount, reason: editReason },
         ),
         {
-          loading: "Updating participation…",
+          loading: "Updating participationâ€¦",
           success: "Participation updated",
           error: "Could not update participation",
         },
@@ -258,7 +269,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
       await showPromiseToast(
         request(`/${detail.investment.id}/mature`, "POST", { actualProceeds }),
         {
-          loading: "Sending maturity for approval…",
+          loading: "Sending maturity for approvalâ€¦",
           success: "Maturity approval requested",
           error: "Could not request maturity approval",
         },
@@ -271,12 +282,26 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
     }
   };
 
+  const submitReversal = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!detail) return;
+    setBusy(true);
+    try {
+      await showPromiseToast(request(`/${detail.investment.id}/reverse`, "POST", {
+        revision: detail.investment.revision, reason: reverseReason, maturityDate: replacementMaturity,
+      }), { loading: "Sending reversal for approval…", success: "Reversal approval requested", error: "Could not request reversal" });
+      setReverseOpen(false);
+      await load();
+    } catch { /* Promise toast includes server feedback. */ }
+    finally { setBusy(false); }
+  };
+
   const submitSettlement = async () => {
     if (!detail) return;
     setBusy(true);
     try {
       await showPromiseToast(request(`/${detail.investment.id}/settle`, "POST"), {
-        loading: "Sending settlement for approval…",
+        loading: "Sending settlement for approvalâ€¦",
         success: "Settlement approval requested",
         error: "Could not request settlement approval",
       });
@@ -293,7 +318,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
     setBusy(true);
     try {
       await showPromiseToast(request(`/approvals/${item.id}/cancel`, "POST"), {
-        loading: "Cancelling approval request…",
+        loading: "Cancelling approval requestâ€¦",
         success: "Approval request cancelled",
         error: "Could not cancel approval request",
       });
@@ -330,7 +355,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
     try {
       await showPromiseToast(
         request(`/${detail.investment.id}/discard`, "POST", { reason: discardReason }),
-        { loading: "Discarding draft…", success: "Draft discarded", error: "Could not discard draft" },
+        { loading: "Discarding draftâ€¦", success: "Draft discarded", error: "Could not discard draft" },
       );
       setDiscardConfirm(false);
       setDiscardReason("");
@@ -384,8 +409,8 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
         {
           loading:
             decision === "APPROVE"
-              ? "Approving investment…"
-              : "Rejecting request…",
+              ? "Approving investmentâ€¦"
+              : "Rejecting requestâ€¦",
           success:
             decision === "APPROVE"
               ? item.actionType === "INVESTMENT_MATURE"
@@ -439,8 +464,8 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
           <h2>{rolloverSource ? "New rollover draft" : "New treasury bill draft"}</h2>
           <p>
             {rolloverSource
-              ? "Participation starts from the matured cycle’s eligible member balances. Review each share before approval."
-              : "Participation uses today’s uninvested member balances. You can review every share before asking for approval."}
+              ? "Participation starts from the matured cycleâ€™s eligible member balances. Review each share before approval."
+              : "Participation uses todayâ€™s uninvested member balances. You can review every share before asking for approval."}
           </p>
           <form onSubmit={create}>
             <div className="member-form-grid">
@@ -503,7 +528,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
                 />
               </label>
               <label>
-                Cost (GH₵)
+                Cost (GHâ‚µ)
                 <input
                   type="number"
                   min="0.01"
@@ -514,7 +539,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
                 />
               </label>
               <label>
-                Expected maturity value (GH₵)
+                Expected maturity value (GHâ‚µ)
                 <input
                   type="number"
                   min="0"
@@ -536,7 +561,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
           <div>
             <h2>Investment cycles</h2>
             <p>
-              {loaded ? `${items.length} recorded cycles` : "Loading cycles…"}
+              {loaded ? `${items.length} recorded cycles` : "Loading cyclesâ€¦"}
             </p>
           </div>
         </div>
@@ -593,7 +618,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
             <div>
               <h2>Allocation preview</h2>
               <p>
-                {detail.investment.institution || "Treasury bill"} ·{" "}
+                {detail.investment.institution || "Treasury bill"} Â·{" "}
                 {detail.investment.status}
               </p>
             </div>
@@ -601,6 +626,31 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
               Close
             </button>
           </div>
+          {(detail.history?.length ?? 0) > 0 && <details className="investment-edit"><summary>Approved revision history</summary>
+            {detail.history?.map(item => <article key={item.revision}><h3>Revision {item.revision} · {item.status}</h3>
+              <p>{item.purchaseDate} to {item.maturityDate}</p><p>Reversal reason: {item.reason}</p></article>)}
+          </details>}
+          {canReverse && ["POSTED", "MATURED"].includes(detail.investment.status) && (
+            <div className="investment-action-bar">
+              <button className="secondary-button" disabled={busy || pending.some(item => item.investmentId === detail.investment.id)}
+                onClick={() => setReverseOpen(value => !value)}>Reverse and return to draft</button>
+            </div>
+          )}
+          {reverseOpen && (
+            <form className="investment-edit" onSubmit={submitReversal}>
+              <h3>Request investment reversal</h3>
+              <p>A different person must approve today. Member income is compensated today; earlier statements keep their original history.
+                The investment returns to a new draft purchased today. Its approved allocation is preserved in revision history.
+                Dependent rollover drafts or committed income must be resolved first.</p>
+              <div className="investment-edit-fields">
+                <label>Reason<textarea required maxLength={1000} value={reverseReason} onChange={event => setReverseReason(event.target.value)} rows={3} /></label>
+                <label>Replacement maturity date<input type="date" required min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
+                  value={replacementMaturity} onChange={event => setReplacementMaturity(event.target.value)} /></label>
+              </div>
+              <div className="investment-action-bar"><button className="primary-button" disabled={busy}>Request reversal approval</button>
+                <button type="button" className="text-button" onClick={() => setReverseOpen(false)}>Cancel</button></div>
+            </form>
+          )}
           <div className="investment-totals">
             <div>
               <span>Participation pool</span>
@@ -688,7 +738,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
               </p>
               <div className="investment-edit-fields">
                 <label>
-                  Participation (GH₵)
+                  Participation (GHâ‚µ)
                   <input
                     type="number"
                     min="0"
@@ -759,7 +809,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
                 </p>
                 <div className="investment-edit-fields">
                   <label>
-                    Actual proceeds (GH₵)
+                    Actual proceeds (GHâ‚µ)
                     <input
                       type="number"
                       min="0"
@@ -803,7 +853,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
               <h3>Actual proceeds preview</h3>
               <p>
                 Proceeds:{" "}
-                <strong>{money(maturityPreview.actualProceeds)}</strong> · Total
+                <strong>{money(maturityPreview.actualProceeds)}</strong> Â· Total
                 income: <strong>{money(maturityPreview.totalIncome)}</strong>
               </p>
               <div className="table-scroll">
@@ -898,10 +948,12 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
                 <strong>{item.institution || "Treasury bill"}</strong>
                 <span>
                   {item.actionType === "INVESTMENT_MATURE"
-                    ? `Maturity · ${money(item.actualProceeds ?? "0")} actual proceeds`
+                    ? `Maturity Â· ${money(item.actualProceeds ?? "0")} actual proceeds`
+                    : item.actionType === "INVESTMENT_REVERSE"
+                      ? `Reversal · ${item.reason ?? ""} · new maturity ${item.replacementMaturityDate ?? ""}`
                     : item.actionType === "INVESTMENT_SETTLE"
-                      ? "Settlement · no rollover"
-                    : `Posting · ${money(item.cost)} cost · ${money(item.maturityValue)} expected value`}
+                      ? "Settlement Â· no rollover"
+                    : `Posting Â· ${money(item.cost)} cost Â· ${money(item.maturityValue)} expected value`}
                 </span>
               </div>
               <button

@@ -258,6 +258,84 @@ class InvestmentWorkflowIntegrationTest {
             .hasMessageContaining("rollover source balance");
     }
 
+    @Test
+    @Transactional
+    void lossReversalPreservesHistoryRestoresEquityAndCanRepost() {
+        UUID maker = user("TREASURER");
+        UUID checker = user("TREASURER");
+        UUID member = member("Reversal loss", "100.00");
+        UUID id = maturedFixture(maker, member, "90.00", "-10.00");
+        var payload = reversal(id, 1);
+        UUID request = approvals.submit("INVESTMENT_REVERSE", payload, maker, 1);
+        assertThatThrownBy(() -> approvals.decide(request, maker, ApprovalService.Decision.APPROVE, null))
+            .hasMessageContaining("Maker cannot approve");
+        assertThatThrownBy(() -> approvals.submit("INVESTMENT_SETTLE", payload(id), maker, 1))
+            .hasMessageContaining("awaits approval");
+        approvals.decide(request, checker, ApprovalService.Decision.APPROVE, null);
+        var detail = investments.get(maker, id);
+        assertThat(detail.investment().status()).isEqualTo("DRAFT");
+        assertThat(detail.investment().revision()).isEqualTo(2);
+        assertThat(detail.investment().actualProceeds()).isNull();
+        assertThat(detail.maturityAllocations()).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT equity FROM member_balances WHERE member_id = ?", BigDecimal.class, member))
+            .isEqualByComparingTo("100.00");
+        assertThat(jdbc.queryForObject("SELECT amount FROM ledger_entries WHERE investment_id = ? AND type = 'REVERSAL'", BigDecimal.class, id))
+            .isEqualByComparingTo("10.00");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM investment_maturity_allocations WHERE investment_id = ?", Integer.class, id))
+            .isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT snapshot -> 'investment' ->> 'status' FROM investment_revision_history WHERE investment_id = ?", String.class, id))
+            .isEqualTo("MATURED");
+        UUID repost = approvals.submit("INVESTMENT_POST", payload(id), maker, 1);
+        approvals.decide(repost, checker, ApprovalService.Decision.APPROVE, null);
+        assertThat(investments.get(maker, id).investment().status()).isEqualTo("POSTED");
+    }
+
+    @Test
+    @Transactional
+    void gainReversalIsBlockedIfIncomeWasReinvested() {
+        UUID maker = user("TREASURER");
+        UUID checker = user("TREASURER");
+        UUID member = member("Committed income", "100.00");
+        UUID source = maturedFixture(maker, member, "120.00", "20.00");
+        UUID target = investments.create(maker, draft("120.00", "130.00"));
+        UUID post = approvals.submit("INVESTMENT_POST", payload(target), maker, 1);
+        approvals.decide(post, checker, ApprovalService.Decision.APPROVE, null);
+        assertThatThrownBy(() -> approvals.submit("INVESTMENT_REVERSE", reversal(source, 1), maker, 1))
+            .hasMessageContaining("committed");
+        UUID reverseTarget = approvals.submit("INVESTMENT_REVERSE", reversal(target, 1), maker, 1);
+        approvals.decide(reverseTarget, checker, ApprovalService.Decision.APPROVE, null);
+        UUID reverseSource = approvals.submit("INVESTMENT_REVERSE", reversal(source, 1), maker, 1);
+        approvals.decide(reverseSource, checker, ApprovalService.Decision.APPROVE, null);
+        assertThat(jdbc.queryForObject("SELECT equity FROM member_balances WHERE member_id = ?", BigDecimal.class, member))
+            .isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    @Transactional
+    void reversalChecksRevisionReasonPermissionAndRolloverDependencies() {
+        UUID maker = user("TREASURER");
+        UUID member = member("Rollover dependency", "100.00");
+        UUID source = maturedFixture(maker, member, "120.00", "20.00");
+        assertThatThrownBy(() -> approvals.submit("INVESTMENT_REVERSE", reversal(source, 2), maker, 1))
+            .hasMessageContaining("current");
+        assertThatThrownBy(() -> approvals.submit("INVESTMENT_REVERSE", reversal(source, 1), user("MEMBER"), 1))
+            .isInstanceOf(SecurityException.class);
+        var blank = ((com.fasterxml.jackson.databind.node.ObjectNode) reversal(source, 1)).put("reason", " ");
+        assertThatThrownBy(() -> approvals.submit("INVESTMENT_REVERSE", blank, maker, 1)).isInstanceOf(IllegalArgumentException.class);
+        UUID target = investments.createRollover(maker, source, draft("120.00", "130.00"), "ROLL_PRINCIPAL_AND_INCOME");
+        assertThatThrownBy(() -> approvals.submit("INVESTMENT_REVERSE", reversal(source, 1), maker, 1))
+            .hasMessageContaining("dependent rollover");
+        investments.discardDraft(maker, target, "Correct source first");
+        assertThat(approvals.submit("INVESTMENT_REVERSE", reversal(source, 1), maker, 1)).isNotNull();
+    }
+
+    private com.fasterxml.jackson.databind.JsonNode reversal(UUID id, int revision) {
+        LocalDate today = LocalDate.now(ZoneId.of("Africa/Accra"));
+        return json.createObjectNode().put("investmentId", id.toString()).put("revision", revision)
+            .put("reason", "Correct treasury allocation").put("effectiveDate", today.toString())
+            .put("maturityDate", today.plusDays(91).toString());
+    }
+
     private UUID maturedFixture(UUID maker, UUID member, String proceeds, String income) {
         UUID id = UUID.randomUUID();
         LocalDate today = LocalDate.now(ZoneId.of("Africa/Accra"));

@@ -23,11 +23,7 @@ public class InvestmentSettleHandler implements ApprovalActionHandler {
         investments.require(makerId, "INVESTMENT_WRITE");
         UUID id = parse(payload);
         requireMaturedWithoutRollover(id);
-        Boolean pending = jdbc.queryForObject("""
-            SELECT EXISTS (SELECT 1 FROM approval_requests WHERE action_type = 'INVESTMENT_SETTLE'
-                AND status = 'PENDING' AND payload ->> 'investmentId' = ?)
-            """, Boolean.class, id.toString());
-        if (Boolean.TRUE.equals(pending)) throw new IllegalStateException("Settlement already awaits approval");
+        investments.requireNoPending(id);
     }
 
     @Override

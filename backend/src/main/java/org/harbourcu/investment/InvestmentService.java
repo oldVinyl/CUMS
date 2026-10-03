@@ -26,7 +26,7 @@ public class InvestmentService {
                           @JsonSerialize(using = ToStringSerializer.class) BigDecimal cost,
                           @JsonSerialize(using = ToStringSerializer.class) BigDecimal maturityValue,
                           @JsonSerialize(using = ToStringSerializer.class) BigDecimal actualProceeds,
-                          String status) {}
+                          String status, int revision) {}
     public record Allocation(UUID memberId, String memberNumber, String fullName,
                              @JsonSerialize(using = ToStringSerializer.class) BigDecimal participation,
                              @JsonSerialize(using = ToStringSerializer.class) BigDecimal ratioPercent,
@@ -40,14 +40,15 @@ public class InvestmentService {
     public record MaturityPreview(@JsonSerialize(using = ToStringSerializer.class) BigDecimal actualProceeds,
                                   @JsonSerialize(using = ToStringSerializer.class) BigDecimal totalIncome,
                                   List<MaturityAllocation> allocations) {}
+    public record RevisionHistory(int revision, String reason, String status, String purchaseDate, String maturityDate) {}
     public record Detail(Summary investment, List<Allocation> allocations,
-                         List<MaturityAllocation> maturityAllocations,
+                         List<MaturityAllocation> maturityAllocations, List<RevisionHistory> history,
                          @JsonSerialize(using = ToStringSerializer.class) BigDecimal pool,
                          @JsonSerialize(using = ToStringSerializer.class) BigDecimal costDifference,
                          @JsonSerialize(using = ToStringSerializer.class) BigDecimal expectedIncome,
                          @JsonSerialize(using = ToStringSerializer.class) BigDecimal expectedClosing) {}
     public record PendingApproval(UUID id, UUID investmentId, UUID makerId, String actionType,
-                                  String institution, LocalDate purchaseDate,
+                                  String institution, String reason, String replacementMaturityDate, LocalDate purchaseDate,
                                   @JsonSerialize(using = ToStringSerializer.class) BigDecimal cost,
                                   @JsonSerialize(using = ToStringSerializer.class) BigDecimal maturityValue,
                                   @JsonSerialize(using = ToStringSerializer.class) BigDecimal actualProceeds) {}
@@ -71,7 +72,7 @@ public class InvestmentService {
         require(actor, "INVESTMENT_READ");
         return jdbc.query("""
             SELECT id, tenor, institution, reference_number, purchase_date, maturity_date,
-                   cost, maturity_value, actual_proceeds, status FROM investments
+                   cost, maturity_value, actual_proceeds, status, revision FROM investments
             ORDER BY purchase_date DESC, created_at DESC LIMIT 100
             """, (row, ignored) -> summary(row));
     }
@@ -81,16 +82,16 @@ public class InvestmentService {
         require(actor, "INVESTMENT_READ");
         return jdbc.query("""
             SELECT r.id, i.id AS investment_id, r.made_by, r.action_type, i.institution,
-                   i.purchase_date, i.cost, i.maturity_value, r.payload ->> 'actualProceeds' AS actual_proceeds
+                   i.purchase_date, i.cost, i.maturity_value, r.payload ->> 'actualProceeds' AS actual_proceeds, r.payload ->> 'reason' AS reason, r.payload ->> 'maturityDate' AS replacement_maturity_date
             FROM approval_requests r
             JOIN investments i ON i.id::text = r.payload ->> 'investmentId'
-            WHERE r.action_type IN ('INVESTMENT_POST', 'INVESTMENT_MATURE', 'INVESTMENT_SETTLE')
+            WHERE r.action_type IN ('INVESTMENT_POST', 'INVESTMENT_MATURE', 'INVESTMENT_SETTLE', 'INVESTMENT_REVERSE')
               AND r.status = 'PENDING'
             ORDER BY r.created_at LIMIT 100
             """, (row, ignored) -> new PendingApproval(row.getObject("id", UUID.class),
                 row.getObject("investment_id", UUID.class), row.getObject("made_by", UUID.class),
                 row.getString("action_type"),
-                row.getString("institution"), row.getDate("purchase_date").toLocalDate(),
+                row.getString("institution"), row.getString("reason"), row.getString("replacement_maturity_date"), row.getDate("purchase_date").toLocalDate(),
                 row.getBigDecimal("cost"), row.getBigDecimal("maturity_value"),
                 row.getString("actual_proceeds") == null ? null
                     : new BigDecimal(row.getString("actual_proceeds"))));
@@ -100,7 +101,7 @@ public class InvestmentService {
         Boolean valid = jdbc.queryForObject("""
             SELECT EXISTS (SELECT 1 FROM approval_requests
                 WHERE id = ? AND action_type IN
-                    ('INVESTMENT_POST', 'INVESTMENT_MATURE', 'INVESTMENT_SETTLE'))
+                    ('INVESTMENT_POST', 'INVESTMENT_MATURE', 'INVESTMENT_SETTLE', 'INVESTMENT_REVERSE'))
             """, Boolean.class, requestId);
         if (!Boolean.TRUE.equals(valid)) throw new IllegalArgumentException("Investment approval not found");
     }
@@ -109,7 +110,7 @@ public class InvestmentService {
         require(actor, "INVESTMENT_READ");
         List<Summary> investments = jdbc.query("""
             SELECT id, tenor, institution, reference_number, purchase_date, maturity_date,
-                   cost, maturity_value, actual_proceeds, status FROM investments WHERE id = ?
+                   cost, maturity_value, actual_proceeds, status, revision FROM investments WHERE id = ?
             """, (row, ignored) -> summary(row), investmentId);
         if (investments.isEmpty()) throw new IllegalArgumentException("Investment not found");
         List<Allocation> rows = jdbc.query("""
@@ -127,12 +128,19 @@ public class InvestmentService {
         BigDecimal pool = rows.stream().map(Allocation::participation).reduce(BigDecimal.ZERO, BigDecimal::add);
         List<MaturityAllocation> actual = jdbc.query("""
             SELECT member_id, actual_maturity_share, actual_income_share
-            FROM investment_maturity_allocations WHERE investment_id = ?
+            FROM investment_maturity_allocations WHERE investment_id = ? AND revision = (SELECT revision FROM investments WHERE id = ?)
             """, (row, ignored) -> new MaturityAllocation(row.getObject("member_id", UUID.class),
                 row.getBigDecimal("actual_maturity_share"), row.getBigDecimal("actual_income_share")),
-            investmentId);
+            investmentId, investmentId);
         BigDecimal income = investments.getFirst().maturityValue().subtract(investments.getFirst().cost());
-        return new Detail(investments.getFirst(), rows, actual, pool,
+        List<RevisionHistory> history = jdbc.query("""
+            SELECT revision, reason, snapshot -> 'investment' ->> 'status' AS status,
+                snapshot -> 'investment' ->> 'purchase_date' AS purchase_date,
+                snapshot -> 'investment' ->> 'maturity_date' AS maturity_date
+            FROM investment_revision_history WHERE investment_id = ? ORDER BY revision DESC
+            """, (row, ignored) -> new RevisionHistory(row.getInt("revision"), row.getString("reason"),
+                row.getString("status"), row.getString("purchase_date"), row.getString("maturity_date")), investmentId);
+        return new Detail(investments.getFirst(), rows, actual, history, pool,
             investments.getFirst().cost().subtract(pool), income, pool.add(income));
     }
 
@@ -192,6 +200,7 @@ public class InvestmentService {
         if (source.isEmpty() || !"MATURED".equals(source.getFirst())) {
             throw new IllegalStateException("Source investment must be matured");
         }
+        requireNoPending(sourceId);
         List<AvailableMember> eligible = jdbc.query("""
             SELECT a.member_id, m.member_number, m.full_name,
                    CASE WHEN ? = 'ROLL_PRINCIPAL_ONLY' THEN a.participation
@@ -199,6 +208,7 @@ public class InvestmentService {
             FROM investment_allocations a
             JOIN investment_maturity_allocations ma
               ON ma.investment_id = a.investment_id AND ma.member_id = a.member_id
+              AND ma.revision = (SELECT revision FROM investments WHERE id = a.investment_id)
             JOIN members m ON m.id = a.member_id
             WHERE a.investment_id = ? AND m.status = 'ACTIVE'
             ORDER BY m.member_number, m.id
@@ -439,6 +449,7 @@ public class InvestmentService {
                   ON original.investment_id = target.rollover_source_id AND original.member_id = a.member_id
                 LEFT JOIN investment_maturity_allocations maturity
                   ON maturity.investment_id = target.rollover_source_id AND maturity.member_id = a.member_id
+                  AND maturity.revision = (SELECT revision FROM investments WHERE id = target.rollover_source_id)
                 WHERE target.id = ? AND target.rollover_source_id IS NOT NULL
                   AND (original.member_id IS NULL OR maturity.member_id IS NULL OR
                     a.participation > original.participation +
@@ -462,8 +473,17 @@ public class InvestmentService {
               ON original.investment_id = target.rollover_source_id AND original.member_id = ?
             LEFT JOIN investment_maturity_allocations maturity
               ON maturity.investment_id = target.rollover_source_id AND maturity.member_id = ?
+              AND maturity.revision = (SELECT revision FROM investments WHERE id = target.rollover_source_id)
             WHERE target.id = ?
             """, BigDecimal.class, memberId, memberId, investmentId);
+    }
+
+    void requireNoPending(UUID id) {
+        Boolean pending = jdbc.queryForObject("""
+            SELECT EXISTS (SELECT 1 FROM approval_requests WHERE status = 'PENDING'
+                AND payload ->> 'investmentId' = ? AND action_type LIKE 'INVESTMENT_%')
+            """, Boolean.class, id.toString());
+        if (Boolean.TRUE.equals(pending)) throw new IllegalStateException("Investment already awaits approval");
     }
 
     void require(UUID actor, String code) {
@@ -490,6 +510,6 @@ public class InvestmentService {
             row.getString("institution"), row.getString("reference_number"),
             row.getDate("purchase_date").toLocalDate(), row.getDate("maturity_date").toLocalDate(),
             row.getBigDecimal("cost"), row.getBigDecimal("maturity_value"),
-            row.getBigDecimal("actual_proceeds"), row.getString("status"));
+            row.getBigDecimal("actual_proceeds"), row.getString("status"), row.getInt("revision"));
     }
 }

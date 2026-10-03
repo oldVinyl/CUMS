@@ -33,6 +33,7 @@ public class InvestmentController {
     public record MaturityRequest(String actualProceeds) {}
     public record RolloverDraftRequest(String policy, InvestmentService.Create draft) {}
     public record DiscardRequest(String reason) {}
+    public record ReverseRequest(Integer revision, String reason, java.time.LocalDate maturityDate) {}
     public record DecisionRequest(String decision, String comment) {}
 
     private final InvestmentService investments;
@@ -192,6 +193,27 @@ public class InvestmentController {
             var payload = json.createObjectNode().put("investmentId", id.toString());
             return ResponseEntity.ok(new Submitted(approvals.submit("INVESTMENT_SETTLE", payload,
                 identity.userId(), 1)));
+        } catch (SecurityException exception) { return denied(request); }
+        catch (IllegalStateException exception) { return conflict(exception, request); }
+        catch (IllegalArgumentException exception) { return validation(exception, request); }
+    }
+
+    @PostMapping("/{id}/reverse")
+    public ResponseEntity<?> reverse(@PathVariable UUID id, @RequestBody ReverseRequest body,
+                                    @CookieValue(name = "cu_access", required = false) String access,
+                                    @RequestHeader(name = "X-CSRF-Token", required = false) String csrf,
+                                    HttpServletRequest request) {
+        var identity = verified(access, csrf, request);
+        if (identity == null) return accessFailure(access, request);
+        try {
+            if (body == null || body.revision() == null || body.maturityDate() == null) {
+                throw new IllegalArgumentException("Revision and replacement maturity date are required");
+            }
+            var payload = json.createObjectNode().put("investmentId", id.toString())
+                .put("revision", body.revision()).put("reason", body.reason())
+                .put("effectiveDate", java.time.LocalDate.now(java.time.ZoneId.of("Africa/Accra")).toString())
+                .put("maturityDate", body.maturityDate().toString());
+            return ResponseEntity.ok(new Submitted(approvals.submit("INVESTMENT_REVERSE", payload, identity.userId(), 1)));
         } catch (SecurityException exception) { return denied(request); }
         catch (IllegalStateException exception) { return conflict(exception, request); }
         catch (IllegalArgumentException exception) { return validation(exception, request); }
