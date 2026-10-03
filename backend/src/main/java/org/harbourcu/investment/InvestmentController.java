@@ -31,6 +31,8 @@ public class InvestmentController {
     public record Submitted(UUID approvalRequestId) {}
     public record ParticipationEdit(String amount, String reason) {}
     public record MaturityRequest(String actualProceeds) {}
+    public record RolloverDraftRequest(String policy, InvestmentService.Create draft) {}
+    public record DiscardRequest(String reason) {}
     public record DecisionRequest(String decision, String comment) {}
 
     private final InvestmentService investments;
@@ -154,6 +156,57 @@ public class InvestmentController {
                 .put("actualProceeds", body.actualProceeds());
             return ResponseEntity.ok(new Submitted(approvals.submit("INVESTMENT_MATURE", payload,
                 identity.userId(), 1)));
+        } catch (SecurityException exception) { return denied(request); }
+        catch (IllegalStateException exception) { return conflict(exception, request); }
+        catch (IllegalArgumentException exception) { return validation(exception, request); }
+    }
+
+    @PostMapping("/{id}/rollover-draft")
+    public ResponseEntity<?> rolloverDraft(@PathVariable UUID id,
+                                           @RequestBody RolloverDraftRequest body,
+                                           @CookieValue(name = "cu_access", required = false) String access,
+                                           @RequestHeader(name = "X-CSRF-Token", required = false) String csrf,
+                                           HttpServletRequest request) {
+        var identity = verified(access, csrf, request);
+        if (identity == null) return accessFailure(access, request);
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(new Created(investments.createRollover(
+                identity.userId(), id, body.draft(), body.policy())));
+        } catch (SecurityException exception) { return denied(request); }
+        catch (DuplicateKeyException exception) {
+            return error(HttpStatus.CONFLICT, "ROLLOVER_ALREADY_DRAFTED", request,
+                "This investment already has an active rollover draft.");
+        }
+        catch (IllegalStateException exception) { return conflict(exception, request); }
+        catch (IllegalArgumentException exception) { return validation(exception, request); }
+    }
+
+    @PostMapping("/{id}/settle")
+    public ResponseEntity<?> settle(@PathVariable UUID id,
+                                    @CookieValue(name = "cu_access", required = false) String access,
+                                    @RequestHeader(name = "X-CSRF-Token", required = false) String csrf,
+                                    HttpServletRequest request) {
+        var identity = verified(access, csrf, request);
+        if (identity == null) return accessFailure(access, request);
+        try {
+            var payload = json.createObjectNode().put("investmentId", id.toString());
+            return ResponseEntity.ok(new Submitted(approvals.submit("INVESTMENT_SETTLE", payload,
+                identity.userId(), 1)));
+        } catch (SecurityException exception) { return denied(request); }
+        catch (IllegalStateException exception) { return conflict(exception, request); }
+        catch (IllegalArgumentException exception) { return validation(exception, request); }
+    }
+
+    @PostMapping("/{id}/discard")
+    public ResponseEntity<?> discard(@PathVariable UUID id, @RequestBody DiscardRequest body,
+                                     @CookieValue(name = "cu_access", required = false) String access,
+                                     @RequestHeader(name = "X-CSRF-Token", required = false) String csrf,
+                                     HttpServletRequest request) {
+        var identity = verified(access, csrf, request);
+        if (identity == null) return accessFailure(access, request);
+        try {
+            investments.discardDraft(identity.userId(), id, body == null ? null : body.reason());
+            return ResponseEntity.noContent().build();
         } catch (SecurityException exception) { return denied(request); }
         catch (IllegalStateException exception) { return conflict(exception, request); }
         catch (IllegalArgumentException exception) { return validation(exception, request); }

@@ -193,3 +193,24 @@
     grid-template-columns: 1fr;
   }
 }
+
+.investment-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.investment-action-bar .secondary-button {
+  margin: 0;
+}
+.investment-settle-confirm {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--page);
+}
+.investment-settle-confirm p {
+  font-size: .76rem;
+  margin-bottom: 12px;
+}

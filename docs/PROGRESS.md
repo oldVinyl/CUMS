@@ -15,7 +15,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
-- [x] Flyway V1–V18 core financial, role, approval, fiscal snapshot, authentication, member identity, Google link, passkey, investment allocation, maturity, and admin investment-read migrations tested against PostgreSQL 16
+- [x] Flyway V1–V20 core financial, role, approval, fiscal snapshot, authentication, member identity, Google link, passkey, investment allocation, maturity, rollover, and admin investment-read migrations tested against PostgreSQL 16
 - [ ] Add remaining workflow tables and migration tests
 - [x] Structured API validation and access errors with trace IDs
 - [x] Append-only ledger and audit triggers with database tests
@@ -78,8 +78,11 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Approve actual maturity proceeds, preview member impact, and post exact positive or negative income to the immutable ledger
 - [x] Give ADMIN read-only access to investments while preserving financial posting and approval restrictions
 - [x] Show a reconciled Sheet A totals row and verify the 12-member sheet fixture in the engine and screen
+- [x] Create principal-only or principal-and-income rollover drafts from matured investments, with source caps, distinct approval, and live uninvested-fund rechecks
+- [x] Allow the creator to discard an unused draft with an audit reason, releasing its rollover source
+- [x] Approve settlement without rollover and leave member balances uninvested
 - [ ] Investment lifecycle, rollover, reversal
-- [ ] Rollover, settlement, and approved investment reversal
+- [ ] Approved investment reversal with exact member-ledger compensation
 - [ ] Sheet A xlsx/PDF export acceptance tests
 
 ## Phase 4 — Dashboards and exports

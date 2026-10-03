@@ -166,6 +166,108 @@ class InvestmentWorkflowIntegrationTest {
             BigDecimal.class, second)).isEqualByComparingTo("95.00");
         assertThatThrownBy(() -> approvals.submit("INVESTMENT_MATURE", payload, maker, 1))
             .hasMessageContaining("not posted");
+
+        UUID next = investments.createRollover(maker, investment, draft("190.00", "200.00"),
+            "ROLL_PRINCIPAL_AND_INCOME");
+        assertThat(investments.get(maker, next).pool()).isEqualByComparingTo("190.00");
+        UUID nextRequest = approvals.submit("INVESTMENT_POST", payload(next), maker, 1);
+        approvals.decide(nextRequest, checker, ApprovalService.Decision.APPROVE, null);
+        assertThat(investments.get(maker, next).investment().status()).isEqualTo("POSTED");
+        assertThat(investments.get(maker, investment).investment().status()).isEqualTo("ROLLED_OVER");
+        assertThat(jdbc.queryForObject("""
+            SELECT sum(invested) FROM investment_participation WHERE member_id IN (?, ?)
+            """, BigDecimal.class, first, second)).isEqualByComparingTo("190.00");
+    }
+
+    @Test
+    @Transactional
+    void principalOnlyRolloverLeavesIncomeUninvestedAndSettlementNeedsApproval() {
+        UUID maker = user("TREASURER");
+        UUID checker = user("TREASURER");
+        UUID member = member("Principal only", "100.00");
+        UUID source = maturedFixture(maker, member, "120.00", "20.00");
+        UUID next = investments.createRollover(maker, source, draft("100.00", "110.00"),
+            "ROLL_PRINCIPAL_ONLY");
+        assertThat(investments.get(maker, next).pool()).isEqualByComparingTo("100.00");
+        UUID post = approvals.submit("INVESTMENT_POST", payload(next), maker, 1);
+        approvals.decide(post, checker, ApprovalService.Decision.APPROVE, null);
+        assertThat(jdbc.queryForObject("""
+            SELECT equity - invested FROM member_balances b
+            JOIN investment_participation p ON p.member_id = b.member_id
+            WHERE b.member_id = ?
+            """, BigDecimal.class, member)).isEqualByComparingTo("20.00");
+        assertThat(jdbc.queryForObject("SELECT rollover_policy FROM investments WHERE id = ?",
+            String.class, source)).isEqualTo("ROLL_PRINCIPAL_ONLY");
+
+        UUID settled = maturedFixture(maker, member, "50.00", "0.00");
+        UUID request = approvals.submit("INVESTMENT_SETTLE", payload(settled), maker, 1);
+        assertThat(investments.get(maker, settled).investment().status()).isEqualTo("MATURED");
+        approvals.decide(request, checker, ApprovalService.Decision.APPROVE, null);
+        assertThat(investments.get(maker, settled).investment().status()).isEqualTo("SETTLED");
+        assertThat(jdbc.queryForObject("SELECT rollover_policy FROM investments WHERE id = ?",
+            String.class, settled)).isEqualTo("NO_ROLLOVER");
+    }
+
+    @Test
+    @Transactional
+    void discardedRolloverDraftReleasesSourceForAnotherDecision() {
+        UUID maker = user("TREASURER");
+        UUID other = user("TREASURER");
+        UUID member = member("Rollover retry", "100.00");
+        UUID source = maturedFixture(maker, member, "120.00", "20.00");
+        UUID first = investments.createRollover(maker, source, draft("100.00", "110.00"),
+            "ROLL_PRINCIPAL_ONLY");
+        assertThatThrownBy(() -> investments.discardDraft(other, first, "Changed plan"))
+            .hasMessageContaining("Only the creator");
+        investments.discardDraft(maker, first, "Use full balance instead");
+        assertThat(investments.get(maker, first).investment().status()).isEqualTo("DISCARDED");
+        UUID replacement = investments.createRollover(maker, source, draft("120.00", "132.00"),
+            "ROLL_PRINCIPAL_AND_INCOME");
+        assertThat(investments.get(maker, replacement).pool()).isEqualByComparingTo("120.00");
+    }
+
+    @Test
+    @Transactional
+    void rolloverEditsCannotPullOtherUninvestedMemberFunds() {
+        UUID maker = user("TREASURER");
+        UUID member = member("Rollover cap", "150.00");
+        UUID source = maturedFixture(maker, member, "120.00", "20.00");
+        UUID draft = investments.createRollover(maker, source, draft("100.00", "110.00"),
+            "ROLL_PRINCIPAL_ONLY");
+        assertThatThrownBy(() -> investments.editParticipation(maker, draft, member,
+            "110.00", "Use extra money"))
+            .hasMessageContaining("rollover source balance");
+    }
+
+    private UUID maturedFixture(UUID maker, UUID member, String proceeds, String income) {
+        UUID id = UUID.randomUUID();
+        LocalDate today = LocalDate.now(ZoneId.of("Africa/Accra"));
+        jdbc.update("""
+            INSERT INTO investments (id, tenor, purchase_date, maturity_date,
+                                     cost, maturity_value, status, created_by)
+            VALUES (?, '91_DAY', ?, ?, 100.00, 120.00, 'DRAFT', ?)
+            """, id, today.minusDays(1), today, maker);
+        jdbc.update("""
+            INSERT INTO investment_allocations
+                (investment_id, member_id, participation, ratio_basis_points, cost_share,
+                 maturity_value_share, income_share, closing_balance)
+            VALUES (?, ?, 100.00, 10000, 100.00, 120.00, 20.00, 120.00)
+            """, id, member);
+        jdbc.update("""
+            INSERT INTO investment_maturity_allocations
+                (investment_id, member_id, actual_maturity_share, actual_income_share)
+            VALUES (?, ?, ?, ?)
+            """, id, member, new BigDecimal(proceeds), new BigDecimal(income));
+        jdbc.update("UPDATE investments SET status = 'MATURED', actual_proceeds = ? WHERE id = ?",
+            new BigDecimal(proceeds), id);
+        if (new BigDecimal(income).signum() != 0) {
+            jdbc.update("""
+                INSERT INTO ledger_entries (member_id, type, component, amount,
+                                            effective_date, fiscal_year, investment_id, reference)
+                VALUES (?, 'INCOME_ALLOCATION', 'INCOME', ?, ?, ?, ?, ?)
+                """, member, new BigDecimal(income), today, today.getYear(), id, "MAT-FIX-" + id);
+        }
+        return id;
     }
 
     private InvestmentService.Create draft(String cost, String fv) {

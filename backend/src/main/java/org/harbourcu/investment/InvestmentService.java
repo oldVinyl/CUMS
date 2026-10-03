@@ -81,7 +81,8 @@ public class InvestmentService {
                    i.purchase_date, i.cost, i.maturity_value, r.payload ->> 'actualProceeds' AS actual_proceeds
             FROM approval_requests r
             JOIN investments i ON i.id::text = r.payload ->> 'investmentId'
-            WHERE r.action_type IN ('INVESTMENT_POST', 'INVESTMENT_MATURE') AND r.status = 'PENDING'
+            WHERE r.action_type IN ('INVESTMENT_POST', 'INVESTMENT_MATURE', 'INVESTMENT_SETTLE')
+              AND r.status = 'PENDING'
             ORDER BY r.created_at LIMIT 100
             """, (row, ignored) -> new PendingApproval(row.getObject("id", UUID.class),
                 row.getObject("investment_id", UUID.class), row.getObject("made_by", UUID.class),
@@ -95,7 +96,8 @@ public class InvestmentService {
     public void requireInvestmentApproval(UUID requestId) {
         Boolean valid = jdbc.queryForObject("""
             SELECT EXISTS (SELECT 1 FROM approval_requests
-                WHERE id = ? AND action_type IN ('INVESTMENT_POST', 'INVESTMENT_MATURE'))
+                WHERE id = ? AND action_type IN
+                    ('INVESTMENT_POST', 'INVESTMENT_MATURE', 'INVESTMENT_SETTLE'))
             """, Boolean.class, requestId);
         if (!Boolean.TRUE.equals(valid)) throw new IllegalArgumentException("Investment approval not found");
     }
@@ -165,6 +167,58 @@ public class InvestmentService {
     @Transactional
     public UUID create(UUID actor, Create input) {
         require(actor, "INVESTMENT_WRITE");
+        validateDraft(input);
+        fiscalYears.requireOpen(input.purchaseDate().getYear());
+        List<AvailableMember> members = available(input.purchaseDate(), null);
+        if (members.isEmpty()) throw new IllegalArgumentException("No members have uninvested funds today");
+        return persistDraft(actor, input, members, null, "ROLL_PRINCIPAL_AND_INCOME");
+    }
+
+    @Transactional
+    public UUID createRollover(UUID actor, UUID sourceId, Create input, String policy) {
+        require(actor, "INVESTMENT_WRITE");
+        validateDraft(input);
+        if (!"ROLL_PRINCIPAL_AND_INCOME".equals(policy)
+            && !"ROLL_PRINCIPAL_ONLY".equals(policy)) {
+            throw new IllegalArgumentException("Choose principal and income or principal only");
+        }
+        fiscalYears.requireOpen(input.purchaseDate().getYear());
+        var source = jdbc.query("""
+            SELECT status FROM investments WHERE id = ? FOR UPDATE
+            """, (row, ignored) -> row.getString("status"), sourceId);
+        if (source.isEmpty() || !"MATURED".equals(source.getFirst())) {
+            throw new IllegalStateException("Source investment must be matured");
+        }
+        List<AvailableMember> eligible = jdbc.query("""
+            SELECT a.member_id, m.member_number, m.full_name,
+                   CASE WHEN ? = 'ROLL_PRINCIPAL_ONLY' THEN a.participation
+                        ELSE a.participation + ma.actual_income_share END AS eligible
+            FROM investment_allocations a
+            JOIN investment_maturity_allocations ma
+              ON ma.investment_id = a.investment_id AND ma.member_id = a.member_id
+            JOIN members m ON m.id = a.member_id
+            WHERE a.investment_id = ? AND m.status = 'ACTIVE'
+            ORDER BY m.member_number, m.id
+            """, (row, ignored) -> new AvailableMember(row.getObject("member_id", UUID.class),
+                row.getString("member_number"), row.getString("full_name"),
+                row.getBigDecimal("eligible")), policy, sourceId);
+        var availableNow = new java.util.HashMap<UUID, BigDecimal>();
+        for (AvailableMember member : available(input.purchaseDate(), null)) {
+            availableNow.put(member.id(), member.available());
+        }
+        List<AvailableMember> members = new ArrayList<>();
+        for (AvailableMember member : eligible) {
+            if (member.available().signum() <= 0) continue;
+            if (member.available().compareTo(availableNow.getOrDefault(member.id(), BigDecimal.ZERO)) > 0) {
+                throw new IllegalStateException("Source funds are no longer uninvested");
+            }
+            members.add(member);
+        }
+        if (members.isEmpty()) throw new IllegalStateException("No source funds are available to roll over");
+        return persistDraft(actor, input, members, sourceId, policy);
+    }
+
+    private static void validateDraft(Create input) {
         if (input == null || input.purchaseDate() == null || input.maturityDate() == null
             || !input.purchaseDate().equals(LocalDate.now(BUSINESS_ZONE))
             || !input.maturityDate().isAfter(input.purchaseDate())) {
@@ -180,11 +234,14 @@ public class InvestmentService {
             || (input.referenceNumber() != null && input.referenceNumber().length() > 100)) {
             throw new IllegalArgumentException("Institution or reference is too long");
         }
+        money(input.cost(), true);
+        money(input.maturityValue(), false);
+    }
+
+    private UUID persistDraft(UUID actor, Create input, List<AvailableMember> members,
+                              UUID sourceId, String policy) {
         BigDecimal cost = money(input.cost(), true);
         BigDecimal maturityValue = money(input.maturityValue(), false);
-        fiscalYears.requireOpen(input.purchaseDate().getYear());
-        List<AvailableMember> members = available(input.purchaseDate(), null);
-        if (members.isEmpty()) throw new IllegalArgumentException("No members have uninvested funds today");
         List<AllocationEngine.Participant> participants = new ArrayList<>();
         for (int i = 0; i < members.size(); i++) {
             participants.add(new AllocationEngine.Participant(i + 1,
@@ -195,11 +252,12 @@ public class InvestmentService {
         UUID id = UUID.randomUUID();
         jdbc.update("""
             INSERT INTO investments (id, tenor, custom_days, institution, reference_number,
-                                     purchase_date, maturity_date, cost, maturity_value, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                     purchase_date, maturity_date, cost, maturity_value,
+                                     created_by, rollover_source_id, rollover_policy)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, id, input.tenor(), input.customDays(), blankToNull(input.institution()),
             blankToNull(input.referenceNumber()), input.purchaseDate(), input.maturityDate(),
-            cost, maturityValue, actor);
+            cost, maturityValue, actor, sourceId, policy);
         for (int i = 0; i < members.size(); i++) {
             AllocationEngine.Share share = shares.get(i);
             jdbc.update("""
@@ -216,8 +274,8 @@ public class InvestmentService {
         jdbc.update("""
             INSERT INTO audit_log (actor_id, action, entity_type, entity_id, details)
             VALUES (?, 'INVESTMENT_DRAFT_CREATED', 'INVESTMENT', ?,
-                    jsonb_build_object('participants', ?))
-            """, actor, id, members.size());
+                    jsonb_build_object('participants', ?, 'rolloverSourceId', ?::text))
+            """, actor, id, members.size(), sourceId == null ? null : sourceId.toString());
         return id;
     }
 
@@ -254,6 +312,9 @@ public class InvestmentService {
         if (amount.signum() > 0 && (!available.containsKey(memberId)
             || amount.compareTo(available.get(memberId)) > 0)) {
             throw new IllegalArgumentException("Participation exceeds this member's uninvested funds");
+        }
+        if (amount.signum() > 0 && amount.compareTo(rolloverLimit(investmentId, memberId)) > 0) {
+            throw new IllegalArgumentException("Participation exceeds this member's rollover source balance");
         }
         List<EditableRow> rows = jdbc.query("""
             SELECT a.member_id, m.member_number, a.participation, a.edit_reason
@@ -303,6 +364,34 @@ public class InvestmentService {
                                  BigDecimal cost, BigDecimal maturityValue) {}
     private record EditableRow(UUID memberId, String number, BigDecimal participation, String reason) {}
 
+    @Transactional
+    public void discardDraft(UUID actor, UUID investmentId, String reason) {
+        require(actor, "INVESTMENT_WRITE");
+        if (reason == null || reason.isBlank() || reason.length() > 1000) {
+            throw new IllegalArgumentException("A short reason for discarding the draft is required");
+        }
+        var rows = jdbc.query("""
+            SELECT status, created_by FROM investments WHERE id = ? FOR UPDATE
+            """, (row, ignored) -> new java.util.AbstractMap.SimpleEntry<>(
+                row.getString("status"), row.getObject("created_by", UUID.class)), investmentId);
+        if (rows.isEmpty() || !"DRAFT".equals(rows.getFirst().getKey())
+            || !actor.equals(rows.getFirst().getValue())) {
+            throw new IllegalArgumentException("Only the creator can discard an unposted draft");
+        }
+        Boolean pending = jdbc.queryForObject("""
+            SELECT EXISTS (SELECT 1 FROM approval_requests WHERE action_type = 'INVESTMENT_POST'
+                AND status = 'PENDING' AND payload ->> 'investmentId' = ?)
+            """, Boolean.class, investmentId.toString());
+        if (Boolean.TRUE.equals(pending)) throw new IllegalStateException("Cancel approval before discarding");
+        jdbc.update("UPDATE investments SET status = 'DISCARDED', updated_at = now() WHERE id = ?",
+            investmentId);
+        jdbc.update("""
+            INSERT INTO audit_log (actor_id, action, entity_type, entity_id, details)
+            VALUES (?, 'INVESTMENT_DRAFT_DISCARDED', 'INVESTMENT', ?,
+                    jsonb_build_object('reason', ?))
+            """, actor, investmentId, reason.trim());
+    }
+
     List<AvailableMember> available(LocalDate date, UUID excludeInvestment) {
         return jdbc.query("""
             SELECT m.id, m.member_number, m.full_name,
@@ -339,6 +428,39 @@ public class InvestmentService {
         if (valid.isEmpty() || valid.contains(false)) {
             throw new IllegalStateException("Member uninvested funds changed; recreate the draft before approval");
         }
+        Boolean validSource = jdbc.queryForObject("""
+            SELECT NOT EXISTS (
+                SELECT 1 FROM investments target
+                JOIN investment_allocations a ON a.investment_id = target.id
+                LEFT JOIN investment_allocations original
+                  ON original.investment_id = target.rollover_source_id AND original.member_id = a.member_id
+                LEFT JOIN investment_maturity_allocations maturity
+                  ON maturity.investment_id = target.rollover_source_id AND maturity.member_id = a.member_id
+                WHERE target.id = ? AND target.rollover_source_id IS NOT NULL
+                  AND (original.member_id IS NULL OR maturity.member_id IS NULL OR
+                    a.participation > original.participation +
+                      CASE WHEN target.rollover_policy = 'ROLL_PRINCIPAL_ONLY' THEN 0
+                           ELSE maturity.actual_income_share END)
+            )
+            """, Boolean.class, investmentId);
+        if (!Boolean.TRUE.equals(validSource)) {
+            throw new IllegalStateException("Rollover source balance changed; recreate the draft");
+        }
+    }
+
+    private BigDecimal rolloverLimit(UUID investmentId, UUID memberId) {
+        return jdbc.queryForObject("""
+            SELECT CASE WHEN target.rollover_source_id IS NULL THEN 999999999999999.99
+                        ELSE original.participation +
+                          CASE WHEN target.rollover_policy = 'ROLL_PRINCIPAL_ONLY' THEN 0
+                               ELSE maturity.actual_income_share END END
+            FROM investments target
+            LEFT JOIN investment_allocations original
+              ON original.investment_id = target.rollover_source_id AND original.member_id = ?
+            LEFT JOIN investment_maturity_allocations maturity
+              ON maturity.investment_id = target.rollover_source_id AND maturity.member_id = ?
+            WHERE target.id = ?
+            """, BigDecimal.class, memberId, memberId, investmentId);
     }
 
     void require(UUID actor, String code) {

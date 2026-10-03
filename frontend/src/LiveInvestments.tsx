@@ -104,6 +104,11 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
   const [pending, setPending] = useState<Pending[]>([]);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [rolloverSource, setRolloverSource] = useState<string | null>(null);
+  const [rolloverPolicy, setRolloverPolicy] = useState("ROLL_PRINCIPAL_AND_INCOME");
+  const [settleConfirm, setSettleConfirm] = useState(false);
+  const [discardConfirm, setDiscardConfirm] = useState(false);
+  const [discardReason, setDiscardReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [decisionComment, setDecisionComment] = useState("");
@@ -149,6 +154,8 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
     try {
       const result = await request<Detail>(`/${id}`);
       setEditing(null);
+      setDiscardConfirm(false);
+      setDiscardReason("");
       setActualProceeds(String(result.investment.maturityValue));
       setMaturityPreview(null);
       setDetail(result);
@@ -164,17 +171,21 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
     event.preventDefault();
     setBusy(true);
     try {
+      const draft = {
+        tenor,
+        customDays: tenor === "CUSTOM" ? Number(customDays) : null,
+        institution,
+        referenceNumber,
+        purchaseDate: businessToday(),
+        maturityDate,
+        cost,
+        maturityValue,
+      };
       const result = await showPromiseToast(
-        request<{ id: string }>("", "POST", {
-          tenor,
-          customDays: tenor === "CUSTOM" ? Number(customDays) : null,
-          institution,
-          referenceNumber,
-          purchaseDate: businessToday(),
-          maturityDate,
-          cost,
-          maturityValue,
-        }),
+        rolloverSource
+          ? request<{ id: string }>(`/${rolloverSource}/rollover-draft`, "POST",
+              { policy: rolloverPolicy, draft })
+          : request<{ id: string }>("", "POST", draft),
         {
           loading: "Creating investment draft…",
           success: "Draft created",
@@ -182,6 +193,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
         },
       );
       setFormOpen(false);
+      setRolloverSource(null);
       await load();
       await open(result.id);
     } catch {
@@ -259,6 +271,44 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
     }
   };
 
+  const submitSettlement = async () => {
+    if (!detail) return;
+    setBusy(true);
+    try {
+      await showPromiseToast(request(`/${detail.investment.id}/settle`, "POST"), {
+        loading: "Sending settlement for approval…",
+        success: "Settlement approval requested",
+        error: "Could not request settlement approval",
+      });
+      setSettleConfirm(false);
+      await load();
+    } catch {
+      /* The toast includes the error. */
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const discardDraft = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!detail) return;
+    setBusy(true);
+    try {
+      await showPromiseToast(
+        request(`/${detail.investment.id}/discard`, "POST", { reason: discardReason }),
+        { loading: "Discarding draft…", success: "Draft discarded", error: "Could not discard draft" },
+      );
+      setDiscardConfirm(false);
+      setDiscardReason("");
+      await load();
+      await open(detail.investment.id);
+    } catch {
+      /* The toast includes the error. */
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const previewActual = async (id: string, amount: string) => {
     try {
       setMaturityPreview(
@@ -306,6 +356,8 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
             decision === "APPROVE"
               ? item.actionType === "INVESTMENT_MATURE"
                 ? "Maturity posted"
+                : item.actionType === "INVESTMENT_SETTLE"
+                  ? "Investment settled"
                 : "Investment posted"
               : "Request rejected",
           error: "Could not record decision",
@@ -342,7 +394,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
         {canWrite && (
           <button
             className="primary-button"
-            onClick={() => setFormOpen(!formOpen)}
+            onClick={() => { setRolloverSource(null); setFormOpen(!formOpen); }}
           >
             <Plus size={18} /> New draft
           </button>
@@ -350,13 +402,20 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
       </div>
       {formOpen && (
         <section className="surface member-form">
-          <h2>New treasury bill draft</h2>
+          <h2>{rolloverSource ? "New rollover draft" : "New treasury bill draft"}</h2>
           <p>
-            Participation uses today’s uninvested member balances. You can
-            review every share before asking for approval.
+            {rolloverSource
+              ? "Participation starts from the matured cycle’s eligible member balances. Review each share before approval."
+              : "Participation uses today’s uninvested member balances. You can review every share before asking for approval."}
           </p>
           <form onSubmit={create}>
             <div className="member-form-grid">
+              {rolloverSource && <label>Rollover policy
+                <select value={rolloverPolicy} onChange={event => setRolloverPolicy(event.target.value)}>
+                  <option value="ROLL_PRINCIPAL_AND_INCOME">Principal and income</option>
+                  <option value="ROLL_PRINCIPAL_ONLY">Principal only</option>
+                </select>
+              </label>}
               <label>
                 Tenor
                 <select
@@ -433,7 +492,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
               </label>
             </div>
             <button className="primary-button" disabled={busy}>
-              Create and preview
+              {rolloverSource ? "Create rollover preview" : "Create and preview"}
             </button>
           </form>
         </section>
@@ -628,7 +687,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
             </form>
           )}
           {canWrite && detail.investment.status === "DRAFT" && (
-            <button
+            <div className="investment-action-bar"><button
               className="primary-button investment-action"
               disabled={
                 busy ||
@@ -639,7 +698,21 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
               onClick={() => void submit()}
             >
               Request approval
-            </button>
+            </button><button className="secondary-button" disabled={busy || pending.some(
+              (item) => item.investmentId === detail.investment.id,
+            )} onClick={() => setDiscardConfirm(true)}>Discard draft</button></div>
+          )}
+          {discardConfirm && detail.investment.status === "DRAFT" && (
+            <form className="investment-edit" onSubmit={discardDraft}>
+              <strong>Discard this draft?</strong>
+              <p>This removes its rollover reservation and keeps an audit record.</p>
+              <label>Reason<input required maxLength={1000} value={discardReason}
+                onChange={(event) => setDiscardReason(event.target.value)} /></label>
+              <div className="investment-action-bar">
+                <button className="primary-button" disabled={busy}>Discard draft</button>
+                <button type="button" className="text-button" onClick={() => setDiscardConfirm(false)}>Cancel</button>
+              </div>
+            </form>
           )}
           {canWrite &&
             detail.investment.status === "POSTED" &&
@@ -729,7 +802,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
               </div>
             </div>
           )}
-          {detail.investment.status === "MATURED" && (
+          {["MATURED", "ROLLED_OVER", "SETTLED"].includes(detail.investment.status) && (
             <div className="investment-maturity">
               <h3>Actual maturity</h3>
               <p>
@@ -764,6 +837,21 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
                   </tbody>
                 </table>
               </div>
+              {canWrite && detail.investment.status === "MATURED" && <div className="investment-action-bar">
+                <button className="primary-button" onClick={() => {
+                  setRolloverSource(detail.investment.id);
+                  setRolloverPolicy("ROLL_PRINCIPAL_AND_INCOME");
+                  setFormOpen(true);
+                  setSettleConfirm(false);
+                }}>Create rollover draft</button>
+                <button className="secondary-button" disabled={busy || pending.some(item => item.investmentId === detail.investment.id && item.actionType === "INVESTMENT_SETTLE")}
+                  onClick={() => setSettleConfirm(true)}>Settle without rollover</button>
+              </div>}
+              {settleConfirm && detail.investment.status === "MATURED" && <div className="investment-settle-confirm">
+                <p>Settlement leaves all member funds uninvested. A different approver must confirm it.</p>
+                <button className="primary-button" disabled={busy} onClick={() => void submitSettlement()}>Request settlement approval</button>
+                <button className="text-button" onClick={() => setSettleConfirm(false)}>Cancel</button>
+              </div>}
             </div>
           )}
         </section>
@@ -782,6 +870,8 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
                 <span>
                   {item.actionType === "INVESTMENT_MATURE"
                     ? `Maturity · ${money(item.actualProceeds ?? "0")} actual proceeds`
+                    : item.actionType === "INVESTMENT_SETTLE"
+                      ? "Settlement · no rollover"
                     : `Posting · ${money(item.cost)} cost · ${money(item.maturityValue)} expected value`}
                 </span>
               </div>

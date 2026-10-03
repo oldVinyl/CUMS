@@ -29,9 +29,11 @@ public class InvestmentPostHandler implements ApprovalActionHandler {
         investments.require(makerId, "INVESTMENT_WRITE");
         UUID id = parse(payload);
         var rows = jdbc.query("""
-            SELECT status, created_by, purchase_date FROM investments WHERE id = ? FOR UPDATE
+            SELECT status, created_by, purchase_date, rollover_source_id, rollover_policy
+            FROM investments WHERE id = ? FOR UPDATE
             """, (row, ignored) -> new Draft(row.getString("status"),
-                row.getObject("created_by", UUID.class), row.getDate("purchase_date").toLocalDate()), id);
+                row.getObject("created_by", UUID.class), row.getDate("purchase_date").toLocalDate(),
+                row.getObject("rollover_source_id", UUID.class), row.getString("rollover_policy")), id);
         if (rows.isEmpty() || !"DRAFT".equals(rows.getFirst().status())
             || !makerId.equals(rows.getFirst().createdBy())) {
             throw new IllegalArgumentException("Only the draft creator can submit this investment");
@@ -56,9 +58,11 @@ public class InvestmentPostHandler implements ApprovalActionHandler {
             UUID.class, requestId);
         investments.require(maker, "INVESTMENT_WRITE");
         var rows = jdbc.query("""
-            SELECT status, created_by, purchase_date FROM investments WHERE id = ? FOR UPDATE
+            SELECT status, created_by, purchase_date, rollover_source_id, rollover_policy
+            FROM investments WHERE id = ? FOR UPDATE
             """, (row, ignored) -> new Draft(row.getString("status"),
-                row.getObject("created_by", UUID.class), row.getDate("purchase_date").toLocalDate()), id);
+                row.getObject("created_by", UUID.class), row.getDate("purchase_date").toLocalDate(),
+                row.getObject("rollover_source_id", UUID.class), row.getString("rollover_policy")), id);
         if (rows.isEmpty() || !"DRAFT".equals(rows.getFirst().status())
             || !maker.equals(rows.getFirst().createdBy())) {
             throw new IllegalStateException("Investment draft changed or was already posted");
@@ -68,8 +72,27 @@ public class InvestmentPostHandler implements ApprovalActionHandler {
             throw new IllegalStateException("Draft purchase date has passed; create a new draft");
         }
         fiscalYears.requireOpen(date.getYear());
+        UUID sourceId = rows.getFirst().sourceId();
+        if (sourceId != null) {
+            var sourceStatuses = jdbc.query("SELECT status FROM investments WHERE id = ? FOR UPDATE",
+                (row, ignored) -> row.getString("status"), sourceId);
+            if (sourceStatuses.isEmpty() || !"MATURED".equals(sourceStatuses.getFirst())) {
+                throw new IllegalStateException("Rollover source is no longer matured");
+            }
+        }
         investments.assertDraftCanPost(id, date);
         jdbc.update("UPDATE investments SET status = 'POSTED', updated_at = now() WHERE id = ?", id);
+        if (sourceId != null) {
+            jdbc.update("""
+                UPDATE investments SET status = 'ROLLED_OVER', rollover_policy = ?, updated_at = now()
+                WHERE id = ?
+                """, rows.getFirst().policy(), sourceId);
+            jdbc.update("""
+                INSERT INTO audit_log (actor_id, action, entity_type, entity_id, details)
+                VALUES (?, 'INVESTMENT_ROLLED_OVER', 'INVESTMENT', ?,
+                        jsonb_build_object('targetInvestmentId', ?::text, 'policy', ?))
+                """, approverId, sourceId, id.toString(), rows.getFirst().policy());
+        }
         jdbc.update("""
             INSERT INTO audit_log (actor_id, action, entity_type, entity_id, details)
             VALUES (?, 'INVESTMENT_POSTED', 'INVESTMENT', ?,
@@ -88,5 +111,6 @@ public class InvestmentPostHandler implements ApprovalActionHandler {
         }
     }
 
-    private record Draft(String status, UUID createdBy, LocalDate purchaseDate) {}
+    private record Draft(String status, UUID createdBy, LocalDate purchaseDate,
+                         UUID sourceId, String policy) {}
 }
