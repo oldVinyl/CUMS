@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -47,5 +48,34 @@ class PermissionServiceIntegrationTest {
     void unknownUserAndPermissionAreDenied() {
         assertThat(permissions.hasPermission(UUID.randomUUID(), "APPROVE")).isFalse();
         assertThat(permissions.hasPermission(null, "APPROVE")).isFalse();
+    }
+
+    @Test
+    @Transactional
+    void configuredDevAccountGetsAllKnownPermissionsOnlyInDevProfile() {
+        UUID userId = UUID.randomUUID();
+        String email = "dev-" + userId + "@invalid.example";
+        jdbc.update("INSERT INTO users (id, email, password_hash) VALUES (?, ?, 'fixture-hash')",
+            userId, email);
+        MockEnvironment dev = new MockEnvironment();
+        dev.setActiveProfiles("dev");
+        dev.setProperty("DEV_BOOTSTRAP_EMAIL", email.toUpperCase());
+        PermissionService devPermissions = new PermissionService(jdbc, dev);
+        assertThat(devPermissions.hasPermission(userId, "INVESTMENT_WRITE")).isTrue();
+        assertThat(devPermissions.hasPermission(userId, "APPROVE")).isTrue();
+        assertThat(devPermissions.currentPermissions(userId))
+            .contains("MEMBER_READ", "LEDGER_POST", "CYCLE_REPOST", "APPROVE");
+        assertThat(devPermissions.hasPermission(userId, "NOT_A_PERMISSION")).isFalse();
+
+        MockEnvironment production = new MockEnvironment();
+        production.setActiveProfiles("prod");
+        production.setProperty("DEV_BOOTSTRAP_EMAIL", email);
+        PermissionService productionPermissions = new PermissionService(jdbc, production);
+        assertThat(productionPermissions.hasPermission(userId, "INVESTMENT_WRITE")).isFalse();
+        assertThat(productionPermissions.currentPermissions(userId)).doesNotContain("APPROVE");
+
+        jdbc.update("UPDATE users SET status = 'DISABLED' WHERE id = ?", userId);
+        assertThat(devPermissions.hasPermission(userId, "APPROVE")).isFalse();
+        assertThat(devPermissions.currentPermissions(userId)).isEmpty();
     }
 }

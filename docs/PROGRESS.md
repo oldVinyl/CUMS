@@ -37,6 +37,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Distributed HTTP rate limiting, recovery-code regeneration, and authenticated route permission enforcement
 - [x] Seed six roles and permission grants; reject overlapping active assignments
 - [x] Read live permissions on each check; approved role changes take effect immediately
+- [x] Give the configured local bootstrap account every known permission only under the `dev` profile, without weakening production ADMIN grants or maker-checker separation
 - [x] Block revocation of the last active ADMIN or PRESIDENT through role-change approvals
 - [x] Enforce current role permissions and session ownership on member API endpoints
 - [ ] Protect against role expiry or account disable removing the last ADMIN or PRESIDENT; extend permission checks to later APIs
