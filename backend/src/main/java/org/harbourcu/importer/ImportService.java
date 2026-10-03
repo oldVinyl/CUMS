@@ -9,6 +9,7 @@ import java.util.*;
 import org.harbourcu.approval.ApprovalService;
 import org.harbourcu.common.FieldEncryption;
 import org.harbourcu.ledger.FiscalYearLock;
+import org.harbourcu.ledger.FiscalSnapshotService;
 import org.harbourcu.member.MemberService;
 import org.harbourcu.role.PermissionService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -28,10 +29,10 @@ public class ImportService {
     public record Page(List<Batch> batches,boolean hasNext,int page) {}
     private final JdbcTemplate jdbc;private final PermissionService permissions;private final ImportFileParser parser;
     private final FieldEncryption fields;private final ObjectMapper json;private final MemberService members;
-    private final FiscalYearLock years;
+    private final FiscalYearLock years;private final FiscalSnapshotService snapshots;
     // ApprovalService is passed at the controller boundary to keep the handler/service dependency acyclic.
-    public ImportService(JdbcTemplate jdbc,PermissionService permissions,ImportFileParser parser,FieldEncryption fields,ObjectMapper json,MemberService members,FiscalYearLock years){
-        this.jdbc=jdbc;this.permissions=permissions;this.parser=parser;this.fields=fields;this.json=json;this.members=members;this.years=years;
+    public ImportService(JdbcTemplate jdbc,PermissionService permissions,ImportFileParser parser,FieldEncryption fields,ObjectMapper json,MemberService members,FiscalYearLock years,FiscalSnapshotService snapshots){
+        this.jdbc=jdbc;this.permissions=permissions;this.parser=parser;this.fields=fields;this.json=json;this.members=members;this.years=years;this.snapshots=snapshots;
     }
     public List<String> columns(String kind){return switch(kind){case "MEMBERS"->MEMBER_COLUMNS;case "LEDGER"->LEDGER_COLUMNS;default->throw new IllegalArgumentException("Choose MEMBERS or LEDGER.");};}
     public Report dryRun(UUID actor,String kind,String filename,byte[] bytes){requireMaker(actor,kind);return analyze(kind,hash(bytes),parser.parse(filename,bytes,columns(kind)));}
@@ -87,6 +88,8 @@ public class ImportService {
                 VALUES(?,?,?,?,?,?,?,?,?,?,?)
                 """,member,r.get("type"),r.get("component"),new BigDecimal(r.get("amount")),effective,effective.getYear(),r.get("reference"),empty(r.get("narration")),maker,checker,id);
         }}
+        int firstYear=rows.stream().map(r->LocalDate.parse(r.get("LEDGER".equals(kind)?"effective_date":"join_date")).getYear()).min(Integer::compareTo).orElseThrow();
+        snapshots.recomputeFrom(firstYear,checker,request,false);
         jdbc.update("UPDATE import_batches SET status='POSTED',posted_at=now() WHERE id=?",id);audit(checker,id,"IMPORT_POSTED");
     }
     @Transactional public UUID reverse(UUID actor,UUID id,String reason,ApprovalService approvals){var b=lockedBatch(id);requireReverse(actor,(String)b.get("kind"));reason=reason(reason);
@@ -152,7 +155,7 @@ public class ImportService {
             if(declared==null&&!totalsError)warnings.add("No TOTAL row was supplied. Independently compare the calculated total with your source before confirming.");
             if(totalsError||(declared!=null&&declared.compareTo(total)!=0)){totalsError=true;warnings.add("The supplied TOTAL does not match the valid data rows.");}
             if(total.precision()-total.scale()>15){totalsError=true;warnings.add("The batch total exceeds the financial storage limit.");}
-            warnings.add("Historical dates require open years without later closed snapshots. Closed-period correction and historical investment imports are not supported by this template.");
+            warnings.add("Historical dates require open years. Closed years need approved period unlock; affected snapshots are versioned and recomputed at approval. Dates affecting posted investment ratios require separate cycle correction and are blocked here.");
         }else warnings.add("Blank member numbers are generated at approval. Private fields are encrypted when confirmed; no records are created by this dry run.");
         return new Report(kind,hash,reports.size(),total.toPlainString(),!totalsError&&reports.stream().allMatch(r->r.errors().isEmpty()),warnings,reports);
     }
@@ -183,7 +186,7 @@ public class ImportService {
         if(member.isEmpty()||!"ACTIVE".equals(member.getFirst().get("status")))throw new IllegalArgumentException("Member number must identify an active member.");
         if(effective.isBefore(((java.sql.Date)member.getFirst().get("join_date")).toLocalDate()))throw new IllegalArgumentException("Effective date precedes the member's join date.");
         if(!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM fiscal_years WHERE year=? AND status='OPEN')",Boolean.class,effective.getYear())))throw new IllegalArgumentException("The effective fiscal year is closed or missing.");
-        if(Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM fiscal_year_snapshots WHERE fiscal_year>=?)",Boolean.class,effective.getYear())))throw new IllegalArgumentException("Later closed snapshots depend on this date. Historical correction is required first.");
+        if(Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM investments WHERE purchase_date>=? AND status IN ('POSTED','MATURED','ROLLED_OVER','SETTLED')) OR EXISTS(SELECT 1 FROM investment_revision_history WHERE (snapshot->'investment'->>'purchase_date')::date>=?)",Boolean.class,effective,effective)))throw new IllegalArgumentException("Posted investment cycles depend on this date. Review the affected cycles before importing; cycle correction is required.");
         String ref=r.get("reference");if(ref.isBlank()||ref.length()>120||!seen.add(ref))throw new IllegalArgumentException("Reference is required, limited to 120 characters and unique within this file.");
         if(Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM ledger_entries WHERE reference=?)",Boolean.class,ref)))throw new IllegalArgumentException("Reference already exists in the ledger.");
         if(r.get("narration").length()>1000)throw new IllegalArgumentException("Narration exceeds 1,000 characters.");

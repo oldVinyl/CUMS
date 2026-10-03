@@ -16,12 +16,14 @@ public class FiscalYearCloseHandler implements ApprovalActionHandler {
     private final JdbcTemplate jdbc;
     private final PermissionService permissions;
     private final FiscalYearLock fiscalYearLock;
+    private final FiscalSnapshotService snapshots;
 
     public FiscalYearCloseHandler(JdbcTemplate jdbc, PermissionService permissions,
-                                  FiscalYearLock fiscalYearLock) {
+                                  FiscalYearLock fiscalYearLock, FiscalSnapshotService snapshots) {
         this.jdbc = jdbc;
         this.permissions = permissions;
         this.fiscalYearLock = fiscalYearLock;
+        this.snapshots = snapshots;
     }
 
     @Override
@@ -48,24 +50,13 @@ public class FiscalYearCloseHandler implements ApprovalActionHandler {
 
     @Override
     public void execute(UUID requestId, UUID approverId, JsonNode payload) {
+        jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");
         fiscalYearLock.requireOpen(year(payload));
         UUID makerId = jdbc.queryForObject(
             "SELECT made_by FROM approval_requests WHERE id = ?", UUID.class, requestId);
         validateSubmission(makerId, payload);
         int year = year(payload);
-        jdbc.update("""
-            INSERT INTO fiscal_year_snapshots
-                (fiscal_year, member_id, principal, income, equity, created_by)
-            SELECT ?, m.id,
-                   coalesce(sum(l.amount) FILTER (WHERE l.component = 'PRINCIPAL'), 0),
-                   coalesce(sum(l.amount) FILTER (WHERE l.component = 'INCOME'), 0),
-                   coalesce(sum(l.amount), 0), ?
-            FROM members m
-            LEFT JOIN ledger_entries l ON l.member_id = m.id
-              AND l.effective_date <= make_date(?, 12, 31)
-            WHERE m.join_date <= make_date(?, 12, 31)
-            GROUP BY m.id
-            """, year, approverId, year, year);
+        snapshots.recomputeFrom(year, approverId, requestId, true);
         int changed = jdbc.update("""
             UPDATE fiscal_years
             SET status = 'CLOSED', closed_at = now(), closed_by = ?

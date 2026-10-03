@@ -17,14 +17,17 @@ Check only implemented and verified gates. This system is not yet production com
 - [ ] Real Paystack sandbox, direct MoMo prompts and settlement matching
 - [ ] SMTP/MailHog delivery and operational retry acceptance
 - [ ] Historical backdate preview, period unlock and snapshot recomputation
+- [x] Approved reasoned period unlock, immutable snapshot revisions, later-year recomputation and reviewed historical import integration
+- [x] Overview fiscal-year selector and component/missing-member snapshot reconciliation
 - [x] CSV/XLSX member/opening-balance/contribution dry runs, approval and batch compensation
-- [ ] Historical investment/allocation imports and closed-period correction integration
+- [ ] Historical investment/allocation imports and explicit dependent-cycle correction/repost
 - [x] Filterable audit metadata screen and audited CSV export with authorization and injection tests
 - [ ] Full audit IP/before-after coverage and recovery/session/account administration
 - [ ] Complete original Sheet B workbook acceptance
 - [ ] HEIC conversion, malware scanner and file security review
 - [ ] Production CSP/TLS/security review and deployment
 - [ ] Encrypted off-site database/files backups, retention and restore drill
-- [ ] Retention/anonymization, complete own JSON export and owner policy review
+- [x] Audited owned JSON export, decimal preservation, private response headers and IDOR/secret-exclusion tests
+- [ ] Retention/anonymization and owner policy review
 
 No production deployment or successful external service delivery is claimed.

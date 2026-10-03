@@ -59,3 +59,14 @@ it("renders live Sheet B figures and filters member rows without changing totals
     expect.objectContaining({ credentials: "same-origin" }),
   ));
 });
+
+
+it("selects historical year ends and exposes snapshot discrepancies", async () => {
+  const figures = { principal: "100", income: "10", equity: "110" };
+  vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ asAt: "2001-02-01", fiscalYear: 2001, members: [], totals: { balanceBf: figures, ytd: figures, total: figures, roePercent: "10", equityRatioPercent: "100" }, balanceForwardSnapshot: { fiscalYear: 2000, state: "REVIEW_REQUIRED", snapshotCount: 1, missingMembers: 1, mismatchedMembers: 2 } }) })));
+  const change = vi.fn();
+  render(<MemoryRouter><ToastProvider><LiveDashboard asAt="2001-02-01" onAsAtChange={change} /></ToastProvider></MemoryRouter>);
+  expect(await screen.findByText(/snapshot review required: 1 missing members and 2 mismatched balances/)).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Fiscal year"), { target: { value: "2000" } });
+  expect(change).toHaveBeenCalledWith("2000-12-31");
+});

@@ -40,4 +40,16 @@ Ledger templates accept OPENING_BALANCE (PRINCIPAL or INCOME) and SEED/ADDITION 
 
 Run the dry run, resolve every row error and compare the calculated total with your source. Enter the source/reason, then confirm the exact checked file. No memberships or entries are created until independent approval. Review batch shows the submitted public impact; private contact/identity values are excluded. Makers can cancel pending requests. Reversal requires a reason and independent approval: ledger entries are exactly compensated today, while unused imported members are deactivated. Accounts or financial dependencies block member-batch reversal.
 
-Historical corrections/unlock, investment/allocation imports, full recovery administration and production delivery gates remain incomplete. See PROGRESS and CHECKLIST.
+## Historical period correction
+
+An authorized PRESIDENT can request a closed year's unlock from Ledger, with a reason. A different eligible approver must review it; the maker cannot approve it. Rejection or cancellation leaves the period closed. Unlock preserves earlier snapshots and recomputes that year's balance forward and all later recorded snapshots. Submit the reviewed correction through Imports, obtain independent approval, verify the updated balances, then request year-end close again.
+
+An import date that would change an existing or archived investment cycle's ratios is blocked. Explicit investment correction/repost and historical investment/allocation imports remain pending; do not alter dates to bypass the warning.
+
+Overview's Fiscal year selector changes the shared as-at date. Balance-forward verification identifies missing or mismatched prior-year snapshots and open correction periods. The Ledger balance-forward panel shows each member's snapshot, revision and ledger comparison. Overview figures always derive from the immutable ledger.
+
+## Download your data
+
+In My membership, use Download my data for a JSON file containing your profile, financial records, own allocation revisions, snapshot history and account metadata. Decimal amounts remain exact strings. It contains personal information; keep it securely. Receipt metadata is included; download the actual files separately from Payments. Passwords, authenticator secrets and session tokens are excluded.
+
+Backdating impact preview and both cycle-handling options, historical investment/allocation imports, full recovery administration and production delivery gates remain incomplete. See PROGRESS and CHECKLIST.

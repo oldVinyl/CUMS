@@ -537,3 +537,12 @@ td { color: var(--ink); }
   .pagination-current { padding: 0 5px; }
   .pagination-first { display: none; }
 }
+
+/* Keep correction and fiscal comparison controls on the shared theme. */
+.investment-form-grid textarea, .investment-panel .card-title-row > label select,
+.investment-panel > label select {
+  width: 100%; min-width: 0; min-height: 44px; padding: 11px 12px;
+  border: 1px solid var(--control-border); border-radius: 8px;
+  background: var(--surface); color: var(--ink); font: inherit;
+}
+.investment-form-grid textarea { resize: vertical; }

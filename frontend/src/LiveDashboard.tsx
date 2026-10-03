@@ -9,10 +9,12 @@ type Figures = { principal: string; income: string; equity: string };
 type Row = { memberId: string | null; memberNumber: string | null; fullName: string;
   balanceBf: Figures; ytd: Figures; total: Figures; roePercent: string; equityRatioPercent: string };
 type Dashboard = { asAt: string; fiscalYear: number; members: Row[]; totals: Row;
-  trend?: { date: string; equity: string }[]; developmentData?: boolean };
+  trend?: { date: string; equity: string }[]; developmentData?: boolean; balanceForwardSnapshot?: { fiscalYear: number; state: string; snapshotCount: number; missingMembers: number; mismatchedMembers: number } };
 
-export default function LiveDashboard({ asAt, canExport = false }: { asAt: string; canExport?: boolean }) {
+export default function LiveDashboard({ asAt, canExport = false, onAsAtChange }: { asAt: string; canExport?: boolean; onAsAtChange?: (date: string) => void }) {
   const showToast = useToast();
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Accra" });
+  const currentYear = Number(today.slice(0, 4));
   const [data, setData] = useState<Dashboard | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -52,13 +54,18 @@ export default function LiveDashboard({ asAt, canExport = false }: { asAt: strin
   return <div className="live-dashboard">
     <header className="page-heading"><div><div className="eyebrow">HARBOUR CREDIT UNION</div><h1>Overview</h1>
       <p>Your union at a glance. Balances as at {new Date(`${asAt}T12:00:00`).toLocaleDateString("en-GH", { day: "numeric", month: "long", year: "numeric" })}.</p></div>
-      <NavLink to="/members" className="primary-button"><Users size={18} /> View members</NavLink></header>
+      <div className="investment-action-bar">{onAsAtChange && <label className="dashboard-sort">Fiscal year<select value={Number(asAt.slice(0, 4))} onChange={event => onAsAtChange(Number(event.target.value) === currentYear ? today : `${event.target.value}-12-31`)}>{Array.from({ length: currentYear - 1999 }, (_, index) => currentYear - index).map(year => <option key={year} value={year}>{year}</option>)}</select></label>}
+      <NavLink to="/members" className="primary-button"><Users size={18} /> View members</NavLink></div></header>
     {loading && <section className="surface dashboard-empty" role="status">Loading your financial overview…</section>}
     {!loading && failed && <section className="surface dashboard-empty"><h2>Overview unavailable</h2><p>Your figures could not be loaded. Try again in a moment.</p>
       <button className="secondary-button" onClick={() => setRetry(value => value + 1)}><RefreshCw size={16} /> Try again</button></section>}
     {!loading && data && <>
       {data.developmentData && <div className="dev-data-notice"><span className="preview-dot" /><span><strong>Development sample data</strong> Fictitious demo members and ledger entries are included.</span></div>}
       <div className="section-heading"><div><h2>Financial overview</h2><p>Fiscal year {data.fiscalYear}</p></div><span className="quiet-tag">{data.members.length} members</span></div>
+      {data.balanceForwardSnapshot && <section className="surface investment-panel"><h2>Balance-forward verification</h2>
+        <p className={data.balanceForwardSnapshot.state === "REVIEW_REQUIRED" ? "negative" : undefined}>{data.balanceForwardSnapshot.state === "RECONCILED" ? `${data.balanceForwardSnapshot.fiscalYear} closed snapshots reconcile with the ledger.` : data.balanceForwardSnapshot.state === "REVIEW_REQUIRED" ? `${data.balanceForwardSnapshot.fiscalYear} snapshot review required: ${data.balanceForwardSnapshot.missingMembers} missing members and ${data.balanceForwardSnapshot.mismatchedMembers} mismatched balances.` : data.balanceForwardSnapshot.state === "CORRECTION_OPEN" ? `${data.balanceForwardSnapshot.fiscalYear} is open for correction. Close it again after the reviewed changes.` : `No closed balance-forward snapshot for ${data.balanceForwardSnapshot.fiscalYear}.`}</p>
+        <p>Overview figures are calculated from immutable ledger entries through the selected date.</p>
+      </section>}
       <div className="stat-grid">{cards.map(({ label, value, detail, icon: Icon, color }) => <div className={`stat-card ${color}`} key={label}>
         <div className="stat-head"><span>{label}</span><span className="stat-icon"><Icon size={19} /></span></div>
         <strong className="stat-value">{formatMoney(value)}</strong><span className="stat-detail">{detail}</span></div>)}</div>

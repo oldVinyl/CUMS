@@ -21,7 +21,8 @@ public class DashboardService {
                             BigDecimal roePercent, BigDecimal equityRatioPercent) {}
     public record TrendPoint(LocalDate date, BigDecimal equity) {}
     public record Dashboard(LocalDate asAt, int fiscalYear, List<MemberRow> members,
-                            MemberRow totals, List<TrendPoint> trend, boolean developmentData) {}
+                            MemberRow totals, List<TrendPoint> trend, boolean developmentData, SnapshotReconciliation balanceForwardSnapshot) {}
+    public record SnapshotReconciliation(int fiscalYear, String state, int snapshotCount, int missingMembers, int mismatchedMembers) {}
 
     private final JdbcTemplate jdbc;
     private final PermissionService permissions;
@@ -33,7 +34,7 @@ public class DashboardService {
         this.environment = environment;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public Dashboard asAt(UUID actor, LocalDate asAt) {
         if (!permissions.hasPermission(actor, "DASHBOARD_READ_ALL")) {
             throw new SecurityException("Access denied");
@@ -98,7 +99,26 @@ public class DashboardService {
         boolean samples = environment.matchesProfiles("dev") && Boolean.TRUE.equals(
             jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM ledger_entries WHERE reference LIKE 'DEV-SAMPLE-%' AND effective_date <= ?)",
                 Boolean.class, asAt));
-        return new Dashboard(asAt, asAt.getYear(), withRatios, totals, trend, samples);
+        return new Dashboard(asAt, asAt.getYear(), withRatios, totals, trend, samples, reconcile(yearStart.getYear()-1));
+    }
+
+    private SnapshotReconciliation reconcile(int year) {
+        var periods=jdbc.queryForList("SELECT status FROM fiscal_years WHERE year=?",String.class,year);
+        if(periods.isEmpty()) return new SnapshotReconciliation(year,"NOT_RECORDED",0,0,0);
+        var counts=jdbc.queryForMap("""
+            WITH balances AS (
+                SELECT m.id,coalesce(sum(l.amount) FILTER(WHERE l.component='PRINCIPAL'),0) principal,
+                  coalesce(sum(l.amount) FILTER(WHERE l.component='INCOME'),0) income
+                FROM members m LEFT JOIN ledger_entries l ON l.member_id=m.id AND l.effective_date<=make_date(?,12,31)
+                WHERE m.join_date<=make_date(?,12,31) GROUP BY m.id
+            ) SELECT count(s.id) snapshots,count(*) FILTER(WHERE s.id IS NULL) missing,
+              count(*) FILTER(WHERE s.id IS NOT NULL AND (s.principal<>b.principal OR s.income<>b.income OR s.equity<>b.principal+b.income)) mismatched
+            FROM balances b LEFT JOIN fiscal_year_snapshots s ON s.member_id=b.id AND s.fiscal_year=?
+            """,year,year,year);
+        int snapshots=((Number)counts.get("snapshots")).intValue(),missing=((Number)counts.get("missing")).intValue(),mismatched=((Number)counts.get("mismatched")).intValue();
+        String state="CLOSED".equals(periods.getFirst()) ? missing==0&&mismatched==0?"RECONCILED":"REVIEW_REQUIRED"
+            : snapshots>0?"CORRECTION_OPEN":"NOT_RECORDED";
+        return new SnapshotReconciliation(year,state,snapshots,missing,mismatched);
     }
 
     private static Figures figures(BigDecimal principal, BigDecimal income) {

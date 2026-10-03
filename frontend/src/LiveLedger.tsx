@@ -1,4 +1,5 @@
 import Pagination from "./Pagination";
+import FiscalSnapshots from "./FiscalSnapshots";
 import { useEffect, useState } from "react";
 import { Plus, BookOpen } from "lucide-react";
 import type { Profile } from "./auth-api";
@@ -16,6 +17,7 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
   const canRead = profile.permissions.includes("LEDGER_READ");
   const canPost = profile.permissions.includes("LEDGER_POST");
   const canClose = profile.permissions.includes("FISCAL_YEAR_CLOSE");
+  const canUnlock = profile.permissions.includes("PERIOD_UNLOCK");
   const [from, setFrom] = useState(`${asAt.slice(0, 4)}-01-01`);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [page, setPage] = useState(0); const [hasNext, setHasNext] = useState(false);
@@ -26,6 +28,7 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
   const [amount, setAmount] = useState(""); const [type, setType] = useState("ADDITION");
   const [reverse, setReverse] = useState<Entry | null>(null); const [reason, setReason] = useState("");
   const [years, setYears] = useState<Year[]>([]); const [closeYear, setCloseYear] = useState(""); const [closeConfirm, setCloseConfirm] = useState(false);
+  const [unlockYear, setUnlockYear] = useState(""); const [unlockReason, setUnlockReason] = useState("");
   const toast = useToast(); const promiseToast = usePromiseToast();
   const validRange = from >= "2000-01-01" && from <= asAt;
   const changed = () => setRetry(value => value + 1);
@@ -58,7 +61,7 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
   const mutation = async (promise: Promise<unknown>, success: string) => {
     setBusy(true);
     try { await promiseToast(promise, { loading: "Sending for approval…", success, error: "Could not submit request" });
-      setFormOpen(false); setAmount(""); setMemberId(""); setReverse(null); setCloseConfirm(false); setCloseYear(""); changed(); }
+      setFormOpen(false); setAmount(""); setMemberId(""); setReverse(null); setCloseConfirm(false); setCloseYear(""); setUnlockYear(""); setUnlockReason(""); changed(); }
     catch { /* Promise toast includes the server error. */ }
     finally { setBusy(false); }
   };
@@ -93,6 +96,15 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
     {canClose && <section className="surface investment-panel"><h2>Year-end close</h2><p>A closed year prevents further posting and preserves each member's balance forward.</p><label>Completed open fiscal year<select value={closeYear} onChange={event => { setCloseYear(event.target.value); setCloseConfirm(false); }}><option value="">Choose year</option>{years.filter(year => year.status === "OPEN" && year.year < new Date().getUTCFullYear()).map(year => <option key={year.year}>{year.year}</option>)}</select></label>
       {closeYear && (closeConfirm ? <div className="investment-edit"><p>Request close for {closeYear}? A different approver must review it. Historical posting to this year will be blocked.</p><button className="primary-button" disabled={busy} onClick={() => void mutation(ledgerRequest(`/fiscal-years/${closeYear}/close`, "POST"), "Year-end close approval requested")}>Confirm close request</button><button className="text-button" onClick={() => setCloseConfirm(false)}>Cancel</button></div> : <button className="secondary-button" onClick={() => setCloseConfirm(true)}>Review year-end close</button>)}
     </section>}
+    {canUnlock && <section className="surface investment-panel"><h2>Historical period correction</h2>
+      <p>Unlocking requires independent approval. Current and later balance-forward snapshots are recomputed, with earlier versions retained for audit. Review investment dependencies before importing corrections, then close the year again.</p>
+      <form onSubmit={event => { event.preventDefault(); void mutation(ledgerRequest(`/fiscal-years/${unlockYear}/unlock`, "POST", { reason: unlockReason }), "Period unlock approval requested"); }}>
+        <div className="investment-form-grid"><label>Closed fiscal year<select required value={unlockYear} onChange={event => setUnlockYear(event.target.value)}><option value="">Choose year</option>{years.filter(year => year.status === "CLOSED").map(year => <option key={year.year}>{year.year}</option>)}</select></label>
+          <label>Correction reason<textarea required maxLength={1000} rows={3} value={unlockReason} onChange={event => setUnlockReason(event.target.value)} /></label></div>
+        <button className="primary-button" disabled={busy || !unlockYear || !unlockReason.trim()}>Request period unlock</button>
+      </form>
+    </section>}
+    <FiscalSnapshots years={years} refresh={retry} />
     <LedgerApprovals key={retry} profile={profile} onChanged={changed} />
   </>;
 }

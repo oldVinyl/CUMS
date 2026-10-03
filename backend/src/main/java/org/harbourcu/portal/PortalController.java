@@ -12,11 +12,12 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController @RequestMapping("/api/v1/portal") @ConditionalOnProperty(name="APP_ENCRYPTION_KEY")
 public class PortalController {
- private final PortalService portal;private final SessionService sessions;private final String origin;
- public PortalController(PortalService portal,SessionService sessions,@Value("${APP_ALLOWED_ORIGIN:http://localhost:5173}") String origin){this.portal=portal;this.sessions=sessions;this.origin=origin;}
+ private final OwnDataExportService exports;private final PortalService portal;private final SessionService sessions;private final String origin;
+ public PortalController(PortalService portal,OwnDataExportService exports,SessionService sessions,@Value("${APP_ALLOWED_ORIGIN:http://localhost:5173}") String origin){this.portal=portal;this.exports=exports;this.sessions=sessions;this.origin=origin;}
  @GetMapping public ResponseEntity<?> overview(@RequestParam String asAt,HttpServletRequest r){return call(r,false,a->ResponseEntity.ok(portal.overview(a,LocalDate.parse(asAt))));}
  @GetMapping("/ledger") public ResponseEntity<?> ledger(@RequestParam String asAt,@RequestParam(defaultValue="0")int page,HttpServletRequest r){return call(r,false,a->ResponseEntity.ok(portal.history(a,LocalDate.parse(asAt),page)));}
  @GetMapping("/profile") public ResponseEntity<?> profile(HttpServletRequest r){return call(r,false,a->ResponseEntity.ok(portal.profile(a)));}
+ @GetMapping("/export.json") public ResponseEntity<?> export(HttpServletRequest r){return call(r,false,a->ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).header("Content-Disposition", "attachment; filename=membership-data.json").header("X-Content-Type-Options","nosniff").body(exports.export(a)));}
  @PostMapping("/profile") public ResponseEntity<?> update(@RequestBody PortalService.Profile b,HttpServletRequest r){return call(r,true,a->{portal.update(a,b);return ResponseEntity.noContent().build();});}
  private ResponseEntity<?> call(HttpServletRequest r,boolean mutation,Function<UUID,ResponseEntity<?>> action){
   String access=null;if(r.getCookies()!=null)for(var c:r.getCookies())if(c.getName().equals("cu_access"))access=c.getValue();var identity=sessions.resolveAccess(access).orElse(null);

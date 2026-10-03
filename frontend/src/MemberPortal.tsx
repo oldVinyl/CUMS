@@ -1,4 +1,5 @@
 import Pagination from "./Pagination";
+import OwnDataExport from "./OwnDataExport";
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { csrfCookie } from "./auth-api";
@@ -28,6 +29,7 @@ export default function MemberPortal({asAt}:{asAt:string}){
  <section className="surface investment-panel"><h2>Your transactions</h2>{!entries.length?<p>No posted transactions through this date.</p>:entries.map(e=><article className="payment-record" key={e.id}><div className="payment-record-heading"><div><strong>{e.type.replaceAll('_',' ')}</strong><p>{e.effectiveDate} · {e.component.toLowerCase()}</p><p className="payment-instructions">{e.narration??e.reference}</p></div><strong>{formatMoney(e.amount)}</strong></div></article>)}<Pagination page={page} hasNext={hasNext} loading={loading} onPageChange={setPage} count={entries.length} pageSize={50} label="Transaction pages" /><MemberStatement memberId={data.memberId} asAt={asAt}/></section>
  {contact&&<section className="surface investment-panel"><h2>Your contact details</h2><p>Contact email is used for membership correspondence. Your sign-in email is managed separately.</p><form className="investment-form" onSubmit={e=>{e.preventDefault();void save();}}>{([
  ['email','Contact email','email'],['phone','Phone','tel'],['nextOfKinName','Next of kin name','text'],['nextOfKinPhone','Next of kin phone','tel'],['nextOfKinRelationship','Relationship','text']] as const).map(([key,label,type])=><label key={key}>{label}<input type={type} value={contact[key]??''} onChange={e=>setContact({...contact,[key]:e.target.value})}/></label>)}<button className="primary-button" disabled={busy}>Save contact details</button></form><NavLink to="/settings" className="secondary-button">Security and sign-in settings</NavLink></section>}
+ <OwnDataExport />
  </>}
  </>;
 }

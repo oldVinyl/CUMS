@@ -39,6 +39,20 @@ import org.springframework.transaction.annotation.Transactional;
   jdbc.update("UPDATE members SET status='INACTIVE' WHERE id=?",member);assertThatThrownBy(()->portal.history(actor,today,0)).hasMessageContaining("active membership");
   mvc.perform(get("/api/v1/portal").param("asAt",today.toString())).andExpect(status().isUnauthorized());
  }
+ @Test @Transactional void ownJsonExportIncludesExactFinancialValuesAndNeverAnotherMemberOrAuthenticationSecrets() throws Exception {
+  UUID mine=member("Export fixture"),other=member("PRIVATE OTHER NAME"),actor=user(mine);
+  entry(mine,"PRINCIPAL","25.1234");entry(other,"PRINCIPAL","70.00");
+  var token=sessions.create(actor);
+  String body=mvc.perform(get("/api/v1/portal/export.json").param("memberId",other.toString()).cookie(new Cookie("cu_access",token.access())))
+   .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store")).andExpect(header().string("X-Content-Type-Options","nosniff"))
+   .andExpect(header().string("Content-Disposition","attachment; filename=membership-data.json"))
+   .andExpect(jsonPath("$.schemaVersion").value(1)).andExpect(jsonPath("$.member.id").value(mine.toString()))
+   .andExpect(jsonPath("$.ledger.length()").value(1)).andExpect(jsonPath("$.ledger[0].amount").value("25.1234"))
+   .andReturn().getResponse().getContentAsString();
+  assertThat(body).doesNotContain("PRIVATE OTHER NAME",other.toString(),"password_hash","totp_secret","token_hash","public_key_cose","encrypted_");
+  assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_log WHERE actor_id=? AND action='OWN_DATA_EXPORTED'",Integer.class,actor)).isEqualTo(1);
+  mvc.perform(get("/api/v1/portal/export.json")).andExpect(status().isUnauthorized());
+ }
  private void entry(UUID m,String c,String amount){jdbc.update("INSERT INTO ledger_entries(member_id,type,component,amount,effective_date,fiscal_year,reference) VALUES(?,'OPENING_BALANCE',?,?,?,?,?)",m,c,new java.math.BigDecimal(amount),today,today.getYear(),UUID.randomUUID().toString());}
  private UUID member(String name){UUID id=UUID.randomUUID();jdbc.update("INSERT INTO members(id,member_number,full_name,join_date) VALUES(?,?,?,?)",id,"PT-"+id,name,today);return id;}
  private UUID user(UUID member){UUID id=UUID.randomUUID();jdbc.update("INSERT INTO users(id,email,password_hash,member_id) VALUES(?,?,'fixture',?)",id,id+"@invalid.example",member);jdbc.update("INSERT INTO user_role_assignments(user_id,role_id,start_date) SELECT ?,id,? FROM roles WHERE code='MEMBER'",id,today);return id;}

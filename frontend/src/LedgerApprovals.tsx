@@ -34,14 +34,15 @@ export default function LedgerApprovals({ profile, onChanged }: { profile: Profi
     finally { setBusy(false); }
   };
   if (!canRead) return <section className="surface investment-panel"><h2>Ledger approval access required</h2><p>Your account cannot view ledger requests.</p></section>;
-  return <section className="surface investment-panel"><div className="card-title-row"><div><h2>Ledger approvals</h2><p>Contributions, reversals and year-end close. A different person must approve. Showing up to 100 pending requests.</p></div>
+  return <section className="surface investment-panel"><div className="card-title-row"><div><h2>Ledger approvals</h2><p>Contributions, reversals, year-end close and period unlock. A different person must approve. Showing up to 100 pending requests.</p></div>
     <button className="text-button" disabled={busy || loading} onClick={() => void load()}>Refresh</button></div>
     {loading ? <p role="status">Loading approvals…</p> : failed ? <p role="alert">Requests could not be loaded. Use Refresh to retry.</p> : !items.length ? <p>No ledger requests are awaiting approval.</p> : items.map(item => <article className="ledger-entry" key={item.id}>
-      <h3>{item.actionType === "LEDGER_POST" ? `${item.payload.type === "SEED" ? "Seed" : "Additional"} contribution` : item.actionType === "LEDGER_REVERSE" ? "Contribution reversal" : `Close fiscal year ${item.payload.year}`}</h3>
+      <h3>{item.actionType === "LEDGER_POST" ? `${item.payload.type === "SEED" ? "Seed" : "Additional"} contribution` : item.actionType === "LEDGER_REVERSE" ? "Contribution reversal" : item.actionType === "PERIOD_UNLOCK" ? `Unlock fiscal year ${item.payload.year}` : `Close fiscal year ${item.payload.year}`}</h3>
       {item.fullName && <p><strong>{item.fullName}</strong> · {item.memberNumber}</p>}
       {item.actionType === "LEDGER_POST" && <p>Principal: <strong>{formatMoney(item.payload.amount ?? "0")}</strong>. Effective on the day of approval.</p>}
       {item.actionType === "LEDGER_REVERSE" && <><p>Principal compensation: <strong>−{formatMoney(item.originalAmount ?? "0")}</strong></p><p>Reason: {item.payload.reason}</p><small>Original entry: {item.payload.entryId}</small></>}
       {item.actionType === "FISCAL_YEAR_CLOSE" && <p>Creates member balance-forward snapshots and blocks posting to this fiscal year.</p>}
+      {item.actionType === "PERIOD_UNLOCK" && <><p>Reopens this year for approved corrections and recomputes its balance-forward snapshot and all later snapshots. Previous versions remain in the audit history.</p><p>Reason: {item.payload.reason}</p></>}
       <p>{item.approvals} of {item.requiredApprovals} approvals</p>
       <div className="investment-action-bar">{item.makerId === profile.userId ? <button className="secondary-button" disabled={busy} onClick={() => void act(item)}>Cancel my request</button> : canApprove && <>
         <button className="primary-button" disabled={busy} onClick={() => { setReview({ item, decision: "APPROVE" }); setComment(""); }}>Review approval</button>

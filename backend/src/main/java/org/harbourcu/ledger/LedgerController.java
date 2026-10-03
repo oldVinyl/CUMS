@@ -35,6 +35,10 @@ public class LedgerController {
     @GetMapping("/fiscal-years") public ResponseEntity<?> years(@CookieValue(name = "cu_access", required = false) String access, HttpServletRequest request) {
         return call(access, null, false, request, actor -> ResponseEntity.ok(ledger.years(actor)));
     }
+    @GetMapping("/fiscal-years/{year}/snapshots") public ResponseEntity<?> snapshots(@PathVariable int year, @RequestParam(defaultValue = "0") int page,
+            @CookieValue(name = "cu_access", required = false) String access, HttpServletRequest request) {
+        return call(access, null, false, request, actor -> ResponseEntity.ok(ledger.snapshots(actor, year, page)));
+    }
     @GetMapping("/approvals") public ResponseEntity<?> pending(@CookieValue(name = "cu_access", required = false) String access, HttpServletRequest request) {
         return call(access, null, false, request, actor -> ResponseEntity.ok(ledger.pending(actor)));
     }
@@ -50,6 +54,10 @@ public class LedgerController {
             @CookieValue(name = "cu_access", required = false) String access, @RequestHeader(name = "X-CSRF-Token", required = false) String csrf, HttpServletRequest request) {
         return call(access, csrf, true, request, actor -> ResponseEntity.ok(new Submitted(ledger.close(actor, year))));
     }
+    @PostMapping("/fiscal-years/{year}/unlock") public ResponseEntity<?> unlock(@PathVariable int year, @RequestBody Reason body,
+            @CookieValue(name = "cu_access", required = false) String access, @RequestHeader(name = "X-CSRF-Token", required = false) String csrf, HttpServletRequest request) {
+        return call(access, csrf, true, request, actor -> ResponseEntity.ok(new Submitted(ledger.unlock(actor, year, body.reason()))));
+    }
     @PostMapping("/approvals/{id}/decide") public ResponseEntity<?> decide(@PathVariable UUID id, @RequestBody Decision body,
             @CookieValue(name = "cu_access", required = false) String access, @RequestHeader(name = "X-CSRF-Token", required = false) String csrf, HttpServletRequest request) {
         return call(access, csrf, true, request, actor -> { ledger.decide(actor, id, body.decision(), body.comment()); return ResponseEntity.noContent().build(); });
@@ -64,12 +72,13 @@ public class LedgerController {
         if (mutation && (!sessions.csrfMatches(identity.sessionId(), csrf) || (request.getHeader("Origin") != null && !origin.equals(request.getHeader("Origin"))))) {
             return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "Refresh this page and try again.", request);
         }
-        try { return action.apply(identity.userId()); }
+        try { var response = action.apply(identity.userId());
+            return ResponseEntity.status(response.getStatusCode()).headers(response.getHeaders()).cacheControl(CacheControl.noStore()).body(response.getBody()); }
         catch (SecurityException exception) { return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "You do not have permission for this ledger action.", request); }
         catch (IllegalArgumentException | DateTimeException exception) { return error(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", exception.getMessage(), request); }
         catch (IllegalStateException exception) { return error(HttpStatus.CONFLICT, "LEDGER_CONFLICT", exception.getMessage(), request); }
     }
     private ResponseEntity<ApiError> error(HttpStatus status, String code, String message, HttpServletRequest request) {
-        return ResponseEntity.status(status).body(new ApiError(code, message, List.of(), TraceIdFilter.traceId(request)));
+        return ResponseEntity.status(status).cacheControl(CacheControl.noStore()).body(new ApiError(code, message, List.of(), TraceIdFilter.traceId(request)));
     }
 }

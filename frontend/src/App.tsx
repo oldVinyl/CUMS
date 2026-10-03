@@ -174,7 +174,7 @@ function App() {
             : <Routes>
             <Route path="/" element={profile
               ? profile.permissions.includes("DASHBOARD_READ_ALL")
-                ? <LiveDashboard asAt={asAt} canExport={profile.permissions.includes("REPORT_EXPORT")} />
+                ? <LiveDashboard asAt={asAt} onAsAtChange={updateAsAt} canExport={profile.permissions.includes("REPORT_EXPORT")} />
                 : <MemberPortal asAt={asAt} />
               : <Overview asAt={asAt} />} />
             <Route

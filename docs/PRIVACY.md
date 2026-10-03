@@ -8,4 +8,6 @@ Financial ledger, audit, payment events, revision history and reconciliation rec
 
 The payment provider receives transaction email, amount, reference and member UUID needed for verification. Status emails exclude receipt attachments and balances. Only public static assets enter the offline cache; APIs and financial documents are excluded.
 
-Retention/anonymization, complete own JSON export, recovery administration, backup recovery and policy review remain outstanding. No automated financial-record deletion is enabled by this draft.
+Members can download an audited JSON export of their own profile, account metadata, exact financial records, allocation revisions, snapshot history and receipt metadata. The server derives the member from the signed-in account; other members' data and authentication secrets are excluded. Receipt files remain separately protected downloads. Snapshot corrections preserve previous values in immutable history.
+
+Retention/anonymization, recovery administration, backup recovery and policy review remain outstanding. No automated financial-record deletion is enabled by this draft.

@@ -77,6 +77,16 @@ Migration V29 adds encrypted immutable import source rows, batches and member-re
 
 POST `/api/v1/imports/dry-run` with multipart `kind` (MEMBERS/LEDGER) and `file`. A dry run does not write audit, staging, member or ledger rows. To submit, POST the same file/kind to `/api/v1/imports` with `expectedHash` from the dry run and a `reason`. Approval revalidates the batch under financial/fiscal locks before posting it atomically. Private source fields are encrypted; no uploaded file is kept in a public folder. Reversals compensate ledger rows today or deactivate unused imported members, retaining original records.
 
-Use `/api/v1/imports/template.csv?kind=MEMBERS` or `kind=LEDGER` for templates. Limits are 5 MB, 1,000 data rows and one worksheet. Formulas are rejected; use UTF-8 for CSV. Totals mismatch, stale references, inactive members, closed years and later dependent snapshots block confirmation/posting. Historical investment/allocation imports and period unlock/recomputation remain pending.
+Use `/api/v1/imports/template.csv?kind=MEMBERS` or `kind=LEDGER` for templates. Limits are 5 MB, 1,000 data rows and one worksheet. Formulas are rejected; use UTF-8 for CSV. Totals mismatch, stale references, inactive members and closed years block confirmation/posting. Approved historical imports recompute affected balance-forward snapshots and preserve previous versions. Imports that affect posted or archived investment ratios remain blocked until their explicit cycle-correction workflow is implemented. Historical investment/allocation imports remain pending.
 
 `node scripts/imports-browser-smoke.mjs` checks the review screen with isolated read fixtures in both themes at five viewport widths. It rejects mutations to the running API.
+
+## Historical periods and member data exports
+
+V30 adds immutable `fiscal_snapshot_history` and a revision counter on current snapshots. PRESIDENT receives PERIOD_UNLOCK; the configured dev bootstrap account retains all permissions. In Ledger, choose a closed year and provide a correction reason. The year remains closed until the required distinct approvals complete. Unlock, approved import and reclose archive existing snapshots and atomically recompute the affected year and all later recorded snapshots. Historical imports still require LEDGER_BACKDATE and all their existing maker permissions. Posted investment dependencies are checked again at final approval.
+
+Overview's fiscal-year selector updates the shared as-at date to year end, or today for the current year. Its balance-forward verification checks both principal and income against the prior fiscal snapshot, flags missing members, and distinguishes an open correction period. Figures continue to come from the immutable ledger. Ledger's balance-forward panel provides a paginated member comparison and revision numbers.
+
+My membership offers `/api/v1/portal/export.json`, an audited no-store attachment whose ownership is derived from the signed-in account. It includes profile, account metadata, exact financial amounts, own allocations and their archived revisions, snapshots, receipt metadata and role/passkey metadata. Authentication secrets and other members' records are excluded. Receipt binaries remain separately available through protected payment downloads.
+
+`node scripts/period-browser-smoke.mjs` checks Overview, Ledger and My membership at five widths in both themes using read fixtures; it rejects financial mutations. It requires an isolated headless Chrome test session on port 9223.

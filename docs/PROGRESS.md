@@ -73,6 +73,10 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Member balances computed from ledger entries through an as-at date
 - [x] Approved year-end close with balance-forward snapshots and fiscal-year locking
 - [ ] Historical corrections, backdating impact preview, period unlock, and snapshot recomputation
+- [x] Independently approved, reasoned period unlock with current permission rechecks, duplicate-request prevention, maker cancellation and rejection
+- [x] Append-only snapshot revision history; recompute the corrected year and every later snapshot on unlock, approved import and reclose
+- [x] Permit reviewed historical ledger imports into open or approved-unlocked years, while blocking changes to posted or archived investment ratios
+- [x] Fiscal-year balance-forward inspection with exact component reconciliation, revision numbers, pagination and empty/error states
 - [x] Live paginated ledger UI, contribution/reversal/year-close request controls, maker cancellation, confirmation-based approvals, origin/CSRF and permission tests
 - [x] Recheck committed investment funds before approving manual contribution compensation
 - [ ] Attachment security and secure downloads
@@ -105,7 +109,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Shared pagination across members, ledger, payments, portal, reconciliation, accounts, audit and import previews/history
 - [x] Unify uppercase eyebrow subtitles, themed surfaces/borders/text/buttons and readable desktop/tablet typography
 - [x] Verify the supplied Sheet B aggregate totals, ROE/equity-share examples, and exclusion of future effective entries with an independent ledger fixture
-- [ ] Explicit fiscal-year selector and closed-snapshot reconciliation for the as-at dashboard
+- [x] Explicit fiscal-year selector and closed-snapshot reconciliation for the as-at dashboard, including missing members and offsetting principal/income mismatches
 - [x] Sheet B xlsx/PDF downloads with grouped headings, numeric totals, audit and visual checks
 - [x] Member statements with opening/running/closing balances, date range, PDF/xlsx, staff authorization and own-account IDOR tests
 - [x] Live Reports page and statement downloads in member details
@@ -136,7 +140,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Accounts/roles UI with invitations, search/pagination and reviewed independent role decisions
 - [x] ADMIN/PRESIDENT grants require explicit approved revocation rather than automatic expiry
 - [x] Dev-only linked sample membership and initially disabled fictitious reviewer for separate-account testing
-- [ ] Password/reset and recovery administration, complete own JSON export and invitation delivery acceptance
+- [x] Own JSON profile/account/ledger/payment/allocation/revision/snapshot/receipt-metadata export, exact decimal strings, audited private download and ownership/secret-exclusion tests
+- [ ] Password/reset and recovery administration and invitation delivery acceptance
 
 ## Phase 7 — Import and reconciliation
 - [ ] Dry-run importer, approval and batch reversal
@@ -145,7 +150,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Independently approve entire batches atomically; stale data, permissions, closed periods and duplicate references are rechecked
 - [x] Reviewed exact ledger batch compensation and unused-member deactivation, retaining original source and financial records
 - [x] Live import validation/review/history screens, pagination, CSRF/origin/permission and rollback tests
-- [ ] Historical investment/allocation imports and closed-period snapshot correction/recomputation
+- [ ] Historical investment/allocation imports and explicit correction of dependent investment cycles
 - [x] Current-day ledger/holdings/cash comparison with exact differences and immutable snapshots
 - [x] Separate finalization/rejection/cancellation with source freshness and transaction rollback tests
 - [x] Live reconciliation screen and paginated decision history
@@ -160,10 +165,12 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] User guide, runbook, privacy implementation notes and release checklist drafts
 
 ## Latest verified pass — 2026-10-03
-- [x] Complete backend suite: 131 tests, no failures/errors/skips, including 250 generated financial allocation cases
-- [x] Frontend regression suite: 34 tests; production build and lint
+- [x] Complete backend suite: 138 tests, no failures/errors/skips, including 250 generated financial allocation cases
+- [x] Frontend regression suite: 39 tests; production build and lint; four focused overview tests rechecked after the final header layout adjustment
 - [x] Ten additional audit responsive checks at 320/375/768/1024/1440 in both themes; 70 checks across the new operational screens
 - [x] Recheck all 70 operational layouts after theme/type/settings/pagination changes and add ten import review checks; 80 checks total
+- [x] Thirty further checks for fiscal overview/reconciliation, ledger correction/snapshot forms and member data export at 320/375/768/1024/1440 in both themes
+- [x] Apply V30 snapshot-history migration to the local development backend and verify application health
 - [ ] Imports, historical corrections, audit/recovery administration and production delivery gates remain open. No phase is declared complete while its gates remain.
 
 ## Deferred follow-ups

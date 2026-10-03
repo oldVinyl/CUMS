@@ -94,6 +94,28 @@ class DashboardServiceIntegrationTest {
             .isInstanceOf(SecurityException.class);
     }
 
+    @Test @Transactional
+    void balanceForwardVerificationDetectsMissingAndOffsettingComponentDiscrepancies() {
+        jdbc.update("INSERT INTO fiscal_years(year,start_date,end_date) VALUES(2000,'2000-01-01','2000-12-31') ON CONFLICT DO NOTHING");
+        UUID member=member("snapshot-","Snapshot fixture"),admin=user("ADMIN");
+        entry(member,"SEED","PRINCIPAL","100",LocalDate.of(2000,2,1));
+        entry(member,"INCOME_ALLOCATION","INCOME","10",LocalDate.of(2000,12,31));
+        jdbc.update("INSERT INTO fiscal_year_snapshots(fiscal_year,member_id,principal,income,equity,created_by) VALUES(2000,?,100,10,110,?)",member,admin);
+        jdbc.update("UPDATE fiscal_years SET status='CLOSED',closed_at=now(),closed_by=? WHERE year=2000",admin);
+        var date=LocalDate.of(2001,2,1);
+        assertThat(dashboards.asAt(admin,date).balanceForwardSnapshot().state()).isEqualTo("RECONCILED");
+        jdbc.update("UPDATE fiscal_year_snapshots SET principal=101,income=9 WHERE fiscal_year=2000 AND member_id=?",member);
+        var mismatch=dashboards.asAt(admin,date);
+        assertThat(mismatch.balanceForwardSnapshot().state()).isEqualTo("REVIEW_REQUIRED");
+        assertThat(mismatch.balanceForwardSnapshot().mismatchedMembers()).isEqualTo(1);
+        assertThat(mismatch.totals().balanceBf().equity()).isEqualByComparingTo("110");
+        jdbc.update("UPDATE fiscal_years SET status='OPEN',closed_at=NULL,closed_by=NULL WHERE year=2000");
+        assertThat(dashboards.asAt(admin,date).balanceForwardSnapshot().state()).isEqualTo("CORRECTION_OPEN");
+        jdbc.update("DELETE FROM fiscal_year_snapshots WHERE fiscal_year=2000 AND member_id=?",member);
+        jdbc.update("UPDATE fiscal_years SET status='CLOSED',closed_at=now(),closed_by=? WHERE year=2000",admin);
+        assertThat(dashboards.asAt(admin,date).balanceForwardSnapshot().missingMembers()).isEqualTo(1);
+    }
+
     private UUID member(String number, String name) {
         UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO members (id, member_number, full_name, join_date) VALUES (?, ?, ?, ?)",
