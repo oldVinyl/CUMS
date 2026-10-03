@@ -94,6 +94,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Verify overview empty and error states, light/dark themes, and desktop/mobile layouts without page overflow
 - [x] Provide opt-in, idempotent fictitious member and ledger samples scoped to the dev profile
 - [x] Separate Settings controls into individual cards and adapt the Vinette credit for smaller screens
+- [x] Verify the supplied Sheet B aggregate totals, ROE/equity-share examples, and exclusion of future effective entries with an independent ledger fixture
 - [ ] As-at dashboard, Sheet B calculations, and filters
 - [ ] Sheet B fixture test, statements, xlsx/PDF, charts
 

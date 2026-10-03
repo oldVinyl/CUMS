@@ -19,6 +19,46 @@ class DashboardServiceIntegrationTest {
 
     @Test
     @Transactional
+    void suppliedSheetBAggregatesAndPercentageExamplesReconcile() {
+        for (int year : new int[] {2000, 2001}) {
+            jdbc.update("""
+                INSERT INTO fiscal_years (year, start_date, end_date)
+                VALUES (?, make_date(?, 1, 1), make_date(?, 12, 31))
+                ON CONFLICT DO NOTHING
+                """, year, year, year);
+        }
+        UUID first = member("sheet-b-a", "Sheet B example");
+        UUID second = member("sheet-b-b", "Sheet B remainder");
+        LocalDate bf = LocalDate.of(2000, 12, 31);
+        LocalDate ytd = LocalDate.of(2001, 6, 1);
+        entry(first, "SEED", "PRINCIPAL", "20000.00", bf);
+        entry(first, "INCOME_ALLOCATION", "INCOME", "3000.00", bf);
+        entry(first, "ADDITION", "PRINCIPAL", "10000.00", ytd);
+        entry(first, "INCOME_ALLOCATION", "INCOME", "1796.87", ytd);
+        entry(second, "SEED", "PRINCIPAL", "200000.00", bf);
+        entry(second, "INCOME_ALLOCATION", "INCOME", "25790.00", bf);
+        entry(second, "ADDITION", "PRINCIPAL", "20811.50", ytd);
+        entry(second, "INCOME_ALLOCATION", "INCOME", "8267.63", ytd);
+        UUID admin = user("ADMIN");
+        var result = dashboards.asAt(admin, ytd);
+        assertThat(result.totals().balanceBf().equity()).isEqualByComparingTo("248790.00");
+        assertThat(result.totals().ytd().equity()).isEqualByComparingTo("40876.00");
+        assertThat(result.totals().total().principal()).isEqualByComparingTo("250811.50");
+        assertThat(result.totals().total().income()).isEqualByComparingTo("38854.50");
+        assertThat(result.totals().total().equity()).isEqualByComparingTo("289666.00");
+        assertThat(result.totals().roePercent()).isEqualByComparingTo("15.49");
+        var example = result.members().stream().filter(row -> row.memberId().equals(first))
+            .findFirst().orElseThrow();
+        assertThat(example.roePercent()).isEqualByComparingTo("15.99");
+        assertThat(example.equityRatioPercent()).isEqualByComparingTo("12.01");
+        assertThat(result.members().stream().map(DashboardService.MemberRow::equityRatioPercent)
+            .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("100.00");
+        assertThat(dashboards.asAt(admin, ytd.minusDays(1)).totals().total().equity())
+            .isEqualByComparingTo("248790.00");
+    }
+
+    @Test
+    @Transactional
     void asAtSeparatesBalanceForwardAndYearToDateWithExactTotals() {
         for (int year : new int[] {2000, 2001}) {
             jdbc.update("""
