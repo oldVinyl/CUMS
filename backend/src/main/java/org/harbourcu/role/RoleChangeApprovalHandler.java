@@ -105,6 +105,9 @@ public class RoleChangeApprovalHandler implements ApprovalActionHandler {
         }
         UUID userId = uuid(payload, "userId");
         UUID roleId = roleId(payload.get("roleCode").asText());
+        if (payload.has("endDate") && List.of("ADMIN", "PRESIDENT").contains(payload.get("roleCode").asText())) {
+            throw new IllegalArgumentException("Administrator and president roles require explicit approved revocation, not automatic expiry");
+        }
         if (payload.has("endDate")) {
             LocalDate endDate;
             try {
