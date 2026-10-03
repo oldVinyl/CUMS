@@ -25,6 +25,7 @@ import AcceptInvitation from './AcceptInvitation'
 import UserAdministration from './UserAdministration'
 import ApprovalsPage from './ApprovalsPage'
 import SettingsPage from './SettingsPage'
+import AuditPage from './AuditPage'
 
 type NavItem = { label: string; path: string; icon: LucideIcon }
 
@@ -39,6 +40,7 @@ const nav: NavItem[] = [
   { label: 'Reports', path: '/reports', icon: FileChartColumnIncreasing },
   { label: 'Reconciliation', path: '/reconciliation', icon: ClipboardCheck },
   { label: 'Accounts and roles', path: '/accounts', icon: ShieldCheck },
+  { label: 'Audit log', path: '/audit', icon: ShieldCheck },
   { label: 'Settings', path: '/settings', icon: Settings },
 ]
 
@@ -121,6 +123,7 @@ function App() {
     "/approvals": ["APPROVE", "LEDGER_POST", "LEDGER_REVERSE", "INVESTMENT_WRITE", "ROLE_ASSIGN", "PAYMENT_VERIFY"],
     "/reports": ["REPORT_EXPORT"], "/reconciliation": ["RECONCILE", "APPROVE", "AUDIT_READ"],
     "/accounts": ["USER_ADMIN", "ROLE_ASSIGN", "APPROVE"],
+    "/audit": ["AUDIT_READ"],
   };
   const visibleNav = nav.filter(item => !profile || !routePermissions[item.path] || routePermissions[item.path].some(p => profile.permissions.includes(p)));
   const [menuOpen, setMenuOpen] = useState(false)
@@ -197,6 +200,7 @@ function App() {
             />
             <Route path="/reconciliation" element={profile ? <ReconciliationPage profile={profile} /> : <SimplePage title="Reconciliation" subtitle="Compare balances with the ledger." icon={ClipboardCheck} heading="Sign in to continue" description="Reconciliation is available to authorized union officers." />} />
             <Route path="/accept-invitation" element={<AcceptInvitation />} />
+            <Route path="/audit" element={profile ? <AuditPage profile={profile} /> : <SimplePage title="Audit log" subtitle="Trace recorded union actions." icon={ShieldCheck} heading="Sign in to continue" description="Audit records require authorized access." />} />
             <Route path="/accounts" element={profile ? <UserAdministration profile={profile} /> : <SimplePage title="Accounts and roles" subtitle="Manage account access." icon={ShieldCheck} heading="Sign in to continue" description="Account management requires authorized access." />} />
             <Route path="/portal" element={profile ? <MemberPortal asAt={asAt} /> : <SimplePage title="My membership" subtitle="Your balances and contributions." icon={Users} heading="Sign in to continue" description="Your membership records are private." />} />
             <Route path="/ledger" element={profile ? <LiveLedger profile={profile} asAt={asAt} /> : <SimplePage title="Ledger" subtitle="Sign in to view posted entries." icon={WalletCards} heading="Sign in to continue" description="Live ledger records are available to authorized accounts." />} />

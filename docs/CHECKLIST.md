@@ -18,7 +18,8 @@ Check only implemented and verified gates. This system is not yet production com
 - [ ] SMTP/MailHog delivery and operational retry acceptance
 - [ ] Historical backdate preview, period unlock and snapshot recomputation
 - [ ] CSV/XLSX imports, approval and batch compensation
-- [ ] Audit screen/export and full recovery/session/account administration
+- [x] Filterable audit metadata screen and audited CSV export with authorization and injection tests
+- [ ] Full audit IP/before-after coverage and recovery/session/account administration
 - [ ] Complete original Sheet B workbook acceptance
 - [ ] HEIC conversion, malware scanner and file security review
 - [ ] Production CSP/TLS/security review and deployment

@@ -33,6 +33,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/investments", "/api/v1/investments/**")
                     .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                         environment.containsProperty("APP_ENCRYPTION_KEY")))
+                .requestMatchers("/api/v1/audit", "/api/v1/audit/**")
+                    .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
+                        environment.containsProperty("APP_ENCRYPTION_KEY")))
                 .requestMatchers("/api/v1/dashboard", "/api/v1/settings/rollover", "/api/v1/reports/**", "/api/v1/ledger", "/api/v1/ledger/**", "/api/v1/payments", "/api/v1/payments/**", "/api/v1/portal", "/api/v1/portal/**", "/api/v1/reconciliations", "/api/v1/reconciliations/**", "/api/v1/users", "/api/v1/users/**")
                     .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                         environment.containsProperty("APP_ENCRYPTION_KEY")))

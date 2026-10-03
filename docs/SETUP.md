@@ -65,3 +65,8 @@ SMTP is opt-in with `APP_MAIL_ENABLED=true`, host/port/from, optional user/passw
 The production service worker caches only public static assets and a reconnection page. API data, receipts, financial documents and navigation responses are excluded. Development Vite does not register it. Bump the shell-cache version when changing the offline shell.
 
 The isolated scripts `operations-browser-smoke.mjs` and `accounts-browser-smoke.mjs` use Chrome port 9223 and reject financial mutations. `pwa-browser-smoke.mjs` verifies the production preview on port 5174 and offline API exclusion. These do not establish real provider/payment acceptance.
+# Audit metadata
+
+The `/audit` screen and `/api/v1/audit` require `AUDIT_READ`. `/api/v1/audit/export.csv` exports the applied date/action/entity/actor filters and records an export event. Date boundaries use Africa/Accra; pagination is 50 events, and CSV exports reject more than 5,000 results instead of silently truncating. Raw audit details are deliberately excluded from these responses. Full IP/before-after event coverage is still a release gate.
+
+Run `node scripts/audit-browser-smoke.mjs` from `frontend` against the isolated development Chrome debugger on port 9223 to check audit fixtures in both themes at five viewport widths. The script intercepts API reads and rejects mutations.

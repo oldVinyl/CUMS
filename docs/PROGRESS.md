@@ -25,6 +25,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Data-minimal append-only audit service and authentication security events
 - [x] Sensitive member-detail reads audited without storing private values in the event
 - [x] Audit report/statement generation and downloads without recording private report contents
+- [x] Permission-protected audit metadata screen with date/action/entity/actor filters, stable pagination, and audited formula-safe CSV export
+- [ ] Complete audit IP and before/after coverage, full audit payload review and failed-login event acceptance
 - [x] Argon2id password hashing and basic common-password policy with tests
 - [x] Session, login-attempt, and TOTP recovery-code tables
 - [x] Opaque access/refresh/CSRF token service with hashed storage, rotation, replay revocation, and tests
@@ -149,8 +151,9 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] User guide, runbook, privacy implementation notes and release checklist drafts
 
 ## Latest verified pass — 2026-10-03
-- [x] Complete backend suite: 121 tests, no failures/errors/skips, including 250 generated financial allocation cases
-- [x] Frontend regression suite: 26 tests plus the own-membership navigation test; production build and lint
+- [x] Complete backend suite: 124 tests, no failures/errors/skips, including 250 generated financial allocation cases
+- [x] Frontend regression suite: 30 tests; production build and lint
+- [x] Ten additional audit responsive checks at 320/375/768/1024/1440 in both themes; 70 checks across the new operational screens
 - [ ] Imports, historical corrections, audit/recovery administration and production delivery gates remain open. No phase is declared complete while its gates remain.
 
 ## Deferred follow-ups
