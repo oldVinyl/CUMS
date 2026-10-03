@@ -289,6 +289,20 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
     }
   };
 
+  const cancelApproval = async (item: Pending) => {
+    setBusy(true);
+    try {
+      await showPromiseToast(request(`/approvals/${item.id}/cancel`, "POST"), {
+        loading: "Cancelling approval request…",
+        success: "Approval request cancelled",
+        error: "Could not cancel approval request",
+      });
+      await load();
+    } catch {
+      /* The toast includes the error. */
+    } finally { setBusy(false); }
+  };
+
   const discardDraft = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!detail) return;
@@ -895,6 +909,11 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
               >
                 Reject
               </button>
+              {item.makerId === profile.userId && <button
+                className="text-button" disabled={busy}
+                onClick={() => void cancelApproval(item)}>
+                Cancel request
+              </button>}
             </div>
           ))}
           <label className="investment-comment">

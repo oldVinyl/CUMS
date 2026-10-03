@@ -80,6 +80,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Show a reconciled Sheet A totals row and verify the 12-member sheet fixture in the engine and screen
 - [x] Create principal-only or principal-and-income rollover drafts from matured investments, with source caps, distinct approval, and live uninvested-fund rechecks
 - [x] Allow the creator to discard an unused draft with an audit reason, releasing its rollover source
+- [x] Let a maker cancel their pending investment request before editing or discarding its draft
 - [x] Approve settlement without rollover and leave member balances uninvested
 - [x] Audit an ADMIN/PRESIDENT-managed organisation rollover default and apply it to new drafts
 - [ ] Investment lifecycle, rollover, reversal

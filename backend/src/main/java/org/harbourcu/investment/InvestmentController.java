@@ -233,6 +233,22 @@ public class InvestmentController {
         catch (IllegalArgumentException exception) { return validation(exception, request); }
     }
 
+    @PostMapping("/approvals/{requestId}/cancel")
+    public ResponseEntity<?> cancel(@PathVariable UUID requestId,
+                                    @CookieValue(name = "cu_access", required = false) String access,
+                                    @RequestHeader(name = "X-CSRF-Token", required = false) String csrf,
+                                    HttpServletRequest request) {
+        var identity = verified(access, csrf, request);
+        if (identity == null) return accessFailure(access, request);
+        try {
+            investments.requireInvestmentApproval(requestId);
+            approvals.cancel(requestId, identity.userId());
+            return ResponseEntity.noContent().build();
+        } catch (SecurityException exception) { return denied(request); }
+        catch (IllegalStateException exception) { return conflict(exception, request); }
+        catch (IllegalArgumentException exception) { return validation(exception, request); }
+    }
+
     private SessionService.SessionIdentity verified(String access, String csrf, HttpServletRequest request) {
         if (request.getHeader("Origin") != null && !allowedOrigin.equals(request.getHeader("Origin"))) return null;
         var identity = sessions.resolveAccess(access).orElse(null);
