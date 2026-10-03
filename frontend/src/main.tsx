@@ -17,3 +17,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </React.StrictMode>,
 )
+
+// Local Vite development remains free of service-worker caches.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => { void navigator.serviceWorker.register("/service-worker.js").catch(() => { /* Network use remains available if installation fails. */ }); });
+}

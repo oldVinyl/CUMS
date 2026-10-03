@@ -1,0 +1,17 @@
+import { afterEach, expect, it, vi } from "vitest";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import App from "./App";
+import { ToastProvider } from "./toast";
+vi.mock("./auth-api", async () => ({ ...(await vi.importActual<typeof import("./auth-api")>("./auth-api")), currentProfile: vi.fn(async () => ({userId:"member-account",email:"member@invalid.example",permissions:["OWN_DATA_READ"],preferredSignInMethod:"TOTP"})) }));
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+it("shows own membership navigation without union financial or staff routes", async () => {
+ vi.stubGlobal("matchMedia",()=>({matches:false,addListener:()=>{},removeListener:()=>{}}));
+ vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify({message:"No linked test membership"}),{status:409,headers:{"Content-Type":"application/json"}})));
+ render(<MemoryRouter><ToastProvider><App /></ToastProvider></MemoryRouter>);
+ await waitFor(()=>expect(screen.getByRole("heading",{name:"My membership"})).toBeTruthy());
+ const nav=within(screen.getByRole("navigation",{name:"Main navigation"}));
+ expect(nav.getByRole("link",{name:"My membership"})).toBeTruthy();expect(nav.getByRole("link",{name:"Payments"})).toBeTruthy();
+ for(const name of ["Members","Investments","Ledger","Accounts and roles","Reconciliation","Reports"]) expect(nav.queryByRole("link",{name})).toBeNull();
+ expect(within(screen.getByRole("navigation",{name:"Mobile navigation"})).queryByRole("button",{name:"More"})).toBeNull();
+});

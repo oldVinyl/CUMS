@@ -6,6 +6,7 @@ import { registerPasskey } from "./passkey-api";
 import { useToast } from "./toast-context";
 import GoogleButton from "./GoogleButton";
 import RolloverSettings from "./RolloverSettings";
+import FinancialPolicySettings from "./FinancialPolicySettings";
 
 export default function SettingsPage({ profile, signOutAll }: {
   profile: Profile | null; signOutAll: () => void;
@@ -21,6 +22,7 @@ export default function SettingsPage({ profile, signOutAll }: {
     <header className="page-heading"><div><div className="eyebrow">HARBOUR CREDIT UNION</div>
       <h1>Settings</h1><p>Your union’s policies and workspace details.</p></div></header>
     <div className="settings-grid setting-cards">
+      {profile?.permissions.includes("SETTINGS_WRITE") && <FinancialPolicySettings />}
       <section className="surface setting-card"><span className="settings-icon"><Landmark size={24} /></span>
         <h2>Investment rollover</h2><p>Choose the starting policy for new investment cycles.</p>
         {profile?.permissions.includes("SETTINGS_WRITE") ? <RolloverSettings />

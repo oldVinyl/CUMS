@@ -18,6 +18,11 @@ import LiveInvestments from './LiveInvestments'
 import LiveDashboard from './LiveDashboard'
 import ReportsPage from './ReportsPage'
 import LiveLedger from './LiveLedger'
+import LivePayments from './LivePayments'
+import MemberPortal from './MemberPortal'
+import ReconciliationPage from './ReconciliationPage'
+import AcceptInvitation from './AcceptInvitation'
+import UserAdministration from './UserAdministration'
 import ApprovalsPage from './ApprovalsPage'
 import SettingsPage from './SettingsPage'
 
@@ -29,8 +34,11 @@ const nav: NavItem[] = [
   { label: 'Investments', path: '/investments', icon: ChartNoAxesCombined },
   { label: 'Ledger', path: '/ledger', icon: WalletCards },
   { label: 'Payments', path: '/payments', icon: CreditCard },
+  { label: 'My membership', path: '/portal', icon: Users },
   { label: 'Approvals', path: '/approvals', icon: ClipboardCheck },
   { label: 'Reports', path: '/reports', icon: FileChartColumnIncreasing },
+  { label: 'Reconciliation', path: '/reconciliation', icon: ClipboardCheck },
+  { label: 'Accounts and roles', path: '/accounts', icon: ShieldCheck },
   { label: 'Settings', path: '/settings', icon: Settings },
 ]
 
@@ -51,12 +59,12 @@ function ThemeButton() {
   return <button className="icon-button" aria-label={`Switch to ${dark ? 'light' : 'dark'} theme`} onClick={() => { setDark(!dark); showToast(`${dark ? 'Light' : 'Dark'} theme on`, { tone: 'success' }) }}>{dark ? <Sun size={19} /> : <Moon size={19} />}</button>
 }
 
-function Sidebar({ close }: { close: () => void }) {
+function Sidebar({ close, items }: { close: () => void; items: NavItem[] }) {
   return <>
     <div className="brand"><div className="brand-mark"><Landmark size={23} strokeWidth={2.2} /></div><div><strong>Harbour</strong><span>Credit Union</span></div></div>
     <div className="side-label">WORKSPACE</div>
     <nav className="side-nav" aria-label="Main navigation">
-      {nav.map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} end={path === '/'} onClick={close} className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}><Icon size={19} strokeWidth={1.9} /><span>{label}</span>{label === 'Approvals' && <span className="nav-dot" />}</NavLink>)}
+      {items.map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} end={path === '/'} onClick={close} className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}><Icon size={19} strokeWidth={1.9} /><span>{label}</span></NavLink>)}
     </nav>
     <div className="sidebar-bottom"><div className="help-icon"><CircleHelp size={19} /></div><div><strong>Need a hand?</strong><span>View the user guide</span></div><ArrowRight size={17} /></div>
   </>
@@ -107,6 +115,14 @@ function App() {
   const showToast = useToast()
   const navigate = useNavigate()
   const [profile, setProfile] = useState<Profile | null>(null)
+  const routePermissions: Record<string, string[]> = {
+    "/members": ["MEMBER_READ"], "/investments": ["INVESTMENT_READ"], "/ledger": ["LEDGER_READ"],
+    "/payments": ["OWN_DATA_READ", "PAYMENT_VERIFY", "APPROVE"], "/portal": ["OWN_DATA_READ"],
+    "/approvals": ["APPROVE", "LEDGER_POST", "LEDGER_REVERSE", "INVESTMENT_WRITE", "ROLE_ASSIGN", "PAYMENT_VERIFY"],
+    "/reports": ["REPORT_EXPORT"], "/reconciliation": ["RECONCILE", "APPROVE", "AUDIT_READ"],
+    "/accounts": ["USER_ADMIN", "ROLE_ASSIGN", "APPROVE"],
+  };
+  const visibleNav = nav.filter(item => !profile || !routePermissions[item.path] || routePermissions[item.path].some(p => profile.permissions.includes(p)));
   const [menuOpen, setMenuOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [asAt, setAsAt] = useState(new Date().toISOString().slice(0, 10))
@@ -130,7 +146,7 @@ function App() {
     const confirmed = await currentProfile()
     if (!confirmed) throw new Error('Your session could not be confirmed. Please sign in again.')
     setProfile(confirmed)
-    navigate('/members')
+    navigate(confirmed.permissions.includes('MEMBER_READ') ? '/members' : '/')
   }
   const signOut = async (allDevices = false) => {
     try {
@@ -144,13 +160,72 @@ function App() {
   const section = nav.find(item => item.path === location.pathname)?.label ?? 'Overview'
   if (location.pathname === '/sign-in') return <AuthPage onAuthenticated={signedIn} />
   return <div className="app-shell">
-    <aside className={`sidebar ${menuOpen ? 'open' : ''}`}><Sidebar close={() => setMenuOpen(false)} /></aside>
+    <aside className={`sidebar ${menuOpen ? 'open' : ''}`}><Sidebar close={() => setMenuOpen(false)} items={visibleNav} /></aside>
     {menuOpen && <button className="scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
-    <div className="main-area"><header className="topbar"><div className="topbar-left"><button className="icon-button desktop-hidden" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button><span className="breadcrumb"><span className="breadcrumb-root">Workspace <span>/</span></span><strong>{section}</strong></span></div><div className="topbar-right"><label className="date-control"><CalendarDays size={17} /><span>As at</span><input type="date" value={asAt} max={new Date().toISOString().slice(0, 10)} onChange={event => updateAsAt(event.target.value)} aria-label="As at date" /></label><ThemeButton /><button className="icon-button notification-button" aria-label="Notifications" onClick={() => showToast("No live notifications yet", { detail: "The inbox will update when approval workflows are connected." })}><Bell size={19} /><span /></button>{profile ? <button className="profile profile-action" onClick={() => signOut()} title="Sign out"><div className="profile-avatar">{profile.email.slice(0, 2).toUpperCase()}</div><div><strong>{profile.email}</strong><span>Sign out</span></div><ChevronDown size={15} /></button> : <NavLink to="/sign-in" className="sign-in-link">Sign in <ArrowRight size={16} /></NavLink>}</div></header>
-      <main className="content"><Routes><Route path="/" element={profile ? profile.permissions.includes("DASHBOARD_READ_ALL") ? <LiveDashboard asAt={asAt} canExport={profile.permissions.includes("REPORT_EXPORT")} /> : <SimplePage title="Overview" subtitle="Your workspace" icon={LayoutDashboard} heading="Dashboard access required" description="Your account cannot view all member balances." /> : <Overview asAt={asAt} />} /><Route path="/members" element={profile ? <LiveMembers profile={profile} asAt={asAt} /> : <Members />} /><Route path="/investments" element={profile ? <LiveInvestments profile={profile} /> : <SimplePage title="Investments" subtitle="Sign in to view investments." icon={Landmark} heading="Sign in to continue" description="Investment records are available after authentication." />} /><Route path="/ledger" element={profile ? <LiveLedger profile={profile} asAt={asAt} /> : <SimplePage title="Ledger" subtitle="Sign in to view posted entries." icon={WalletCards} heading="Sign in to continue" description="Live ledger records are available to authorized accounts." />} /><Route path="/payments" element={<SimplePage title="Payments" subtitle="Follow contributions from submission to confirmation." icon={CreditCard} heading="Payments will appear here" description="Online payments and receipt verification will be tied to the approval and ledger workflows." />} /><Route path="/approvals" element={profile ? <ApprovalsPage profile={profile} /> : <SimplePage title="Approvals" subtitle="A second pair of eyes for money movements." icon={ClipboardCheck} heading="Sign in to review requests" description="Authorized requests are reviewed before money is posted." />} /><Route path="/reports" element={profile ? <ReportsPage profile={profile} asAt={asAt} /> : <SimplePage title="Reports" subtitle="Reliable figures for every point in time." icon={FileChartColumnIncreasing} heading="Sign in to view reports" description="Authorized report downloads use live member and ledger data." />} /><Route path="/settings" element={<SettingsPage profile={profile} signOutAll={() => signOut(true)} />} /></Routes></main>
+    <div className="main-area"><header className="topbar"><div className="topbar-left"><button className="icon-button desktop-hidden" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button><span className="breadcrumb"><span className="breadcrumb-root">Workspace <span>/</span></span><strong>{section}</strong></span></div><div className="topbar-right"><label className="date-control"><CalendarDays size={17} /><span>As at</span><input type="date" value={asAt} max={new Date().toISOString().slice(0, 10)} onChange={event => updateAsAt(event.target.value)} aria-label="As at date" /></label><ThemeButton /><button className="icon-button notification-button" aria-label="Notifications" onClick={() => showToast("Email notifications", { detail: "Payment and approval updates are queued for configured email delivery. The in-app inbox is not available yet." })}><Bell size={19} /><span /></button>{profile ? <button className="profile profile-action" onClick={() => signOut()} title="Sign out"><div className="profile-avatar">{profile.email.slice(0, 2).toUpperCase()}</div><div><strong>{profile.email}</strong><span>Sign out</span></div><ChevronDown size={15} /></button> : <NavLink to="/sign-in" className="sign-in-link">Sign in <ArrowRight size={16} /></NavLink>}</div></header>
+      <main className="content"><Routes>
+            <Route path="/" element={profile
+              ? profile.permissions.includes("DASHBOARD_READ_ALL")
+                ? <LiveDashboard asAt={asAt} canExport={profile.permissions.includes("REPORT_EXPORT")} />
+                : <MemberPortal asAt={asAt} />
+              : <Overview asAt={asAt} />} />
+            <Route
+              path="/members"
+              element={
+                profile ? (
+                  <LiveMembers profile={profile} asAt={asAt} />
+                ) : (
+                  <Members />
+                )
+              }
+            />
+            <Route
+              path="/investments"
+              element={
+                profile ? (
+                  <LiveInvestments profile={profile} />
+                ) : (
+                  <SimplePage
+                    title="Investments"
+                    subtitle="Sign in to view investments."
+                    icon={Landmark}
+                    heading="Sign in to continue"
+                    description="Investment records are available after authentication."
+                  />
+                )
+              }
+            />
+            <Route path="/reconciliation" element={profile ? <ReconciliationPage profile={profile} /> : <SimplePage title="Reconciliation" subtitle="Compare balances with the ledger." icon={ClipboardCheck} heading="Sign in to continue" description="Reconciliation is available to authorized union officers." />} />
+            <Route path="/accept-invitation" element={<AcceptInvitation />} />
+            <Route path="/accounts" element={profile ? <UserAdministration profile={profile} /> : <SimplePage title="Accounts and roles" subtitle="Manage account access." icon={ShieldCheck} heading="Sign in to continue" description="Account management requires authorized access." />} />
+            <Route path="/portal" element={profile ? <MemberPortal asAt={asAt} /> : <SimplePage title="My membership" subtitle="Your balances and contributions." icon={Users} heading="Sign in to continue" description="Your membership records are private." />} />
+            <Route path="/ledger" element={profile ? <LiveLedger profile={profile} asAt={asAt} /> : <SimplePage title="Ledger" subtitle="Sign in to view posted entries." icon={WalletCards} heading="Sign in to continue" description="Live ledger records are available to authorized accounts." />} />
+            <Route path="/payments" element={profile ? <LivePayments profile={profile} /> : <SimplePage title="Payments" subtitle="Follow contributions from submission to confirmation." icon={CreditCard} heading="Sign in to continue" description="Submit receipts and follow payment status after authentication." />} />
+            <Route
+              path="/approvals"
+              element={
+                profile ? <ApprovalsPage profile={profile} /> : <SimplePage title="Approvals" subtitle="A second pair of eyes for money movements." icon={ClipboardCheck} heading="Sign in to review requests" description="Authorized requests are reviewed before money is posted." />
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                profile ? <ReportsPage profile={profile} asAt={asAt} /> : <SimplePage title="Reports" subtitle="Reliable figures for every point in time." icon={FileChartColumnIncreasing} heading="Sign in to view reports" description="Authorized report downloads use live member and ledger data." />
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <SettingsPage
+                  profile={profile}
+                  signOutAll={() => signOut(true)}
+                />
+              }
+            />
+          </Routes></main>
     </div>
-    <nav className="bottom-nav" aria-label="Mobile navigation">{nav.slice(0, 4).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} end={path === '/'} className={({ isActive }) => `bottom-link${isActive ? ' active' : ''}`}><Icon size={20} /><span>{label}</span></NavLink>)}<button className={`bottom-link${moreOpen ? ' active' : ''}`} onClick={() => setMoreOpen(!moreOpen)}><Menu size={20} /><span>More</span></button></nav>
-    {moreOpen && <div className="more-sheet"><div className="sheet-top"><strong>More</strong><button className="icon-button" aria-label="Close more menu" onClick={() => setMoreOpen(false)}><X size={19} /></button></div>{nav.slice(4).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} className="sheet-link"><Icon size={20} />{label}<ArrowRight size={17} /></NavLink>)}</div>}
+    <nav className={`bottom-nav${visibleNav.length <= 4 ? " compact" : ""}`} aria-label="Mobile navigation">{visibleNav.slice(0, 4).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} end={path === '/'} className={({ isActive }) => `bottom-link${isActive ? ' active' : ''}`}><Icon size={20} /><span>{label}</span></NavLink>)}{visibleNav.length > 4 && <button className={`bottom-link${moreOpen ? ' active' : ''}`} onClick={() => setMoreOpen(!moreOpen)}><Menu size={20} /><span>More</span></button>}</nav>
+    {moreOpen && <div className="more-sheet"><div className="sheet-top"><strong>More</strong><button className="icon-button" aria-label="Close more menu" onClick={() => setMoreOpen(false)}><X size={19} /></button></div>{visibleNav.slice(4).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} className="sheet-link"><Icon size={20} />{label}<ArrowRight size={17} /></NavLink>)}</div>}
   </div>
 }
 

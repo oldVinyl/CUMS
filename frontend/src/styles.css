@@ -392,3 +392,39 @@
 :root[data-theme="dark"] { --muted: #b8ccd0; }
 .ledger-entry .negative { color: var(--red); }
 :root[data-theme="dark"] .ledger-entry .negative { color: #ff8b85; }
+
+
+.payment-record { padding: 1.3rem 0; border-bottom: 1px solid var(--line); }
+.payment-record:last-of-type { border-bottom: 0; }
+.payment-record-heading, .payment-method { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.payment-record-heading p, .payment-method p { margin: .4rem 0; }
+.payment-instructions { white-space: pre-wrap; overflow-wrap: anywhere; }
+.payment-warning { color: #940404; background: #fff0ed; padding: 1rem; border-left: 4px solid #c31b1b; }
+[data-theme="dark"] .payment-warning { color: #ffb8b4; background: #3d2029; }
+.payment-method { padding: 1rem 0; border-bottom: 1px solid var(--line); }
+.payment-record .investment-edit label { display: grid; gap: .5rem; margin-block: 1rem; }
+@media (max-width: 480px) { .payment-record-heading, .payment-method { flex-direction: column; } }
+
+.portal-balance-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1.5rem; margin-block: 1.5rem; }
+.portal-balance-grid > div { min-width: 0; }
+.portal-balance-grid span, .portal-balance-grid strong { display: block; }
+.portal-balance-grid strong { margin-top: .5rem; font-size: 1.2rem; overflow-wrap: anywhere; }
+.portal-trend { display: grid; gap: 1rem; }
+.portal-trend > div { display: grid; grid-template-columns: 7rem minmax(0,1fr) minmax(4rem,1fr); gap: 1rem; align-items: center; }
+.portal-trend progress { width: 100%; accent-color: #407e8c; }
+@media(max-width:600px) { .portal-balance-grid { grid-template-columns: 1fr; gap: .75rem; } .portal-trend > div { grid-template-columns: 1fr 1fr; } .portal-trend progress { grid-column: 1/-1; } }
+
+.investment-form { display: grid; gap: 1rem; max-width: 760px; margin-block: 1.2rem; }
+.investment-form label { display: grid; gap: .5rem; color: var(--ink); font-size: .88rem; font-weight: 600; min-width: 0; }
+.investment-form input, .investment-form select, .investment-form textarea { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--surface); font: inherit; min-height: 44px; }
+.investment-form textarea { resize: vertical; }
+.investment-form input:focus-visible, .investment-form select:focus-visible, .investment-form textarea:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.investment-form input[type="file"] { white-space: normal; font-size: .8rem; }
+.investment-form input[type="file"]::file-selector-button { background: var(--surface-soft, var(--surface)); color: var(--ink); border: 1px solid var(--line); padding: .6rem; margin-right: .5rem; }
+.investment-form button, .investment-panel button, .investment-panel a.secondary-button { min-height: 44px; }
+.payment-record, .payment-record-heading > div, .payment-method > div, .setting-card { min-width: 0; overflow-wrap: anywhere; }
+@media(max-width:480px) { .payment-record-heading strong { max-width: 100%; } }
+
+.setting-card .secondary-button { color: var(--ink); min-height: 44px; }
+.bottom-nav.compact { display: flex; }
+.bottom-nav.compact > a { flex: 1; }
