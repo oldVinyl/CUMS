@@ -23,7 +23,7 @@ public class SecurityConfig {
         return http
             .csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/auth/**", "/api/v1/members",
                 "/api/v1/members/**", "/api/v1/investments", "/api/v1/investments/**",
-                "/api/v1/settings/rollover", "/api/v1/ledger/**"))
+                "/api/v1/settings/rollover", "/api/v1/ledger/**", "/api/v1/payments", "/api/v1/payments/**", "/api/v1/portal", "/api/v1/portal/**", "/api/v1/reconciliations", "/api/v1/reconciliations/**", "/api/v1/users", "/api/v1/users/**"))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/api/v1/health", "/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/members", "/api/v1/members/*",
@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/investments", "/api/v1/investments/**")
                     .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                         environment.containsProperty("APP_ENCRYPTION_KEY")))
-                .requestMatchers("/api/v1/dashboard", "/api/v1/settings/rollover", "/api/v1/reports/**", "/api/v1/ledger", "/api/v1/ledger/**")
+                .requestMatchers("/api/v1/dashboard", "/api/v1/settings/rollover", "/api/v1/reports/**", "/api/v1/ledger", "/api/v1/ledger/**", "/api/v1/payments", "/api/v1/payments/**", "/api/v1/portal", "/api/v1/portal/**", "/api/v1/reconciliations", "/api/v1/reconciliations/**", "/api/v1/users", "/api/v1/users/**")
                     .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                         environment.containsProperty("APP_ENCRYPTION_KEY")))
                 .anyRequest().denyAll())

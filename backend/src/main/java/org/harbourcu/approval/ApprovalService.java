@@ -45,6 +45,7 @@ public class ApprovalService {
         if (makerId == null || payload == null || requiredApprovals < 1 || requiredApprovals > 3) {
             throw new IllegalArgumentException("Maker, payload, and 1–3 approvals are required");
         }
+        requiredApprovals = Math.max(requiredApprovals, jdbc.queryForObject("SELECT required_approvals FROM organisation_settings WHERE singleton=true", Integer.class));
         ApprovalActionHandler handler = handlerFor(actionType);
         handler.validateSubmission(makerId, payload);
         UUID id = UUID.randomUUID();

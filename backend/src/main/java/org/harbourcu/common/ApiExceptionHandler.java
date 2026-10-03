@@ -32,6 +32,25 @@ public class ApiExceptionHandler {
             "Please correct the highlighted fields.", fields, TraceIdFilter.traceId(request)));
     }
 
+    @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
+        org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+        org.springframework.web.bind.MissingServletRequestParameterException.class,
+        org.springframework.web.multipart.support.MissingServletRequestPartException.class})
+    ResponseEntity<ApiError> malformed(Exception exception, HttpServletRequest request) {
+        return ResponseEntity.badRequest().body(new ApiError("VALIDATION_ERROR",
+            "Check the required fields, dates and file, then try again.", List.of(), TraceIdFilter.traceId(request)));
+    }
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    ResponseEntity<ApiError> oversized(Exception exception, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(new ApiError("FILE_TOO_LARGE",
+            "Receipt files must be no larger than 10 MB.", List.of(), TraceIdFilter.traceId(request)));
+    }
+    @ExceptionHandler(org.springframework.dao.EmptyResultDataAccessException.class)
+    ResponseEntity<ApiError> missing(Exception exception, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError("NOT_FOUND",
+            "This record is unavailable.", List.of(), TraceIdFilter.traceId(request)));
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiError> unexpected(Exception exception, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiError(

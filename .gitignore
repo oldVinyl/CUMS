@@ -19,3 +19,7 @@ backups/
 *.sql.gz
 *.age
 *.gpg
+
+# Private financial receipts
+private-uploads/
+backend/private-uploads/
