@@ -47,6 +47,9 @@ class DashboardServiceIntegrationTest {
         assertThat(dashboard.totals().ytd().equity()).isEqualByComparingTo("1600.00");
         assertThat(dashboard.totals().total().equity()).isEqualByComparingTo("36396.87");
         assertThat(dashboard.totals().equityRatioPercent()).isEqualByComparingTo("100.00");
+        assertThat(dashboard.trend()).hasSize(2);
+        assertThat(dashboard.trend().getFirst().equity()).isEqualByComparingTo("35796.87");
+        assertThat(dashboard.trend().getLast().equity()).isEqualByComparingTo("36396.87");
         assertThatThrownBy(() -> dashboards.asAt(user("MEMBER"), LocalDate.of(2001, 2, 1)))
             .isInstanceOf(SecurityException.class);
     }

@@ -1,5 +1,13 @@
 # Setup
 
+### Development sample data
+
+Set `DEV_SAMPLE_DATA=true` alongside `SPRING_PROFILES_ACTIVE=dev` to load twelve fictitious members (`DEMO-001`–`DEMO-012`) and ledger entries for opening balances, monthly contributions, and quarterly income. The local workspace enables this flag. Samples are labelled in the overview and transaction narration. Repeated startup does not duplicate entries, closed fiscal years are skipped, and this seeder cannot run outside the dev profile. Turning the flag off stops future seeding; existing sample records remain in that local database.
+
+Run financial integration tests against a fresh disposable PostgreSQL database using `DB_URL`, with `DEV_SAMPLE_DATA=false` and no active dev profile. Set `SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3` during the full suite so its multiple Spring contexts can coexist with the running application. This avoids mixing development samples into financial test fixtures.
+
+`frontend/scripts/overview-browser-smoke.mjs` checks the rendered overview and Settings against mocked API responses in a separate headless Chromium instance on CDP port 9223. It captures desktop/mobile light/dark screenshots under the ignored `frontend/artifacts/ui-check` directory and rejects horizontal page overflow.
+
 This document is updated as each phase becomes runnable. Current status is in [PROGRESS.md](PROGRESS.md). Do not use this code for live funds until all acceptance gates pass.
 
 ## 1. Install tools

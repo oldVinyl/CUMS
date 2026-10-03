@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.harbourcu.role.PermissionService;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,15 +19,18 @@ public class DashboardService {
     public record MemberRow(UUID memberId, String memberNumber, String fullName,
                             Figures balanceBf, Figures ytd, Figures total,
                             BigDecimal roePercent, BigDecimal equityRatioPercent) {}
+    public record TrendPoint(LocalDate date, BigDecimal equity) {}
     public record Dashboard(LocalDate asAt, int fiscalYear, List<MemberRow> members,
-                            MemberRow totals) {}
+                            MemberRow totals, List<TrendPoint> trend, boolean developmentData) {}
 
     private final JdbcTemplate jdbc;
     private final PermissionService permissions;
+    private final Environment environment;
 
-    public DashboardService(JdbcTemplate jdbc, PermissionService permissions) {
+    public DashboardService(JdbcTemplate jdbc, PermissionService permissions, Environment environment) {
         this.jdbc = jdbc;
         this.permissions = permissions;
+        this.environment = environment;
     }
 
     @Transactional(readOnly = true)
@@ -79,7 +83,22 @@ public class DashboardService {
         MemberRow totals = new MemberRow(null, null, "Total", bfTotal, ytdTotal, total,
             percent(total.income(), total.principal()),
             equity.signum() == 0 ? BigDecimal.ZERO : new BigDecimal("100.00"));
-        return new Dashboard(asAt, asAt.getYear(), withRatios, totals);
+        List<TrendPoint> trend = jdbc.query("""
+            SELECT dates.as_at, coalesce(sum(l.amount), 0) AS equity
+            FROM (
+                SELECT least((month + interval '1 month - 1 day')::date, ?::date) AS as_at
+                FROM generate_series(?::date, ?::date, interval '1 month') month
+            ) dates
+            LEFT JOIN ledger_entries l ON l.effective_date <= dates.as_at
+                AND EXISTS (SELECT 1 FROM members m WHERE m.id = l.member_id
+                    AND m.join_date <= dates.as_at)
+            GROUP BY dates.as_at ORDER BY dates.as_at
+            """, (row, ignored) -> new TrendPoint(row.getDate("as_at").toLocalDate(),
+                row.getBigDecimal("equity")), asAt, yearStart, asAt);
+        boolean samples = environment.matchesProfiles("dev") && Boolean.TRUE.equals(
+            jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM ledger_entries WHERE reference LIKE 'DEV-SAMPLE-%' AND effective_date <= ?)",
+                Boolean.class, asAt));
+        return new Dashboard(asAt, asAt.getYear(), withRatios, totals, trend, samples);
     }
 
     private static Figures figures(BigDecimal principal, BigDecimal income) {
