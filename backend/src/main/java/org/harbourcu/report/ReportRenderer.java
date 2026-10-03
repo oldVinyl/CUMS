@@ -192,22 +192,35 @@ public class ReportRenderer {
         return value instanceof BigDecimal amount ? amount.setScale(2, RoundingMode.HALF_UP).toPlainString() : value == null ? "" : value.toString();
     }
     private static List<String> wrap(PDFont font, String value, float size, float width) throws IOException {
-        // Character wrapping also bounds long references and names without whitespace.
         value = value.replaceAll("[\\s\\p{Z}]+", " ");
-        List<String> lines = new ArrayList<>(); StringBuilder line = new StringBuilder();
+        StringBuilder safe = new StringBuilder();
         for (int offset = 0; offset < value.length();) {
             int cp = value.codePointAt(offset); offset += Character.charCount(cp);
-            if (cp == '\n') { lines.add(line.toString()); line.setLength(0); continue; }
             if (Character.isISOControl(cp)) cp = ' ';
             String glyph = new String(Character.toChars(cp));
             try { font.encode(glyph); } catch (IllegalArgumentException exception) { glyph = "?"; }
-            if (!line.isEmpty() && font.getStringWidth(line + glyph) / 1000 * size > width) {
-                lines.add(line.toString()); line.setLength(0);
+            safe.append(glyph);
+        }
+        List<String> lines = new ArrayList<>(); StringBuilder line = new StringBuilder();
+        for (String word : safe.toString().trim().split(" +")) {
+            String candidate = line.isEmpty() ? word : line + " " + word;
+            if (font.getStringWidth(candidate) / 1000 * size <= width) {
+                line.setLength(0); line.append(candidate); continue;
             }
-            line.append(glyph);
+            if (!line.isEmpty()) { lines.add(line.toString()); line.setLength(0); }
+            // Preserve whole words; split only references or tokens wider than their column.
+            for (int offset = 0; offset < word.length();) {
+                int cp = word.codePointAt(offset); offset += Character.charCount(cp);
+                String glyph = new String(Character.toChars(cp));
+                if (!line.isEmpty() && font.getStringWidth(line + glyph) / 1000 * size > width) {
+                    lines.add(line.toString()); line.setLength(0);
+                }
+                line.append(glyph);
+            }
         }
         lines.add(line.toString()); return lines;
     }
+
     private static void fill(PDPageContentStream stream, float x, float y, float w, float h, Color color) throws IOException {
         stream.setNonStrokingColor(color); stream.addRect(x, y, w, h); stream.fill();
     }
