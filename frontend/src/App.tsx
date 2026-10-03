@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, Bell, CalendarDays, ChartNoAxesCombined,
-  ChevronDown, CircleHelp, ClipboardCheck, Copy, CreditCard, ExternalLink, FileChartColumnIncreasing,
+  ChevronDown, CircleHelp, ClipboardCheck, CreditCard, FileChartColumnIncreasing,
   Landmark, LayoutDashboard, Menu, Moon, Plus, Search, Settings, ShieldCheck, Sun,
   Users, WalletCards, X,
 } from 'lucide-react'
@@ -11,14 +11,12 @@ import type { LucideIcon } from 'lucide-react'
 import { formatMoney } from './money'
 import { useToast } from './toast-context'
 import AuthPage from './AuthPage'
-import { currentProfile, linkGoogle, logout } from './auth-api'
+import { currentProfile, logout } from './auth-api'
 import type { Profile } from './auth-api'
 import LiveMembers from './LiveMembers'
 import LiveInvestments from './LiveInvestments'
 import LiveDashboard from './LiveDashboard'
-import RolloverSettings from './RolloverSettings'
-import GoogleButton from './GoogleButton'
-import { registerPasskey } from './passkey-api'
+import SettingsPage from './SettingsPage'
 
 type NavItem = { label: string; path: string; icon: LucideIcon }
 
@@ -95,30 +93,6 @@ function Members() {
   const [query, setQuery] = useState('')
   const filtered = previewMembers.filter(member => `${member.name} ${member.number}`.toLowerCase().includes(query.toLowerCase()))
   return <><PageHeader title="Members" subtitle="A clear view of everyone in the union." action={<button className="primary-button" disabled><Plus size={18} /> Add member</button>} /><PreviewBanner /><div className="surface list-card"><div className="list-toolbar"><div><h2>Member directory</h2><p>{filtered.length} sample members</p></div><label className="search-box"><Search size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search members" aria-label="Search members" /></label></div>{filtered.length ? <MemberTable members={filtered} /> : <div className="empty-state"><Users size={28} /><strong>No matching members</strong><span>Try another name or member number.</span></div>}</div></>
-}
-
-function SettingsPage({ profile, signOutAll }: { profile: Profile | null; signOutAll: () => void }) {
-  const showToast = useToast()
-  const [passkeyBusy, setPasskeyBusy] = useState(false)
-  const github = 'https://github.com/oldVinyl'
-  const copyGithub = async () => {
-    try {
-      await navigator.clipboard.writeText(github)
-      showToast('GitHub link copied', { tone: 'success' })
-    } catch {
-      showToast('Could not copy the link', { detail: 'Use the GitHub link below instead.', tone: 'error' })
-    }
-  }
-
-  return <>
-    <PageHeader title="Settings" subtitle="Your union’s policies and workspace details." />
-    {!profile && <PreviewBanner />}
-    <div className="settings-grid">
-      <section className="surface settings-placeholder"><span className="settings-icon"><Settings size={25} /></span><h2>Organisation settings</h2>{profile?.permissions.includes("SETTINGS_WRITE") ? <RolloverSettings /> : <p>Sign in with settings access to manage the organisation’s rollover default.</p>}<span className="phase-label">Other settings are in progress</span></section>
-      {profile && <section className="surface settings-placeholder"><span className="settings-icon"><ShieldCheck size={25} /></span><h2>Account security</h2><p>Signed in as {profile.email}. {profile.preferredSignInMethod && <>Preferred sign-in: {profile.preferredSignInMethod === 'TOTP' ? 'authenticator app' : profile.preferredSignInMethod === 'PASSKEY' ? 'passkey' : 'Google'}. </>}Add a passkey or link Google for another sign-in option. End every active session if you have lost a device.</p><button type="button" className="secondary-button" disabled={passkeyBusy} onClick={() => { setPasskeyBusy(true); void registerPasskey().then(() => showToast('Passkey added', { tone: 'success' })).catch(error => showToast('Could not add passkey', { detail: error instanceof Error ? error.message : 'Please try again.', tone: 'error' })).finally(() => setPasskeyBusy(false)) }}>{passkeyBusy ? 'Please wait…' : 'Add a passkey'}</button><GoogleButton mode="link" onCredential={idToken => { void linkGoogle(idToken).then(() => showToast('Google account linked', { tone: 'success' })).catch(error => showToast('Could not link Google', { detail: error instanceof Error ? error.message : 'Please try again.', tone: 'error' })) }} /><button type="button" className="secondary-button" onClick={signOutAll}>Sign out on all devices</button></section>}
-      <section className="surface creator-card" aria-labelledby="creator-title"><div className="creator-mark" aria-hidden="true">V<span>.</span></div><span className="creator-eyebrow">MADE WITH CARE</span><h2 id="creator-title">Built by Vinette</h2><p>By Vinyl. Thoughtful tools for the people who keep communities moving.</p><div className="creator-actions"><a href={github} target="_blank" rel="noopener noreferrer" className="creator-link">github.com/oldVinyl <ExternalLink size={16} /></a><button type="button" className="copy-link" onClick={copyGithub}><Copy size={16} /> Copy link</button></div></section>
-    </div>
-  </>
 }
 
 function SimplePage({ title, subtitle, icon: Icon, heading, description }: { title: string; subtitle: string; icon: LucideIcon; heading: string; description: string }) {

@@ -1,9 +1,32 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { formatMoney } from "./money";
 import LiveDashboard from "./LiveDashboard";
 import { ToastProvider } from "./toast";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+it("handles an empty ledger without a chart or invalid percentages", async () => {
+  const figures = { principal: "0", income: "0", equity: "0" };
+  vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true,
+    json: async () => ({ asAt: "2001-02-01", fiscalYear: 2001, members: [], trend: [],
+      totals: { balanceBf: figures, ytd: figures, total: figures, roePercent: "0", equityRatioPercent: "0" } }) })));
+  render(<MemoryRouter><ToastProvider><LiveDashboard asAt="2001-02-01" /></ToastProvider></MemoryRouter>);
+  expect(await screen.findByText("A fresh start for your union")).toBeTruthy();
+  expect(screen.getByText("No equity history yet")).toBeTruthy();
+  expect(screen.queryByText(/NaN|Infinity/)).toBeNull();
+});
+
+it("offers a retry when the dashboard cannot be loaded", async () => {
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addListener: () => {}, removeListener: () => {} }));
+  const fetchMock = vi.fn(() => Promise.resolve({ ok: false, json: async () => ({ message: "Please retry." }) }));
+  vi.stubGlobal("fetch", fetchMock);
+  render(<MemoryRouter><ToastProvider><LiveDashboard asAt="2001-02-01" /></ToastProvider></MemoryRouter>);
+  expect(await screen.findByRole("heading", { name: "Overview unavailable" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+});
 
 it("renders live Sheet B figures and filters member rows without changing totals", async () => {
   vi.stubGlobal("matchMedia", () => ({ matches: false,
@@ -23,10 +46,10 @@ it("renders live Sheet B figures and filters member rows without changing totals
     json: async () => ({ asAt: "2001-02-01", fiscalYear: 2001,
       members: [first, second], totals: total }) }));
   vi.stubGlobal("fetch", fetchMock);
-  render(<ToastProvider><LiveDashboard asAt="2001-02-01" /></ToastProvider>);
-  expect(await screen.findByText("Ama Example")).toBeTruthy();
-  expect(screen.getByText("Kojo Example")).toBeTruthy();
-  expect(screen.getAllByText("GH₵ 36,396.87").length).toBeGreaterThan(0);
+  render(<MemoryRouter><ToastProvider><LiveDashboard asAt="2001-02-01" /></ToastProvider></MemoryRouter>);
+  expect((await screen.findAllByText("Ama Example"))[0]).toBeTruthy();
+  expect(screen.getAllByText("Kojo Example")[0]).toBeTruthy();
+  expect(screen.getAllByText(formatMoney("36396.87")).length).toBeGreaterThan(0);
   fireEvent.change(screen.getByLabelText("Search members"),
     { target: { value: "Ama" } });
   expect(screen.queryByText("Kojo Example")).toBeNull();
