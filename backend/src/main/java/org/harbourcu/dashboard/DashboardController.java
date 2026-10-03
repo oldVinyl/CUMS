@@ -36,7 +36,7 @@ public class DashboardController {
             "Please sign in to continue.", request);
         try {
             return ResponseEntity.ok(dashboard.asAt(identity.userId(), LocalDate.parse(asAt)));
-        } catch (IllegalArgumentException exception) {
+        } catch (IllegalArgumentException | java.time.DateTimeException exception) {
             return error(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Choose a valid as-at date.", request);
         } catch (SecurityException exception) {
             return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED",

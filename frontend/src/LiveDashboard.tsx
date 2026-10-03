@@ -3,6 +3,7 @@ import { ArrowDownLeft, ArrowUpRight, Search, Users, WalletCards, ChevronDown, R
 import { NavLink } from "react-router-dom";
 import { formatMoney } from "./money";
 import { useToast } from "./toast-context";
+import ReportDownloads from "./ReportDownloads";
 
 type Figures = { principal: string; income: string; equity: string };
 type Row = { memberId: string | null; memberNumber: string | null; fullName: string;
@@ -10,7 +11,7 @@ type Row = { memberId: string | null; memberNumber: string | null; fullName: str
 type Dashboard = { asAt: string; fiscalYear: number; members: Row[]; totals: Row;
   trend?: { date: string; equity: string }[]; developmentData?: boolean };
 
-export default function LiveDashboard({ asAt }: { asAt: string }) {
+export default function LiveDashboard({ asAt, canExport = false }: { asAt: string; canExport?: boolean }) {
   const showToast = useToast();
   const [data, setData] = useState<Dashboard | null>(null);
   const [search, setSearch] = useState("");
@@ -76,6 +77,7 @@ export default function LiveDashboard({ asAt }: { asAt: string }) {
       <section className="surface dashboard-sheet">
         <div className="card-title-row"><div><h2>Member balances</h2><p>A clear view of principal, income, and equity.</p></div>
           <label className="search-box"><Search size={18} /><input aria-label="Search members" value={search} onChange={event => setSearch(event.target.value)} placeholder="Name or number" /></label></div>
+        {canExport && <ReportDownloads path={`/api/v1/reports/dashboard?asAt=${encodeURIComponent(asAt)}`} filename={`sheet-b-${asAt}`} />}
         <div className="dashboard-tools"><div className="dashboard-view" role="group" aria-label="Balance period">{([["total", "Total balances"], ["balanceBf", "Balance forward"], ["ytd", "Year to date"]] as const).map(([key, label]) =>
           <button key={key} aria-pressed={view === key} onClick={() => setView(key)}>{label}</button>)}</div>
           <label className="dashboard-sort">Sort by<select value={sort} onChange={event => setSort(event.target.value)}><option value="number">Member number</option><option value="name">Name</option><option value="equity">Highest equity</option></select></label></div>

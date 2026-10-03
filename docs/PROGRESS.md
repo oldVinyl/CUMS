@@ -22,7 +22,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] AES-256-GCM private-field encryption, versioned keys, and blind indexes with tests
 - [x] Data-minimal append-only audit service and authentication security events
 - [x] Sensitive member-detail reads audited without storing private values in the event
-- [ ] File download and export audit hooks when those endpoints are added
+- [x] Audit report/statement generation and downloads without recording private report contents
 - [x] Argon2id password hashing and basic common-password policy with tests
 - [x] Session, login-attempt, and TOTP recovery-code tables
 - [x] Opaque access/refresh/CSRF token service with hashed storage, rotation, replay revocation, and tests
@@ -84,8 +84,9 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Approve settlement without rollover and leave member balances uninvested
 - [x] Audit an ADMIN/PRESIDENT-managed organisation rollover default and apply it to new drafts
 - [ ] Investment lifecycle, rollover, reversal
-- [ ] Approved investment reversal with exact member-ledger compensation
-- [ ] Sheet A xlsx/PDF export acceptance tests
+- [x] Approved current-day investment reversal with exact gain/loss compensation, immutable revision history, dependency checks, return to draft and fresh posting approval
+- [ ] Historical investment correction dates and approved period unlock/recomputation
+- [x] Sheet A xlsx/PDF downloads with grouped headings, reconciled supplied fixture totals, permissions, audit and visual checks
 
 ## Phase 4 — Dashboards and exports
 - [x] Persist balance-forward snapshots at approved year-end close
@@ -96,7 +97,12 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Separate Settings controls into individual cards and adapt the Vinette credit for smaller screens
 - [x] Verify the supplied Sheet B aggregate totals, ROE/equity-share examples, and exclusion of future effective entries with an independent ledger fixture
 - [ ] As-at dashboard, Sheet B calculations, and filters
-- [ ] Sheet B fixture test, statements, xlsx/PDF, charts
+- [x] Sheet B xlsx/PDF downloads with grouped headings, numeric totals, audit and visual checks
+- [x] Member statements with opening/running/closing balances, date range, PDF/xlsx, staff authorization and own-account IDOR tests
+- [x] Live Reports page and statement downloads in member details
+- [x] Ledger and public-field member-directory Excel/PDF exports with range/date filters and permission tests
+- [x] Check new financial forms and review screens at desktop/mobile widths in both themes, including search styling and secondary-action contrast
+- [ ] Complete original Sheet B row-by-row workbook acceptance and snapshot reconciliation
 
 ## Phase 5 — Payments
 - [ ] Provider interface, fake and Paystack implementations

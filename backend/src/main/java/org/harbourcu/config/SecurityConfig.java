@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/investments", "/api/v1/investments/**")
                     .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                         environment.containsProperty("APP_ENCRYPTION_KEY")))
-                .requestMatchers("/api/v1/dashboard", "/api/v1/settings/rollover")
+                .requestMatchers("/api/v1/dashboard", "/api/v1/settings/rollover", "/api/v1/reports/**")
                     .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                         environment.containsProperty("APP_ENCRYPTION_KEY")))
                 .anyRequest().denyAll())
