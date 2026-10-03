@@ -21,7 +21,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper json,
                                             Environment environment) throws Exception {
         return http
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/auth/**", "/api/v1/members",
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/imports", "/api/v1/imports/**", "/api/v1/auth/**", "/api/v1/members",
                 "/api/v1/members/**", "/api/v1/investments", "/api/v1/investments/**",
                 "/api/v1/settings/rollover", "/api/v1/ledger/**", "/api/v1/payments", "/api/v1/payments/**", "/api/v1/portal", "/api/v1/portal/**", "/api/v1/reconciliations", "/api/v1/reconciliations/**", "/api/v1/users", "/api/v1/users/**"))
             .authorizeHttpRequests(auth -> auth
@@ -34,6 +34,9 @@ public class SecurityConfig {
                     .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                         environment.containsProperty("APP_ENCRYPTION_KEY")))
                 .requestMatchers("/api/v1/audit", "/api/v1/audit/**")
+                    .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
+                        environment.containsProperty("APP_ENCRYPTION_KEY")))
+                .requestMatchers("/api/v1/imports", "/api/v1/imports/**")
                     .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                         environment.containsProperty("APP_ENCRYPTION_KEY")))
                 .requestMatchers("/api/v1/dashboard", "/api/v1/settings/rollover", "/api/v1/reports/**", "/api/v1/ledger", "/api/v1/ledger/**", "/api/v1/payments", "/api/v1/payments/**", "/api/v1/portal", "/api/v1/portal/**", "/api/v1/reconciliations", "/api/v1/reconciliations/**", "/api/v1/users", "/api/v1/users/**")

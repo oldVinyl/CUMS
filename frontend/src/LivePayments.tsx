@@ -1,3 +1,4 @@
+import Pagination from "./Pagination";
 import { useEffect, useState } from "react";
 import { Plus, CreditCard } from "lucide-react";
 import { csrfCookie, type Profile } from "./auth-api";
@@ -122,7 +123,7 @@ export default function LivePayments({ profile }: { profile: Profile }) {
       <button className="secondary-button" onClick={() => setSelected(null)}>Close review</button>
     </div>}
    </article>)}
-   <div className="investment-action-bar"><button className="secondary-button" disabled={page === 0 || loading} onClick={() => setPage(v => v - 1)}>Previous</button><span>Page {page + 1}</span><button className="secondary-button" disabled={!hasNext || loading} onClick={() => setPage(v => v + 1)}>Next</button></div>
+   <Pagination page={page} hasNext={hasNext} loading={loading} onPageChange={setPage} count={payments.length} pageSize={50} label="Payment pages" />
   </section>
  </>;
 }

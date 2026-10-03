@@ -1,3 +1,5 @@
+import ImportsPage from "./ImportsPage";
+import { canSeeRoute } from "./navigation";
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
@@ -41,6 +43,7 @@ const nav: NavItem[] = [
   { label: 'Reconciliation', path: '/reconciliation', icon: ClipboardCheck },
   { label: 'Accounts and roles', path: '/accounts', icon: ShieldCheck },
   { label: 'Audit log', path: '/audit', icon: ShieldCheck },
+  { label: 'Imports', path: '/imports', icon: FileChartColumnIncreasing },
   { label: 'Settings', path: '/settings', icon: Settings },
 ]
 
@@ -117,15 +120,7 @@ function App() {
   const showToast = useToast()
   const navigate = useNavigate()
   const [profile, setProfile] = useState<Profile | null>(null)
-  const routePermissions: Record<string, string[]> = {
-    "/members": ["MEMBER_READ"], "/investments": ["INVESTMENT_READ"], "/ledger": ["LEDGER_READ"],
-    "/payments": ["OWN_DATA_READ", "PAYMENT_VERIFY", "APPROVE"], "/portal": ["OWN_DATA_READ"],
-    "/approvals": ["APPROVE", "LEDGER_POST", "LEDGER_REVERSE", "INVESTMENT_WRITE", "ROLE_ASSIGN", "PAYMENT_VERIFY"],
-    "/reports": ["REPORT_EXPORT"], "/reconciliation": ["RECONCILE", "APPROVE", "AUDIT_READ"],
-    "/accounts": ["USER_ADMIN", "ROLE_ASSIGN", "APPROVE"],
-    "/audit": ["AUDIT_READ"],
-  };
-  const visibleNav = nav.filter(item => !profile || !routePermissions[item.path] || routePermissions[item.path].some(p => profile.permissions.includes(p)));
+  const visibleNav = nav.filter(item => canSeeRoute(item.path, profile));
   const [menuOpen, setMenuOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [asAt, setAsAt] = useState(new Date().toISOString().slice(0, 10))
@@ -136,7 +131,7 @@ function App() {
     }
     if (value !== asAt) {
       setAsAt(value)
-      showToast(profile?.permissions.includes('DASHBOARD_READ_ALL') ? 'Dashboard date changed' : 'Preview date changed', { detail: profile?.permissions.includes('DASHBOARD_READ_ALL') ? 'Ledger figures are updating for the selected date.' : 'Sample balances do not change with the date yet.' })
+      showToast(profile?.permissions.includes('DASHBOARD_READ_ALL') ? 'As-at date changed' : 'Preview date changed', { detail: profile?.permissions.includes('DASHBOARD_READ_ALL') ? 'Figures are updating for the selected date.' : 'Sample balances do not change with the date yet.' })
     }
   }
   const location = useLocation()
@@ -145,6 +140,14 @@ function App() {
   useEffect(() => {
     if (initialPath !== '/sign-in') void currentProfile().then(setProfile).catch(() => {})
   }, [initialPath])
+  useEffect(() => {
+    if (!profile?.userId) return;
+    let active = true;
+    const updateProfile = () => { void currentProfile().then(value => { if (active) setProfile(value); }).catch(() => { /* Keep the current session during a network interruption. */ }); };
+    const interval = window.setInterval(updateProfile, 60000);
+    window.addEventListener('focus', updateProfile);
+    return () => { active = false; window.clearInterval(interval); window.removeEventListener('focus', updateProfile); };
+  }, [profile?.userId]);
   const signedIn = async () => {
     const confirmed = await currentProfile()
     if (!confirmed) throw new Error('Your session could not be confirmed. Please sign in again.')
@@ -166,7 +169,9 @@ function App() {
     <aside className={`sidebar ${menuOpen ? 'open' : ''}`}><Sidebar close={() => setMenuOpen(false)} items={visibleNav} /></aside>
     {menuOpen && <button className="scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
     <div className="main-area"><header className="topbar"><div className="topbar-left"><button className="icon-button desktop-hidden" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button><span className="breadcrumb"><span className="breadcrumb-root">Workspace <span>/</span></span><strong>{section}</strong></span></div><div className="topbar-right"><label className="date-control"><CalendarDays size={17} /><span>As at</span><input type="date" value={asAt} max={new Date().toISOString().slice(0, 10)} onChange={event => updateAsAt(event.target.value)} aria-label="As at date" /></label><ThemeButton /><button className="icon-button notification-button" aria-label="Notifications" onClick={() => showToast("Email notifications", { detail: "Payment and approval updates are queued for configured email delivery. The in-app inbox is not available yet." })}><Bell size={19} /><span /></button>{profile ? <button className="profile profile-action" onClick={() => signOut()} title="Sign out"><div className="profile-avatar">{profile.email.slice(0, 2).toUpperCase()}</div><div><strong>{profile.email}</strong><span>Sign out</span></div><ChevronDown size={15} /></button> : <NavLink to="/sign-in" className="sign-in-link">Sign in <ArrowRight size={16} /></NavLink>}</div></header>
-      <main className="content"><Routes>
+      <main className="content">{profile && location.pathname !== '/accept-invitation' && !canSeeRoute(location.pathname, profile)
+            ? <SimplePage title="Access required" subtitle="This page is not included in your current permissions." icon={ShieldCheck} heading="Choose an available page" description="Use the workspace menu to open a page your account can access." />
+            : <Routes>
             <Route path="/" element={profile
               ? profile.permissions.includes("DASHBOARD_READ_ALL")
                 ? <LiveDashboard asAt={asAt} canExport={profile.permissions.includes("REPORT_EXPORT")} />
@@ -200,6 +205,7 @@ function App() {
             />
             <Route path="/reconciliation" element={profile ? <ReconciliationPage profile={profile} /> : <SimplePage title="Reconciliation" subtitle="Compare balances with the ledger." icon={ClipboardCheck} heading="Sign in to continue" description="Reconciliation is available to authorized union officers." />} />
             <Route path="/accept-invitation" element={<AcceptInvitation />} />
+            <Route path="/imports" element={profile ? <ImportsPage profile={profile} /> : <SimplePage title="Imports" subtitle="Review source data before posting." icon={FileChartColumnIncreasing} heading="Sign in to continue" description="Imports require authorized access." />} />
             <Route path="/audit" element={profile ? <AuditPage profile={profile} /> : <SimplePage title="Audit log" subtitle="Trace recorded union actions." icon={ShieldCheck} heading="Sign in to continue" description="Audit records require authorized access." />} />
             <Route path="/accounts" element={profile ? <UserAdministration profile={profile} /> : <SimplePage title="Accounts and roles" subtitle="Manage account access." icon={ShieldCheck} heading="Sign in to continue" description="Account management requires authorized access." />} />
             <Route path="/portal" element={profile ? <MemberPortal asAt={asAt} /> : <SimplePage title="My membership" subtitle="Your balances and contributions." icon={Users} heading="Sign in to continue" description="Your membership records are private." />} />
@@ -226,7 +232,7 @@ function App() {
                 />
               }
             />
-          </Routes></main>
+          </Routes>}</main>
     </div>
     <nav className={`bottom-nav${visibleNav.length <= 4 ? " compact" : ""}`} aria-label="Mobile navigation">{visibleNav.slice(0, 4).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} end={path === '/'} className={({ isActive }) => `bottom-link${isActive ? ' active' : ''}`}><Icon size={20} /><span>{label}</span></NavLink>)}{visibleNav.length > 4 && <button className={`bottom-link${moreOpen ? ' active' : ''}`} onClick={() => setMoreOpen(!moreOpen)}><Menu size={20} /><span>More</span></button>}</nav>
     {moreOpen && <div className="more-sheet"><div className="sheet-top"><strong>More</strong><button className="icon-button" aria-label="Close more menu" onClick={() => setMoreOpen(false)}><X size={19} /></button></div>{visibleNav.slice(4).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} className="sheet-link"><Icon size={20} />{label}<ArrowRight size={17} /></NavLink>)}</div>}

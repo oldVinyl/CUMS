@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Copy, ExternalLink, Fingerprint, Globe, Landmark, LogOut } from "lucide-react";
+import { Copy, ExternalLink, Fingerprint, Globe, LogOut } from "lucide-react";
 import type { Profile } from "./auth-api";
 import { linkGoogle } from "./auth-api";
 import { registerPasskey } from "./passkey-api";
 import { useToast } from "./toast-context";
 import GoogleButton from "./GoogleButton";
-import RolloverSettings from "./RolloverSettings";
 import FinancialPolicySettings from "./FinancialPolicySettings";
 
 export default function SettingsPage({ profile, signOutAll }: {
@@ -23,10 +22,6 @@ export default function SettingsPage({ profile, signOutAll }: {
       <h1>Settings</h1><p>Your union’s policies and workspace details.</p></div></header>
     <div className="settings-grid setting-cards">
       {profile?.permissions.includes("SETTINGS_WRITE") && <FinancialPolicySettings />}
-      <section className="surface setting-card"><span className="settings-icon"><Landmark size={24} /></span>
-        <h2>Investment rollover</h2><p>Choose the starting policy for new investment cycles.</p>
-        {profile?.permissions.includes("SETTINGS_WRITE") ? <RolloverSettings />
-          : <p className="setting-help">Sign in with settings access to manage the rollover default.</p>}</section>
       <section className="surface setting-card"><span className="settings-icon"><Fingerprint size={24} /></span>
         <h2>Passkeys</h2><p>Sign in using your fingerprint, face, or device screen lock.</p>
         {profile ? <button className="secondary-button" disabled={passkeyBusy} onClick={() => {

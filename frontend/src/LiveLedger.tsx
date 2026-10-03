@@ -1,3 +1,4 @@
+import Pagination from "./Pagination";
 import { useEffect, useState } from "react";
 import { Plus, BookOpen } from "lucide-react";
 import type { Profile } from "./auth-api";
@@ -82,7 +83,7 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
           {entry.narration && <p>{entry.narration}</p>}{entry.reversalOf && <small>Compensates entry {entry.reversalOf}</small>}
           {entry.canReverse && <button className="text-button" disabled={busy} onClick={() => { setReverse(entry); setReason(""); }}>Request reversal</button>}
         </article>)}
-        <div className="investment-action-bar"><button className="secondary-button" disabled={page === 0 || loading} onClick={() => setPage(value => value - 1)}>Previous</button><span>Page {page + 1}</span><button className="secondary-button" disabled={!hasNext || loading} onClick={() => setPage(value => value + 1)}>Next</button></div>
+        <Pagination page={page} hasNext={hasNext} loading={loading} onPageChange={setPage} count={entries.length} pageSize={50} label="Ledger pages" />
       </>}
       {reverse && <form className="investment-edit" onSubmit={event => { event.preventDefault(); void mutation(ledgerRequest(`/${reverse.id}/reverse`, "POST", { reason }), "Reversal approval requested"); }}>
         <h3>Reverse {formatMoney(reverse.amount)} for {reverse.fullName}?</h3><p>The original entry remains visible. Approval adds its exact negative amount; committed investment funds cannot be reversed.</p>

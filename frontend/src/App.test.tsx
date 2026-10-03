@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import App from './App'
 import { ToastProvider } from './toast'
 
-const renderApp = () => render(<MemoryRouter><ToastProvider><App /></ToastProvider></MemoryRouter>)
+const renderApp = (path = "/") => render(<MemoryRouter initialEntries={[path]}><ToastProvider><App /></ToastProvider></MemoryRouter>)
 
 beforeEach(() => {
   localStorage.clear()
@@ -20,8 +20,7 @@ describe('workspace preview', () => {
   })
 
   it('filters the sample member directory', () => {
-    renderApp()
-    fireEvent.click(screen.getAllByRole('link', { name: 'Members' })[0])
+    renderApp("/members")
     fireEvent.change(screen.getByRole('textbox', { name: 'Search members' }), { target: { value: 'Ama' } })
     expect(screen.getAllByText('Ama Example').length).toBeGreaterThan(0)
     expect(screen.queryByText('Kojo Sample')).toBeNull()

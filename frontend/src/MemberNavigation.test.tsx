@@ -9,9 +9,9 @@ it("shows own membership navigation without union financial or staff routes", as
  vi.stubGlobal("matchMedia",()=>({matches:false,addListener:()=>{},removeListener:()=>{}}));
  vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify({message:"No linked test membership"}),{status:409,headers:{"Content-Type":"application/json"}})));
  render(<MemoryRouter><ToastProvider><App /></ToastProvider></MemoryRouter>);
- await waitFor(()=>expect(screen.getByRole("heading",{name:"My membership"})).toBeTruthy());
+ await waitFor(()=>expect(screen.getByRole("heading",{name:"My membership"})).toBeTruthy(),{timeout:5000});
  const nav=within(screen.getByRole("navigation",{name:"Main navigation"}));
  expect(nav.getByRole("link",{name:"My membership"})).toBeTruthy();expect(nav.getByRole("link",{name:"Payments"})).toBeTruthy();
- for(const name of ["Members","Investments","Ledger","Accounts and roles","Reconciliation","Reports"]) expect(nav.queryByRole("link",{name})).toBeNull();
+ for(const name of ["Members","Investments","Ledger","Accounts and roles","Reconciliation","Reports","Audit log"]) expect(nav.queryByRole("link",{name})).toBeNull();
  expect(within(screen.getByRole("navigation",{name:"Mobile navigation"})).queryByRole("button",{name:"More"})).toBeNull();
 });

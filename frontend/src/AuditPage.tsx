@@ -1,3 +1,4 @@
+import Pagination from "./Pagination";
 import { useEffect, useState } from "react";
 import { Download, ShieldCheck } from "lucide-react";
 import type { Profile } from "./auth-api";
@@ -82,7 +83,7 @@ export default function AuditPage({ profile }: { profile: Profile }) {
             <dt>Entity</dt><dd>{event.entityType}<small>{event.entityId ?? "No specific record"}</small></dd>
             <dt>Event ID</dt><dd>{event.id}</dd>{event.requestId && <><dt>Request ID</dt><dd>{event.requestId}</dd></>}</dl>
         </article>)}</div>}
-      <div className="investment-action-bar"><button className="secondary-button" disabled={loading || page === 0} onClick={() => setPage(value => value - 1)}>Previous</button><span>Page {page + 1}</span><button className="secondary-button" disabled={loading || !hasNext} onClick={() => setPage(value => value + 1)}>Next</button></div>
+      <Pagination page={page} hasNext={hasNext} loading={loading} onPageChange={setPage} count={events.length} pageSize={50} label="Audit pages" />
     </section>
   </>;
 }

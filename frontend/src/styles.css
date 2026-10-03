@@ -433,3 +433,107 @@
 .audit-events dd { margin: 0; overflow-wrap: anywhere; }
 .audit-events small { display: block; margin-top: .2rem; }
 .audit-events time { color: var(--muted); font-size: .85rem; }
+
+/* Shared semantic surfaces and type scale across preview and live workflows. */
+:root {
+  --surface-soft: #edf3f1;
+  --control-border: #829da2;
+  --accent-text: #286370;
+  --action: #083a4f;
+  --action-hover: #14546a;
+  --on-action: #fff;
+  --text-body: .9375rem;
+  --text-small: .8125rem;
+  color-scheme: light;
+  color: var(--ink);
+  background: var(--page);
+}
+:root[data-theme="dark"] {
+  --surface-soft: #214550;
+  --control-border: #668e97;
+  --accent-text: #a3d4da;
+  --action: #c0d5d6;
+  --action-hover: #d8e6e6;
+  --on-action: #083a4f;
+  color-scheme: dark;
+}
+button, input, select, textarea { font: inherit; }
+h2 { font-size: 1.2rem; line-height: 1.35; }
+.eyebrow { display: block; text-transform: uppercase; color: var(--muted); font-size: .75rem; line-height: 1.5; }
+.page-heading p { font-size: 1rem; line-height: 1.6; max-width: 70ch; color: var(--muted); }
+.surface { color: var(--ink); border-color: var(--line); }
+.surface p, .surface label, .surface input, .surface select, .surface textarea { font-size: var(--text-body); }
+.surface h3 { font-size: 1.06rem; line-height: 1.4; }
+.primary-button { background: var(--action); color: var(--on-action); min-height: 44px; height: auto; padding-top: 11px; padding-bottom: 11px; font-size: var(--text-small); }
+.primary-button:hover:not(:disabled) { background: var(--action-hover); }
+.secondary-button, .copy-link { background: var(--surface); color: var(--ink); border-color: var(--control-border); font-size: var(--text-small); }
+:root .secondary-button:hover, :root .copy-link:hover { background: var(--surface-soft); }
+:root .icon-button { color: var(--muted); }
+:root .icon-button:hover { background: var(--surface-soft); }
+:root .date-control, :root .search-box, :root .small-note, :root .phase-label,
+:root[data-theme="dark"] .date-control, :root[data-theme="dark"] .search-box, :root[data-theme="dark"] .small-note,
+:root[data-theme="dark"] .phase-label { background: var(--surface-soft); color: var(--muted); border-color: var(--line); }
+.search-box input { background: transparent; color: var(--ink); font-size: var(--text-body); }
+.search-box:focus-within { outline: 2px solid var(--control-border); outline-offset: 2px; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+.breadcrumb, .breadcrumb span, .stat-head, .stat-detail, .chart-months, .chart-lines,
+.muted, .attention-item div span, .small-note div span, .empty-state, .mobile-member .ratio { color: var(--muted); }
+.chart-area, .grid-line, .attention-item, td { border-color: var(--line); }
+th, :root[data-theme="dark"] th { background: var(--surface-soft); color: var(--muted); border-color: var(--line); }
+td { color: var(--ink); }
+.text-button, .dashboard-full-details > summary { color: var(--accent-text); }
+.stat-head, .stat-detail, .quiet-tag, .dashboard-summary span, .dashboard-sort, .dashboard-view button,
+.dashboard-year-card > p, .dashboard-note, .dev-data-notice, .dashboard-filter-note, .dashboard-empty,
+.dashboard-breakdown-grid p, .dashboard-sheet td, .dashboard-sheet th, .member-detail dt,
+.member-detail dd, .setting-card .setting-help, .creator-card p, .creator-link, .copy-link,
+.rollover-settings p, .auth-card p { font-size: var(--text-small); line-height: 1.55; }
+.dashboard-summary strong { font-size: clamp(1.25rem, 1.6vw, 1.6rem); }
+.dashboard-breakdown-grid h4 { font-size: var(--text-small); }
+.investment-form input, .investment-form select, .investment-form textarea,
+.investment-form-grid input, .investment-form-grid select, .rollover-settings select,
+.investment-panel > label input, .auth-card input, .member-form input, .member-form select,
+.member-form textarea { border-color: var(--control-border); background: var(--surface); color: var(--ink); min-height: 44px; }
+.settings-icon, .stat-icon { background: var(--surface-soft); color: var(--accent-text); }
+.organization-settings { grid-column: 1 / -1; }
+.organization-form { display: grid; gap: 24px; margin-top: 26px; }
+.organization-form fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.organization-form legend { padding: 0; font-size: 1rem; font-weight: 700; }
+.organization-form > button { justify-self: start; }
+.organization-form label { color: var(--ink); }
+.field-help { color: var(--muted); font-size: var(--text-small); font-weight: 400; line-height: 1.6; }
+.organization-rollover { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 24px; }
+.organization-rollover h3 { margin: 0; }
+.organization-rollover .rollover-settings { max-width: 600px; }
+.setting-card h2 { font-size: 1.2rem; }
+:root .creator-card, :root[data-theme="dark"] .creator-card { background: var(--surface-soft); border-color: var(--line); }
+:root .creator-card p, :root .creator-eyebrow,
+:root[data-theme="dark"] .creator-card p, :root[data-theme="dark"] .creator-eyebrow { color: var(--muted); }
+:root .creator-link, :root[data-theme="dark"] .creator-link { color: var(--accent-text); }
+:root .copy-link, :root[data-theme="dark"] .copy-link { background: var(--surface); border-color: var(--control-border); color: var(--ink); }
+.pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 0 0; margin-top: 20px; border-top: 1px solid var(--line); }
+.pagination-summary { color: var(--muted); font-size: var(--text-small); }
+.pagination-controls { display: flex; align-items: center; gap: 4px; padding: 4px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 10px; }
+.pagination-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; padding: 8px 10px; color: var(--ink); background: transparent; border: 0; border-radius: 6px; font-size: var(--text-small); font-weight: 600; }
+.pagination-button:hover:not(:disabled) { background: var(--surface); }
+.pagination-button:disabled { opacity: .5; }
+.pagination-current { color: var(--ink); font-size: var(--text-small); font-weight: 700; white-space: nowrap; padding: 0 8px; }
+.sidebar { overflow-y: auto; }
+.import-notice { border-left: 3px solid var(--gold); background: var(--surface-soft); color: var(--ink); padding: 12px 16px; margin: 16px 0; line-height: 1.6; }
+.import-preview { margin: 18px 0; }
+.import-checksum { margin-top: 18px; color: var(--muted); overflow-wrap: anywhere; }
+.import-checksum summary { cursor: pointer; }
+.investment-form .import-confirm { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; font-weight: 400; }
+.investment-form .import-confirm input { width: 20px; min-width: 20px; min-height: 20px; height: 20px; margin: 3px 0 0; }
+@media (min-width: 821px) {
+  :root { --text-body: 1rem; --text-small: .875rem; }
+  .side-link { font-size: .9375rem; }
+  .setting-card, .investment-panel { line-height: 1.6; }
+}
+@media (max-width: 680px) {
+  .page-heading { align-items: flex-start; flex-wrap: wrap; }
+  .organization-settings { padding: 20px; }
+  .pagination-controls { width: 100%; justify-content: space-between; gap: 0; }
+  .pagination-button { padding: 8px 6px; gap: 3px; }
+  .pagination-current { padding: 0 5px; }
+  .pagination-first { display: none; }
+}
