@@ -29,15 +29,19 @@ This tracks the master prompt's security requirements. A checked implementation 
 - [x] AES-256-GCM versioned private fields and keyed blind indexes
 - [x] Private receipt storage, bounded size/magic-byte checks, metadata stripping and audited downloads
 - [x] Parameterized queries, safe structured errors, formula-safe exports and data-minimal audit events
-- [ ] HEIC conversion and malware scan integration
+- [x] Private ClamAV INSTREAM hook scans original/normalized receipts and fails closed on malware, malformed responses or unavailable configured daemon; bounded protocol tests
+- [ ] HEIC conversion and real scanner/delegate acceptance
+- [x] Request IP/trace enrichment for all database audit inserts, trusted production gateway forwarding and pooled-connection/background isolation tests
 - [ ] Complete audit IP/before-after coverage and explicit personal-data log-scrubbing acceptance
 - [ ] Retention-based anonymization of inactive members and historical personal-data copies
-- [ ] Encrypted off-site database/upload backups, retention and isolated restore drill
+- [x] Encrypted database/upload backup scripts, exact-name retention, empty-target restore protection and passing isolated synthetic restore drill
+- [ ] Real off-site credentials, delivery, monitoring and owner recovery acceptance
 
 ## Browser and delivery
 
 - [x] Playwright/axe harness for public pages, sign-in, overview, settings, recovery overlays and member creation at 320/375/768/1024/1440 in light/dark themes
 - [x] Browser tests intercept API calls and never post to the real development financial database
+- [x] Expand the harness to ledger, investments, payments, reconciliation, portal, reports, accounts, imports, audit and approvals; all 140 responsive/axe scenarios pass
 - [x] Production-only static PWA cache excludes API/documents; private responses use no-store headers
 - [ ] Finish axe/keyboard acceptance across payments, investment/approval/reconciliation screens and real financial browser workflows
 - [ ] Production HTTPS/CSP/cookie review, dependency scan, coverage thresholds and verified CI acceptance

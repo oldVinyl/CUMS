@@ -14,6 +14,7 @@ Check only implemented and verified gates. This system is not yet production com
 - [x] Persistent email outbox and opt-in SMTP implementation
 - [x] Responsive fixture checks at 320/375/768/1024/1440 in both themes
 - [x] 40 Playwright/axe scenarios for public/sign-in/overview/settings/member creation in five sizes and both themes
+- [x] Expand to 140 Playwright/axe scenarios including ten operational screens and provide synthetic role-guide screenshots
 - [ ] Real browser financial workflows and full axe/accessibility acceptance
 - [ ] Real Paystack sandbox, direct MoMo prompts and settlement matching
 - [ ] SMTP/MailHog delivery and operational retry acceptance
@@ -28,6 +29,8 @@ Check only implemented and verified gates. This system is not yet production com
 - [ ] Complete original Sheet B workbook acceptance
 - [ ] HEIC conversion, malware scanner and file security review
 - [ ] Production CSP/TLS/security review and deployment
+- [x] Production Compose/Caddy configuration, startup guards, separate leadership bootstrap and synthetic encrypted recovery tooling
+- [x] Local age-encrypted database/receipt restore drill with exact totals, wrong-key and populated-target rejection
 - [ ] Encrypted off-site database/files backups, retention and restore drill
 - [x] Audited owned JSON export, decimal preservation, private response headers and IDOR/secret-exclusion tests
 - [ ] Retention/anonymization and owner policy review

@@ -1,6 +1,6 @@
 # Operational runbook — working draft
 
-Complete CHECKLIST before handling production funds. Deployment and encrypted off-site backup automation remain outstanding.
+Complete CHECKLIST before handling production funds. Production Compose, HTTPS routing and encrypted database/upload recovery tooling are described in DEPLOYMENT. Live hosting, off-site credentials and owner restore acceptance remain release gates.
 
 ## Startup
 
@@ -8,7 +8,7 @@ Start PostgreSQL with Docker Compose, supply environment settings from SETUP, bu
 
 ## Approvals and accounts
 
-Use separate named maker/checker accounts. Role changes take effect after final approval. Production ADMIN alone cannot approve money. Initial leadership provisioning needs an owner-authorized bootstrap procedure. ADMIN/PRESIDENT grants use explicit guarded revocation instead of expiry.
+Use separate named maker/checker accounts. Role changes take effect after final approval. Production ADMIN alone cannot approve money. The explicit `prod,bootstrap` procedure provisions separate ADMIN/PRESIDENT accounts atomically on a fresh account table, forces password replacement and refuses repeat runs. Follow DEPLOYMENT and remove bootstrap secrets/profile afterwards. ADMIN/PRESIDENT grants use explicit guarded revocation instead of expiry.
 
 ## Payments and mail
 
@@ -20,6 +20,6 @@ SMTP is disabled by default while notifications remain queued. Enable only after
 
 Back up PostgreSQL, private uploads and recoverable versioned encryption keys together, with keys kept separately from encrypted archives. A database-only restore cannot recover receipt files or encryption keys. Private uploads must not be mounted as public web content.
 
-The outstanding release gate requires encrypted nightly dumps and uploaded-file archives, S3-compatible off-site retention of 30 daily/12 monthly backups, monitoring, and an isolated restore drill. These are not yet implemented or verified.
+`deploy/backup-host.sh` stops the backend under a host lock and restarts it on success/failure. `backup.sh` encrypts a PostgreSQL dump and private uploads with age, uploads to S3-compatible storage and retains 30 daily/12 monthly generated archives. Plaintext staging is confined to tmpfs; private keys are stored separately. `restore.sh` refuses populated database/upload targets, validates archive paths/types and restores the database in one transaction. The synthetic local drill passed exact ledger/receipt recovery, wrong-key rejection and populated-target refusal. Off-site delivery, actual-key recovery, monitoring and owner acceptance remain release gates; see DEPLOYMENT.
 
-Preserve audit/approval/provider references during incidents. Financial corrections use approved compensation, not editing prior rows. Historical corrections, resets, recovery administration and retention procedures still need implementation. Local tests and fixtures do not establish production or external-service acceptance.
+Preserve audit/approval/provider references during incidents. Audit events now capture request IP and trace metadata at database insert; background operations have no fabricated client address. Production trusts forwarded client addresses only from the configured gateway. Financial corrections use approved compensation, not editing prior rows. Historical corrections, resets, recovery administration and retention procedures still need implementation. Local tests and fixtures do not establish production or external-service acceptance.

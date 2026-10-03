@@ -1,5 +1,9 @@
 # Setup
 
+For production Compose, first leadership accounts, HTTPS, encrypted nightly backups and the verified synthetic restore drill, see [DEPLOYMENT.md](DEPLOYMENT.md). Local test results do not replace the release gates in CHECKLIST.
+
+Optional private receipt scanning uses CLAMAV_HOST/CLAMAV_PORT (INSTREAM). When configured, both original and normalized receipts must receive a clean verdict before storage. Malware, timeouts and malformed/unavailable daemon responses reject the upload. Use a private daemon; no public scanning service is contacted. HEIC conversion remains a release gate.
+
 ### Development sample data
 
 Set `DEV_SAMPLE_DATA=true` alongside `SPRING_PROFILES_ACTIVE=dev` to load twelve fictitious members (`DEMO-001`–`DEMO-012`) and ledger entries for opening balances, monthly contributions, and quarterly income. The local workspace enables this flag. Samples are labelled in the overview and transaction narration. Repeated startup does not duplicate entries, closed fiscal years are skipped, and this seeder cannot run outside the dev profile. Turning the flag off stops future seeding; existing sample records remain in that local database.

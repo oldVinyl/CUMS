@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuditQueryService {
     public record Filter(LocalDate from, LocalDate to, String action, String entityType, UUID actorId, UUID entityId) {}
     public record Event(UUID id, UUID actorId, String actorEmail, String action, String entityType,
-                        UUID entityId, String occurredAt, String requestId) {}
+                        UUID entityId, String occurredAt, String requestId, String requestIp) {}
     public record Page(List<Event> events, int page, boolean hasNext) {}
     private record Query(String sql, List<Object> args) {}
     private final JdbcTemplate jdbc;
@@ -33,9 +33,9 @@ public class AuditQueryService {
         require(actor);
         var events = read(filter, 5001, 0);
         if (events.size() > 5000) throw new IllegalArgumentException("The export exceeds 5,000 events. Narrow the date range or filters.");
-        var csv = new StringBuilder("Event ID,Occurred at (UTC),Actor ID,Actor email,Action,Entity type,Entity ID,Request ID\r\n");
+        var csv = new StringBuilder("Event ID,Occurred at (UTC),Actor ID,Actor email,Action,Entity type,Entity ID,Request ID,Request IP\r\n");
         for (var e : events) csv.append(String.join(",", cell(e.id()), cell(e.occurredAt()), cell(e.actorId()),
-            cell(e.actorEmail()), cell(e.action()), cell(e.entityType()), cell(e.entityId()), cell(e.requestId()))).append("\r\n");
+            cell(e.actorEmail()), cell(e.action()), cell(e.entityType()), cell(e.entityId()), cell(e.requestId()), cell(e.requestIp()))).append("\r\n");
         audit.record(actor, AuditService.Action.EXPORT_DOWNLOADED, "EXPORT", null, requestId);
         return csv.toString().getBytes(StandardCharsets.UTF_8);
     }
@@ -45,13 +45,13 @@ public class AuditQueryService {
         return jdbc.query(q.sql() + " ORDER BY a.occurred_at DESC,a.id DESC LIMIT ? OFFSET ?", (rs, row) ->
             new Event(rs.getObject("id", UUID.class), rs.getObject("actor_id", UUID.class), rs.getString("email"),
                 rs.getString("action"), rs.getString("entity_type"), rs.getObject("entity_id", UUID.class),
-                rs.getTimestamp("occurred_at").toInstant().toString(), rs.getString("request_id")), args.toArray());
+                rs.getTimestamp("occurred_at").toInstant().toString(), rs.getString("request_id"), rs.getString("request_ip")), args.toArray());
     }
     private Query query(Filter f) {
         LocalDate today = LocalDate.now(ZoneId.of("Africa/Accra"));
         if (f == null || f.from() == null || f.to() == null || f.from().isBefore(LocalDate.of(2000,1,1))
             || f.to().isAfter(today) || f.from().isAfter(f.to())) throw new IllegalArgumentException("Choose a valid date range from 2000 through today.");
-        String sql = "SELECT a.id,a.actor_id,u.email,a.action,a.entity_type,a.entity_id,a.occurred_at,a.request_id FROM audit_log a LEFT JOIN users u ON u.id=a.actor_id WHERE a.occurred_at>=? AND a.occurred_at<?";
+        String sql = "SELECT a.id,a.actor_id,u.email,a.action,a.entity_type,a.entity_id,a.occurred_at,a.request_id,host(a.request_ip) request_ip FROM audit_log a LEFT JOIN users u ON u.id=a.actor_id WHERE a.occurred_at>=? AND a.occurred_at<?";
         var args = new ArrayList<Object>();
         args.add(f.from().atStartOfDay(ZoneId.of("Africa/Accra")).toOffsetDateTime());
         args.add(f.to().plusDays(1).atStartOfDay(ZoneId.of("Africa/Accra")).toOffsetDateTime());

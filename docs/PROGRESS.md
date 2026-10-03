@@ -39,13 +39,14 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] HTTP sign-in, refresh, logout, and profile endpoints with strict cookies, origin and CSRF checks, and integration tests
 - [x] Account-wide session revocation and authenticated sign-out-on-all-devices action
 - [x] Bucket4j per-IP and global auth POST limit with HTTP 429 feedback and tests
-- [ ] Distributed HTTP rate limiting, recovery-code regeneration, and authenticated route permission enforcement
+- [x] Recovery-code regeneration and permission/ownership enforcement on implemented authenticated routes
+- [ ] Distributed HTTP rate limiting and complete route permission sweep acceptance
 - [x] Seed six roles and permission grants; reject overlapping active assignments
 - [x] Read live permissions on each check; approved role changes take effect immediately
 - [x] Give the configured local bootstrap account every known permission only under the `dev` profile, without weakening production ADMIN grants or maker-checker separation
 - [x] Block revocation of the last active ADMIN or PRESIDENT through role-change approvals
 - [x] Enforce current role permissions and session ownership on member API endpoints
-- [ ] Protect against role expiry or account disable removing the last ADMIN or PRESIDENT; extend permission checks to later APIs
+- [x] Guard ADMIN/PRESIDENT assignments against automatic expiry and block deactivation of linked leadership accounts until approved role removal
 - [x] Responsive frontend shell, light/dark theming, money formatter, feedback toasts, and Vinette credit
 - [x] Server-connected sign-in, password-change, and TOTP screens with toast feedback
 - [x] Scannable TOTP setup QR with a manual key fallback
@@ -96,7 +97,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Audit an ADMIN/PRESIDENT-managed organisation rollover default and apply it to new drafts
 - [ ] Investment lifecycle, rollover, reversal
 - [x] Approved current-day investment reversal with exact gain/loss compensation, immutable revision history, dependency checks, return to draft and fresh posting approval
-- [ ] Historical investment correction dates and approved period unlock/recomputation
+- [x] Approved fiscal-period unlock and immutable snapshot recomputation
+- [ ] Historical investment correction dates and dependent-cycle repost
 - [x] Sheet A xlsx/PDF downloads with grouped headings, reconciled supplied fixture totals, permissions, audit and visual checks
 
 ## Phase 4 — Dashboards and exports
@@ -226,3 +228,33 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Add SECURITY_CHECKLIST.md and account-security/setup instructions
 - [ ] Complete recovery when all protected factors/codes are lost, authorized administrative reset and password-reset delivery
 - [ ] Complete real financial browser E2E/coverage/dependency gates, remaining historical workflows, retention anonymization and production backup/deployment acceptance
+
+## Production delivery and security pass — 2026-10-03
+- [x] Add production Compose with internal PostgreSQL, private receipt volume, read-only backend, bounded memory and Caddy HTTPS/security headers/CSP
+- [x] Prevent private uploads/build artifacts from entering Docker build contexts
+- [x] Reject unsafe production startup settings, dev samples/bootstrap, fake provider, weak/shared keys, insecure cookies/origin and enabled non-TLS mail
+- [x] Explicit atomic first-leadership bootstrap creates distinct ADMIN/PRESIDENT accounts only on a fresh account table, requires new passwords and records minimal audit events
+- [x] Encrypt PostgreSQL and private uploads together using age; keep plaintext staging in tmpfs and original keys separate
+- [x] Add host backup lock/quiescence/restart, S3-compatible off-site upload and exact-name 30-daily/12-monthly retention
+- [x] Refuse restores over existing tables/uploads, validate archive paths/types and restore PostgreSQL in one transaction
+- [x] Run disposable synthetic restore drill: ledger total/receipt recovery, wrong-key rejection and populated-target protection
+- [x] Verify two retention tests and add the reproducible Docker recovery drill to CI
+- [x] V34 enriches all audit inserts with HTTP request IP/trace; tests cover direct writers, IPv4/IPv6, append-only protection and pooled background isolation
+- [x] Expose audit IP metadata in authorized screen/CSV; production forwarding trusts only the private gateway
+- [x] Add bounded private ClamAV receipt hook, scanning raw and normalized files, with clean/malware/error/unavailable protocol tests
+- [x] Add Dependabot, deployment/restore instructions and safe Linux Maven wrapper execution
+- [x] Verify 161 backend tests, 250 generated allocation checks, 54 frontend tests, build/lint, production Compose schema and Caddy configuration
+- [x] Apply V34 to the local backend and confirm health UP
+- [x] Verify 140 Playwright/axe scenarios at five widths in both themes, including operational empty states; generate ten synthetic screenshots and role-specific guide sections
+- [ ] Real production host/domain/bucket, live scanner, provider/mail credentials and owner restore/delivery acceptance remain external gates
+
+## Remaining master-prompt completion gates
+- [ ] Historical contribution impact preview with both future-only and dependent-cycle reverse/repost options; historical payment amendments and investment/allocation imports
+- [ ] Fully lost-factor recovery and independently authorized reset administration/delivery
+- [ ] Retention-based personal-data anonymization, including historical private copies
+- [ ] Complete financial before/after audit coverage, failed-login/log-scrubbing and distributed rate-limit acceptance
+- [ ] HEIC conversion and real private scanner acceptance
+- [ ] Actual bank/gateway settlement matching and direct mobile-money/provider acceptance
+- [ ] Real financial browser E2E, original row-level workbook acceptance, required coverage/dependency gates and verified hosted CI
+- [ ] Review/post private migration with separate authorized checker; collect missing actual member dates/details
+- [ ] Owner production/off-site restore acceptance, then finalize release/tag. The master prompt is not declared complete.

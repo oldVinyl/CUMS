@@ -4,7 +4,7 @@ import { Download, ShieldCheck } from "lucide-react";
 import type { Profile } from "./auth-api";
 import { usePromiseToast } from "./toast-context";
 
-type Event = { id: string; actorId: string | null; actorEmail: string | null; action: string; entityType: string; entityId: string | null; occurredAt: string; requestId: string | null };
+type Event = { id: string; actorId: string | null; actorEmail: string | null; action: string; entityType: string; entityId: string | null; occurredAt: string; requestId: string | null; requestIp?: string | null };
 type Filters = { from: string; to: string; action: string; entityType: string; actorId: string; entityId: string };
 function parameters(filters: Filters) {
   const query = new URLSearchParams();
@@ -81,7 +81,8 @@ export default function AuditPage({ profile }: { profile: Profile }) {
           <h3>{event.action.replaceAll("_", " ")}</h3><time dateTime={event.occurredAt}>{new Date(event.occurredAt).toLocaleString()}</time>
           <dl><dt>Actor</dt><dd>{event.actorEmail ?? "System"}{event.actorId && <small>{event.actorId}</small>}</dd>
             <dt>Entity</dt><dd>{event.entityType}<small>{event.entityId ?? "No specific record"}</small></dd>
-            <dt>Event ID</dt><dd>{event.id}</dd>{event.requestId && <><dt>Request ID</dt><dd>{event.requestId}</dd></>}</dl>
+            <dt>Event ID</dt><dd>{event.id}</dd>{event.requestId && <><dt>Request ID</dt><dd>{event.requestId}</dd></>}
+            {event.requestIp && <><dt>Request IP</dt><dd>{event.requestIp}</dd></>}</dl>
         </article>)}</div>}
       <Pagination page={page} hasNext={hasNext} loading={loading} onPageChange={setPage} count={events.length} pageSize={50} label="Audit pages" />
     </section>

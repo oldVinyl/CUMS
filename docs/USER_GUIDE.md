@@ -1,5 +1,39 @@
 # User guide
 
+The examples below use an isolated synthetic operator fixture. No client workbook/member details appear in the screenshots. Actual menus and controls follow each account's current permissions.
+
+## Treasurer
+
+Use Financial operations → Ledger to record a contribution, Investments to preview treasury-bill allocations, and Reconciliation to compare holdings/cash. A money movement is pending until independent approval. Manual receipts are verified in Payments against the actual evidence/amount; the verifier cannot supply their own independent approval. Never use the labelled development payment simulator for real money.
+
+![Ledger with empty-state and contribution controls](screenshots/ledger.png)
+
+## Approver
+
+Open Financial operations → Approvals, review the exact proposed amount, source and consequences, then approve or reject. The maker cannot approve their own request; rejection needs a reason. Role and import approvals appear in their respective authorized screens. Recheck stale-source warnings instead of repeatedly retrying.
+
+![Independent approval inbox](screenshots/approvals.png)
+
+## President and vice president
+
+Use Overview/Reports for as-at balances and oversight. Permissions determine whether approval controls are available. Authorized period unlocks require a reason and independent approval; review corrected snapshots before reclosing a year. Current production leadership roles differ from the developer's all-permission override.
+
+![Financial report downloads](screenshots/reports.png)
+
+## Administrator
+
+Use Administration → Accounts and roles for email invitations and reviewed role assignments. An invitation can start a prospective membership; do not invent a member record merely to send an invitation. Recipients choose their own password and protected method. Initial leadership roles cannot expire automatically, and linked leadership members cannot be deactivated until their guarded role removal is approved. Settings contains union policies and separate personal security cards. Audit access follows AUDIT_READ; request addresses are restricted investigation metadata.
+
+![Accounts and invitation controls](screenshots/accounts.png)
+
+## Member
+
+My membership shows your balances, contact details, statement downloads and transactions. Payments provides the union's published bank/wallet instructions. Generate a transfer reference, include it in your transfer, then submit your receipt; your balance changes after staff verification and independent approval. Security methods and recovery codes are managed in Settings. Monthly charts are suppressed where imported summaries cannot establish monthly history.
+
+![Member balances, details and statement sections](screenshots/portal.png)
+
+![Bank details and receipt-submission controls](screenshots/payments.png)
+
 ## Membership and sign-in
 
 Open the invitation link, set a strong password, then sign in and choose TOTP, a passkey, or configured Google sign-in. TOTP includes a QR code and manual key; keep recovery codes privately. Google remains gated until credentials are configured.

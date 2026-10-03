@@ -18,15 +18,16 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class ProofStorage {
  public record Proof(UUID id, String contentType, byte[] bytes) {}
- private final Path root; private final JdbcTemplate jdbc; private final PermissionService permissions;
- public ProofStorage(@Value("${APP_UPLOAD_DIR:./private-uploads}") String dir, JdbcTemplate jdbc, PermissionService permissions) {
-  this.root=Path.of(dir).toAbsolutePath().normalize(); this.jdbc=jdbc; this.permissions=permissions;
+ private final Path root; private final JdbcTemplate jdbc; private final PermissionService permissions; private final ReceiptScanner scanner;
+ public ProofStorage(@Value("${APP_UPLOAD_DIR:./private-uploads}") String dir, JdbcTemplate jdbc, PermissionService permissions, ReceiptScanner scanner) {
+  this.root=Path.of(dir).toAbsolutePath().normalize(); this.jdbc=jdbc; this.permissions=permissions; this.scanner=scanner;
  }
  @Transactional public UUID upload(UUID actor, UUID member, MultipartFile file) {
   ownOrStaff(actor,member,true);
   if(file==null || file.isEmpty() || file.getSize()>10485760) throw new IllegalArgumentException("Choose a JPEG, PNG or PDF receipt up to 10 MB.");
   try {
    byte[] raw=file.getBytes(), clean; String type;
+   scanner.requireClean(raw);
    if(raw.length>=5 && new String(raw,0,5,java.nio.charset.StandardCharsets.US_ASCII).equals("%PDF-")) {
     try(var pdf=Loader.loadPDF(raw)) {
      if(pdf.isEncrypted() || pdf.getNumberOfPages()<1 || pdf.getNumberOfPages()>100) throw new IllegalArgumentException("Use an unencrypted PDF with 1–100 pages.");
@@ -51,6 +52,7 @@ public class ProofStorage {
     }
    }
    if(clean.length>10485760) throw new IllegalArgumentException("Normalized receipt exceeds 10 MB.");
+   scanner.requireClean(clean);
    String hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(clean));
    UUID id=UUID.randomUUID(),key=UUID.randomUUID(); Files.createDirectories(root); Path path=root.resolve(key.toString());
    Files.write(path,clean,StandardOpenOption.CREATE_NEW);

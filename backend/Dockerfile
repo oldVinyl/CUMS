@@ -5,7 +5,7 @@ RUN chmod +x mvnw && ./mvnw --batch-mode -DskipTests package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-RUN useradd --system --uid 10001 appuser
+RUN useradd --system --uid 10001 appuser && mkdir -p /app/private-uploads && chown appuser /app/private-uploads
 COPY --from=build /app/target/*.jar app.jar
 USER appuser
 EXPOSE 8080

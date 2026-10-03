@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+!deploy/.env.production.example
 **/target/
 **/node_modules/
 **/dist/
@@ -28,3 +29,5 @@ backend/private-uploads/
 docs/FUND MANAGEMENT TEMPLATE-*.xlsx
 private-migration/
 __pycache__/
+deploy/.backup.lock
+*.agekey

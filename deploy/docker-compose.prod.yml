@@ -1,0 +1,113 @@
+name: cums-production
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cums
+      POSTGRES_USER: cums
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U cums -d cums']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [private]
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs: [/tmp:mode=1777,size=256m]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/cums
+      DB_USER: cums
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?Set APP_ENCRYPTION_KEY}
+      AUTH_THROTTLE_KEY: ${AUTH_THROTTLE_KEY:?Set AUTH_THROTTLE_KEY}
+      APP_ALLOWED_ORIGIN: https://${DOMAIN:?Set DOMAIN}
+      APP_PASSKEY_RP_ID: ${DOMAIN:?Set DOMAIN}
+      APP_COOKIE_SECURE: 'true'
+      APP_GOOGLE_CLIENT_ID: ${APP_GOOGLE_CLIENT_ID:-}
+      PAYMENT_PROVIDER: paystack
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:?Set PAYSTACK_SECRET_KEY}
+      APP_UPLOAD_DIR: /app/private-uploads
+      CLAMAV_HOST: ${CLAMAV_HOST:-}
+      CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+      APP_MAIL_ENABLED: ${APP_MAIL_ENABLED:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_STARTTLS: 'true'
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      JAVA_TOOL_OPTIONS: '-XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError'
+      SERVER_FORWARD_HEADERS_STRATEGY: native
+      SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES: '172\.30\.0\.10'
+    volumes: [uploads:/app/private-uploads]
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks:
+      private:
+        aliases: [backend-private]
+      outbound:
+    mem_limit: 1536m
+  frontend:
+    build: ../frontend
+    restart: unless-stopped
+    networks: [private]
+  gateway:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN}
+      TLS_EMAIL: ${TLS_EMAIL:?Set TLS_EMAIL}
+    ports: ['80:80', '443:443', '443:443/udp']
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      private: {ipv4_address: 172.30.0.10}
+      outbound:
+    depends_on: [frontend, backend]
+  backup:
+    profiles: [maintenance]
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    environment:
+      PGHOST: postgres
+      PGDATABASE: cums
+      PGUSER: cums
+      PGPASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      AGE_RECIPIENT: ${AGE_RECIPIENT:-}
+      BACKUP_BUCKET: ${BACKUP_BUCKET:-}
+      BACKUP_PREFIX: ${BACKUP_PREFIX:-cums}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_ENDPOINT_URL: ${AWS_ENDPOINT_URL:-}
+    volumes:
+      - uploads:/uploads
+      - backups:/backups
+    tmpfs: [/work:mode=700,size=2048m]
+    networks: [private, outbound]
+    entrypoint: [/bin/bash]
+volumes:
+  database:
+  uploads:
+  backups:
+  caddy_data:
+  caddy_config:
+networks:
+  private:
+    internal: true
+    ipam:
+      config: [{subnet: 172.30.0.0/24}]
+  outbound:
