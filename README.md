@@ -6,5 +6,8 @@ Ghana cedi credit union management system. The authoritative build requirements 
 
 See [docs/SETUP.md](docs/SETUP.md). The repository uses Java 21/Spring Boot, PostgreSQL 16, and React 18/TypeScript/Vite.
 
-The current interface is a **design preview with sample figures**. Review the [desktop](docs/ui-preview-1440.png) and [mobile](docs/ui-preview-375.png) captures. Financial actions are disabled while the secure workflows are built.
-The Settings preview credits Vinette by Vinyl and links to [Vinyl’s GitHub profile](https://github.com/oldVinyl); see the [Settings capture](docs/ui-settings-1440.png).
+The signed-in workspace connects to live member, ledger, investment, dashboard, report, payment, reconciliation and account APIs. The signed-out overview remains a labelled preview. Development can opt into fictitious balances and a payment simulator.
+
+See the [user guide](docs/USER_GUIDE.md), [runbook](docs/RUNBOOK.md) and [release checklist](docs/CHECKLIST.md). Imports, historical corrections, deeper recovery administration and production gates remain open; this is not yet production complete.
+
+Settings credits **Vinette by Vinyl** and links to [Vinyl’s GitHub profile](https://github.com/oldVinyl).

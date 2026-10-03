@@ -15,6 +15,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
+- [x] V22–V28 revision history, payments/proofs/jobs, reconciliation, policies, notification outbox and invitation migrations verified
+- [x] Signed-in navigation follows current profile permissions; ordinary members land on their own portal
 - [x] Flyway V1–V21 core financial, role, approval, fiscal snapshot, authentication, member identity, Google link, passkey, investment allocation, maturity, rollover, settings, and admin investment-read migrations tested against PostgreSQL 16
 - [ ] Add remaining workflow tables and migration tests
 - [x] Structured API validation and access errors with trace IDs
@@ -107,23 +109,51 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Complete original Sheet B row-by-row workbook acceptance and snapshot reconciliation
 
 ## Phase 5 — Payments
-- [ ] Provider interface, fake and Paystack implementations
-- [ ] Webhook, verification, receipt workflow, notifications
+- [x] Provider interface, dev-only simulator and credential-gated Paystack hosted checkout adapter
+- [x] Persist references before provider calls; verify member/reference/currency/amount; exact-once ledger credit and separate fee policy
+- [x] Raw-body HMAC-SHA512 webhook verification, durable jobs, retries and tampering tests
+- [x] Configurable manual instructions and unique pre-transfer references
+- [x] Private JPEG/PNG/plain-PDF receipts, byte/size checks, metadata removal, ownership and audited downloads
+- [x] Idempotent submission, duplicate warnings, actual verification values, independent approval/rejection/cancellation
+- [x] Own payment history and confirmation PDFs with IDOR tests
+- [x] Live payment screen, bounded status polling and clearly labelled development simulation
+- [x] Persistent payment/approval/invitation email outbox and opt-in SMTP Notifier
+- [x] Configurable 1–3 approvals, online limits and captured fee policy with separate Settings cards
+- [ ] Real Paystack sandbox acceptance, direct MoMo prompts, settlement matching and operational exception review
+- [ ] Historical payment posting, receipt amendments, HEIC conversion and malware scan hook
+- [ ] MailHog/SMTP delivery acceptance and notification administration
 
 ## Phase 6 — Member portal
-- [ ] Invitation, own-data dashboard and history, profile, export
-- [ ] Ownership and IDOR tests
+- [x] Hashed expiring single-use invitations, encrypted queued links, replacement invalidation and password activation
+- [x] Own balances, BF/YTD/Total, ROE/share, monthly trend, allocations and paginated transactions
+- [x] Own statements and encrypted versioned contact/next-of-kin editing
+- [x] Server-derived membership and own-data/receipt/statement IDOR tests
+- [x] Accounts/roles UI with invitations, search/pagination and reviewed independent role decisions
+- [x] ADMIN/PRESIDENT grants require explicit approved revocation rather than automatic expiry
+- [x] Dev-only linked sample membership and initially disabled fictitious reviewer for separate-account testing
+- [ ] Password/reset and recovery administration, complete own JSON export and invitation delivery acceptance
 
 ## Phase 7 — Import and reconciliation
 - [ ] Dry-run importer, approval and batch reversal
-- [ ] Reconciliation workflow
+- [x] Current-day ledger/holdings/cash comparison with exact differences and immutable snapshots
+- [x] Separate finalization/rejection/cancellation with source freshness and transaction rollback tests
+- [x] Live reconciliation screen and paginated decision history
+- [ ] Historical reconstruction and gateway/bank settlement matching
 
 ## Phase 8 — Delivery
+- [x] 60 isolated responsive checks for payments, portal, reconciliation, accounts, invitations and settings at 320/375/768/1024/1440 in both themes
+- [x] PWA manifest/icon and production-only public-static service worker; private API/documents excluded
 - [ ] Security and accessibility review, responsive E2E, PWA
 - [ ] Production deployment, backups and restore drill
 - [ ] User guide, runbook, privacy, checklist, full test gates
+- [x] User guide, runbook, privacy implementation notes and release checklist drafts
+
+## Latest verified pass — 2026-10-03
+- [x] Complete backend suite: 121 tests, no failures/errors/skips, including 250 generated financial allocation cases
+- [x] Frontend regression suite: 26 tests plus the own-membership navigation test; production build and lint
+- [ ] Imports, historical corrections, audit/recovery administration and production delivery gates remain open. No phase is declared complete while its gates remain.
 
 ## Deferred follow-ups
-- [ ] MailHog startup and email notifications remain deferred at the owner's request.
+- [ ] MailHog startup and live email delivery remain deferred at the owner's request; the persistent outbox and gated SMTP implementation are built.
 - [ ] Google sign-in stays gated until OAuth credentials are supplied.
 - [ ] Complete passkey device-loss recovery and credential removal after the core financial workflows.

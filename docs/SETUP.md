@@ -49,3 +49,19 @@ Create a **private** repository in GitHub (`New repository` → `Private`), add 
 - Downloads require live permissions, use no-store responses, and write an audit event. Reports are capped at 5,000 source rows; shorten a ledger/statement range when necessary. Excel values exceeding 15 significant digits are stored as exact text because Excel cannot preserve their cents numerically. PDF reports embed the redistributable Noto Sans font with its SIL OFL license in `backend/src/main/resources/fonts`.
 - Investment reversal is a future-only correction effective today. It archives the previous revision, adds exact compensation for gains/losses, and returns a new working draft with today's purchase date and an explicitly selected future maturity date. It does not rewrite earlier statements. Historical period unlock and snapshot recomputation remain pending.
 - `frontend/scripts/financial-browser-smoke.mjs` verifies Reports, Ledger contribution forms and approval confirmations at desktop/phone widths in light/dark mode using isolated fixtures on headless Chromium port 9223. It rejects mutations and page overflow. Screenshots are ignored under `frontend/artifacts/ui-check/financial`.
+
+## Payments, portal, accounts and reconciliation
+
+The live routes are `/payments`, `/portal`, `/accounts` and `/reconciliation`. Invitations activate linked memberships; role requests use independent approval. Reconciliation stores immutable current-day figures and rejects finalization after source changes.
+
+With `dev` and `DEV_SAMPLE_DATA=true`, the bootstrap account is linked to DEMO-001 only if unlinked. DEMO-002 has an initially disabled fictitious MEMBER/TREASURER reviewer (`dev-reviewer@invalid.example`). Create an invitation for DEMO-002 with the intended test email in Accounts, and activate it in another browser session. No default password is shipped. This gives local testing two accounts while preserving maker-checker separation. The seeded manual method explicitly prohibits real transfers.
+
+`PAYMENT_PROVIDER=fake` is permitted only in dev. For staging/production explicitly set `PAYMENT_PROVIDER=paystack`, a valid secret key and the deployed `APP_ALLOWED_ORIGIN`. Configure Paystack's webhook as `/api/v1/payments/webhook`. Posting requires the signature-validated job and independent amount/currency/reference/member verification. Hosted checkout collects card/MoMo details; direct MoMo prompts and real sandbox acceptance remain open.
+
+`APP_UPLOAD_DIR` defaults to `./private-uploads` relative to the backend working directory. Keep it private and included in backups. Accepted receipts are JPEG/PNG/plain PDF up to 10 MB. HEIC conversion and external malware scanning remain pending. Never expose this directory as static content.
+
+SMTP is opt-in with `APP_MAIL_ENABLED=true`, host/port/from, optional user/password and `SMTP_STARTTLS=true` when required. Notifications persist while disabled. MailHog remains deferred. Invitation links are encrypted in queued payloads; audit events exclude links/passwords.
+
+The production service worker caches only public static assets and a reconnection page. API data, receipts, financial documents and navigation responses are excluded. Development Vite does not register it. Bump the shell-cache version when changing the offline shell.
+
+The isolated scripts `operations-browser-smoke.mjs` and `accounts-browser-smoke.mjs` use Chrome port 9223 and reject financial mutations. `pwa-browser-smoke.mjs` verifies the production preview on port 5174 and offline API exclusion. These do not establish real provider/payment acceptance.
