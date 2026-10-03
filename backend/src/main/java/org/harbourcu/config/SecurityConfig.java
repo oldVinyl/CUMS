@@ -22,11 +22,14 @@ public class SecurityConfig {
                                             Environment environment) throws Exception {
         return http
             .csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/auth/**", "/api/v1/members",
-                "/api/v1/members/**"))
+                "/api/v1/members/**", "/api/v1/investments", "/api/v1/investments/**"))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/api/v1/health", "/api/v1/auth/**").permitAll()
                 .requestMatchers("/api/v1/members", "/api/v1/members/*",
                     "/api/v1/members/*/status", "/api/v1/members/*/balance")
+                    .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
+                        environment.containsProperty("APP_ENCRYPTION_KEY")))
+                .requestMatchers("/api/v1/investments", "/api/v1/investments/**")
                     .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
                         environment.containsProperty("APP_ENCRYPTION_KEY")))
                 .anyRequest().denyAll())

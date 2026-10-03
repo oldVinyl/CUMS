@@ -3,6 +3,7 @@ package org.harbourcu.allocation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import net.jqwik.api.ForAll;
@@ -25,6 +26,18 @@ class AllocationEngineTest {
         assertThat(shares.stream().mapToLong(AllocationEngine.Share::closingBalancePesewas).sum()).isEqualTo(4_516_374);
         assertThat(shares.stream().mapToLong(AllocationEngine.Share::ratioBasisPoints).sum()).isEqualTo(10_000);
         assertThat(shares.get(0).costPesewas()).isEqualTo(503_229);
+        for (var share : shares) {
+            BigDecimal exactCost = BigDecimal.valueOf(4_227_126L)
+                .multiply(BigDecimal.valueOf(share.participationPesewas()))
+                .divide(BigDecimal.valueOf(4_200_000L), 8, RoundingMode.HALF_UP);
+            BigDecimal exactMaturity = BigDecimal.valueOf(4_543_500L)
+                .multiply(BigDecimal.valueOf(share.participationPesewas()))
+                .divide(BigDecimal.valueOf(4_200_000L), 8, RoundingMode.HALF_UP);
+            assertThat(BigDecimal.valueOf(share.costPesewas()).subtract(exactCost).abs())
+                .isLessThanOrEqualTo(BigDecimal.ONE);
+            assertThat(BigDecimal.valueOf(share.maturityValuePesewas()).subtract(exactMaturity).abs())
+                .isLessThanOrEqualTo(BigDecimal.ONE);
+        }
     }
 
     @Test
