@@ -29,15 +29,16 @@ public class InvestmentPostHandler implements ApprovalActionHandler {
         investments.require(makerId, "INVESTMENT_WRITE");
         UUID id = parse(payload);
         var rows = jdbc.query("""
-            SELECT status, created_by, purchase_date, rollover_source_id, rollover_policy
+            SELECT status, created_by, purchase_date, rollover_source_id, rollover_policy, revision
             FROM investments WHERE id = ? FOR UPDATE
             """, (row, ignored) -> new Draft(row.getString("status"),
                 row.getObject("created_by", UUID.class), row.getDate("purchase_date").toLocalDate(),
-                row.getObject("rollover_source_id", UUID.class), row.getString("rollover_policy")), id);
+                row.getObject("rollover_source_id", UUID.class), row.getString("rollover_policy"), row.getInt("revision")), id);
         if (rows.isEmpty() || !"DRAFT".equals(rows.getFirst().status())
             || !makerId.equals(rows.getFirst().createdBy())) {
             throw new IllegalArgumentException("Only the draft creator can submit this investment");
         }
+        if (rows.getFirst().revision() > 1) investments.require(makerId, "CYCLE_REPOST");
         if (!rows.getFirst().purchaseDate().equals(LocalDate.now(ZoneId.of("Africa/Accra")))) {
             throw new IllegalStateException("Draft purchase date has passed; create a new draft");
         }
@@ -58,15 +59,16 @@ public class InvestmentPostHandler implements ApprovalActionHandler {
             UUID.class, requestId);
         investments.require(maker, "INVESTMENT_WRITE");
         var rows = jdbc.query("""
-            SELECT status, created_by, purchase_date, rollover_source_id, rollover_policy
+            SELECT status, created_by, purchase_date, rollover_source_id, rollover_policy, revision
             FROM investments WHERE id = ? FOR UPDATE
             """, (row, ignored) -> new Draft(row.getString("status"),
                 row.getObject("created_by", UUID.class), row.getDate("purchase_date").toLocalDate(),
-                row.getObject("rollover_source_id", UUID.class), row.getString("rollover_policy")), id);
+                row.getObject("rollover_source_id", UUID.class), row.getString("rollover_policy"), row.getInt("revision")), id);
         if (rows.isEmpty() || !"DRAFT".equals(rows.getFirst().status())
             || !maker.equals(rows.getFirst().createdBy())) {
             throw new IllegalStateException("Investment draft changed or was already posted");
         }
+        if (rows.getFirst().revision() > 1) investments.require(maker, "CYCLE_REPOST");
         LocalDate date = rows.getFirst().purchaseDate();
         if (!date.equals(LocalDate.now(ZoneId.of("Africa/Accra")))) {
             throw new IllegalStateException("Draft purchase date has passed; create a new draft");
@@ -112,5 +114,5 @@ public class InvestmentPostHandler implements ApprovalActionHandler {
     }
 
     private record Draft(String status, UUID createdBy, LocalDate purchaseDate,
-                         UUID sourceId, String policy) {}
+                         UUID sourceId, String policy, int revision) {}
 }
