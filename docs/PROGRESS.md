@@ -15,7 +15,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Java and frontend formatter configuration
 
 ## Phase 1 — Foundation
-- [x] Flyway V1–V14 core financial, role, approval, fiscal snapshot, authentication, member identity, Google link, and passkey migrations tested against PostgreSQL 16
+- [x] Flyway V1–V18 core financial, role, approval, fiscal snapshot, authentication, member identity, Google link, passkey, investment allocation, maturity, and admin investment-read migrations tested against PostgreSQL 16
 - [ ] Add remaining workflow tables and migration tests
 - [x] Structured API validation and access errors with trace IDs
 - [x] Append-only ledger and audit triggers with database tests
@@ -71,8 +71,15 @@ Check an item only after implementation and tests pass. Each item is small enoug
 
 ## Phase 3 — Investments
 - [x] Pesewa allocation engine and property tests
+- [x] Persist investment drafts with proposed participation from live uninvested balances, exact allocation shares, and a Sheet A style preview
+- [x] Allow the draft creator to edit participation with a recorded reason, including zero to exclude a member; recalculate shares and prevent edits while approval is pending
+- [x] Submit drafts for distinct-maker approval and recheck available funds before posting; show pending decisions in the live Investments page
+- [x] Approve actual maturity proceeds, preview member impact, and post exact positive or negative income to the immutable ledger
+- [x] Give ADMIN read-only access to investments while preserving financial posting and approval restrictions
+- [x] Show a reconciled Sheet A totals row and verify the 12-member sheet fixture in the engine and screen
 - [ ] Investment lifecycle, rollover, reversal
-- [ ] Sheet A screen and fixture test
+- [ ] Rollover, settlement, and approved investment reversal
+- [ ] Sheet A xlsx/PDF export acceptance tests
 
 ## Phase 4 — Dashboards and exports
 - [x] Persist balance-forward snapshots at approved year-end close
@@ -95,3 +102,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Security and accessibility review, responsive E2E, PWA
 - [ ] Production deployment, backups and restore drill
 - [ ] User guide, runbook, privacy, checklist, full test gates
+
+## Deferred follow-ups
+- [ ] MailHog startup and email notifications remain deferred at the owner's request.
+- [ ] Google sign-in stays gated until OAuth credentials are supplied.
+- [ ] Complete passkey device-loss recovery and credential removal after the core financial workflows.

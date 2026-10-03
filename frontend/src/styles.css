@@ -43,3 +43,153 @@
 .mobile-member-top>div>strong,.mobile-member-top>div>small{display:block}.mobile-member-top>div>small{color:var(--muted);font-size:.7rem;margin-top:3px}
 .auth-google-option{margin-top:20px;padding-top:18px;border-top:1px solid var(--line);display:grid;justify-items:center;gap:11px}.auth-google-option>span{font-size:.72rem;font-weight:700;color:var(--muted)}.google-signin{display:grid;justify-items:center;gap:7px;min-height:40px}.google-signin p,.auth-method-unavailable{font-size:.72rem;color:var(--muted);line-height:1.45;text-align:center}.settings-placeholder .google-signin,.settings-placeholder .auth-method-unavailable{justify-items:start;text-align:left;margin-top:18px}
 .auth-passkey-button{margin:0;width:100%;justify-content:center}
+.investment-panel {
+  padding: 22px;
+  margin-bottom: 20px;
+}
+.investment-panel > p {
+  font-size: 0.78rem;
+  margin: 7px 0 16px;
+}
+.investment-panel .table-scroll {
+  margin-top: 17px;
+}
+.investment-panel td small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.investment-empty {
+  padding: 24px 0;
+  color: var(--muted);
+}
+.investment-totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+.investment-totals div {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 13px;
+  background: var(--page);
+}
+.investment-totals span,
+.investment-totals strong {
+  display: block;
+}
+.investment-totals span {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.investment-totals strong {
+  margin-top: 6px;
+  font-size: 0.92rem;
+}
+.investment-action {
+  margin-top: 20px;
+}
+.investment-approval {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+.investment-approval > div {
+  flex: 1;
+}
+.investment-approval strong,
+.investment-approval span {
+  display: block;
+}
+.investment-approval span {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.investment-approval .secondary-button {
+  margin: 0;
+}
+.investment-comment {
+  display: grid;
+  gap: 7px;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+.investment-comment textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 10px;
+}
+.member-form select {
+  height: 43px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 11px;
+  background: var(--surface);
+  color: var(--ink);
+}
+@media (max-width: 780px) {
+  .investment-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .investment-approval {
+    flex-wrap: wrap;
+  }
+  .investment-approval > div {
+    flex-basis: 100%;
+  }
+}
+.investment-edit {
+  margin-top: 18px;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--page);
+}
+.investment-edit > p {
+  font-size: 0.74rem;
+  margin: 6px 0 12px;
+}
+.investment-edit-fields {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 12px;
+}
+.investment-edit-fields label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.investment-edit-fields input {
+  height: 42px;
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.investment-edit .primary-button {
+  margin-top: 13px;
+}
+.investment-edit .text-button {
+  margin-left: 8px;
+}
+.investment-panel tfoot th,
+.investment-panel tfoot td {
+  border-top: 2px solid var(--teal);
+  background: var(--page);
+  font-weight: 800;
+}
+@media (max-width: 680px) {
+  .investment-edit-fields {
+    grid-template-columns: 1fr;
+  }
+}
