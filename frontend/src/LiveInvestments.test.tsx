@@ -129,6 +129,7 @@ it("creates a principal-only draft from a matured investment", async () => {
   const fetchMock = vi.fn((path: string) => Promise.resolve({
     ok: true, status: path.endsWith("/rollover-draft") ? 201 : 200,
     json: async () => path.endsWith("/rollover-draft") ? { id: "next" }
+      : path.endsWith("/settings/rollover") ? { defaultRolloverPolicy: "ROLL_PRINCIPAL_ONLY" }
       : path.endsWith("/source") || path.endsWith("/next") ? detail : [cycle],
   }));
   vi.stubGlobal("fetch", fetchMock);
@@ -137,8 +138,8 @@ it("creates a principal-only draft from a matured investment", async () => {
     permissions: ["INVESTMENT_READ", "INVESTMENT_WRITE"] }} /></ToastProvider>);
   fireEvent.click(await screen.findByRole("button", { name: "View allocation" }));
   fireEvent.click(await screen.findByRole("button", { name: "Create rollover draft" }));
-  fireEvent.change(screen.getByLabelText("Rollover policy"),
-    { target: { value: "ROLL_PRINCIPAL_ONLY" } });
+  await waitFor(() => expect((screen.getByLabelText("Rollover policy") as HTMLSelectElement).value)
+    .toBe("ROLL_PRINCIPAL_ONLY"));
   fireEvent.change(screen.getByLabelText("Maturity date"),
     { target: { value: "2027-01-01" } });
   fireEvent.change(screen.getByLabelText("Cost (GH₵)"),

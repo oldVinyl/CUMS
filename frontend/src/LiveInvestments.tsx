@@ -303,6 +303,26 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
     } finally { setBusy(false); }
   };
 
+  const openRollover = async (sourceId: string) => {
+    setRolloverSource(sourceId);
+    setRolloverPolicy("ROLL_PRINCIPAL_AND_INCOME");
+    setFormOpen(true);
+    setSettleConfirm(false);
+    try {
+      const response = await fetch("/api/v1/settings/rollover", { credentials: "same-origin" });
+      if (!response.ok) throw new Error("The default policy could not be loaded.");
+      const setting = await response.json() as { defaultRolloverPolicy: string };
+      if (setting.defaultRolloverPolicy === "ROLL_PRINCIPAL_ONLY") {
+        setRolloverPolicy("ROLL_PRINCIPAL_ONLY");
+      }
+    } catch (error) {
+      showToast("Using principal and income as the starting option", {
+        detail: error instanceof Error ? error.message : "Choose the policy before creating the draft.",
+        tone: "info",
+      });
+    }
+  };
+
   const discardDraft = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!detail) return;
@@ -852,12 +872,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
                 </table>
               </div>
               {canWrite && detail.investment.status === "MATURED" && <div className="investment-action-bar">
-                <button className="primary-button" onClick={() => {
-                  setRolloverSource(detail.investment.id);
-                  setRolloverPolicy("ROLL_PRINCIPAL_AND_INCOME");
-                  setFormOpen(true);
-                  setSettleConfirm(false);
-                }}>Create rollover draft</button>
+                <button className="primary-button" onClick={() => void openRollover(detail.investment.id)}>Create rollover draft</button>
                 <button className="secondary-button" disabled={busy || pending.some(item => item.investmentId === detail.investment.id && item.actionType === "INVESTMENT_SETTLE")}
                   onClick={() => setSettleConfirm(true)}>Settle without rollover</button>
               </div>}
