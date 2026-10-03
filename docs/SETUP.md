@@ -90,3 +90,27 @@ Overview's fiscal-year selector updates the shared as-at date to year end, or to
 My membership offers `/api/v1/portal/export.json`, an audited no-store attachment whose ownership is derived from the signed-in account. It includes profile, account metadata, exact financial amounts, own allocations and their archived revisions, snapshots, receipt metadata and role/passkey metadata. Authentication secrets and other members' records are excluded. Receipt binaries remain separately available through protected payment downloads.
 
 `node scripts/period-browser-smoke.mjs` checks Overview, Ledger and My membership at five widths in both themes using read fixtures; it rejects financial mutations. It requires an isolated headless Chrome test session on port 9223.
+
+## Account-security verification and browser acceptance
+
+Settings now supports passkey revocation, one-time recovery-code replacement and password changes, with fresh password plus protected-factor verification. Password changes/passkey removal revoke all sessions. Never remove authentication factors using direct SQL during an incident; fully lost-factor administrative recovery remains a release gate.
+
+Run the new isolated Playwright/axe suite:
+
+```powershell
+cd frontend
+npm ci
+npx playwright install chromium
+npm run test:e2e
+```
+
+On Windows, the installed Chrome can be used instead of downloading Chromium:
+
+```powershell
+$env:CUMS_CHROME_PATH='C:\Program Files\Google\Chrome\Application\chrome.exe'
+npm run test:e2e
+```
+
+On Linux/macOS, use `npx playwright install --with-deps chromium` where system dependencies are needed. The suite starts Vite automatically when needed, uses five viewport sizes in both themes, and intercepts every API request with synthetic fixtures. It does not submit changes to the actual financial database. Results/traces are under `frontend/artifacts/`; CI uploads failing fixture traces for seven days. These tests cover browser behavior and WCAG rules on the specified pages, while real financial browser workflows remain an open release gate.
+
+See SECURITY_CHECKLIST.md for the explicit remaining security and delivery requirements. No v1.0.0 completion is claimed.

@@ -1,3 +1,4 @@
+import LandingPage from "./LandingPage";
 import ResponsiveOverlay from "./ResponsiveOverlay";
 import ImportsPage from "./ImportsPage";
 import { canSeeRoute } from "./navigation";
@@ -5,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import {
-  ArrowDownLeft, ArrowRight, ArrowUpRight, Bell, CalendarDays, ChartNoAxesCombined,
+  ArrowRight, CalendarDays, ChartNoAxesCombined,
   ChevronDown, CircleHelp, ClipboardCheck, CreditCard, FileChartColumnIncreasing,
   Landmark, LayoutDashboard, Menu, Moon, Plus, Search, Settings, ShieldCheck, Sun,
   Users, WalletCards,
@@ -55,14 +56,20 @@ const previewMembers = [
   { number: 'CU-004', name: 'Kofi Example', initials: 'KE', tone: 'gold', principal: '15000.00', income: '2250.00', equity: '17250.00', ratio: '5.96%' },
 ]
 
-function ThemeButton() {
-  const showToast = useToast()
-  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && matchMedia('(prefers-color-scheme: dark)').matches))
-  useEffect(() => {
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-    localStorage.setItem('theme', dark ? 'dark' : 'light')
-  }, [dark])
-  return <button className="icon-button theme-toggle" aria-label={`Switch to ${dark ? 'light' : 'dark'} theme`} onClick={() => { setDark(!dark); showToast(`${dark ? 'Light' : 'Dark'} theme on`, { tone: 'success' }) }}>{dark ? <Sun size={19} /> : <Moon size={19} />}</button>
+function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
+  const showToast = useToast();
+  return (
+    <button
+      className="icon-button theme-toggle"
+      aria-label={`Switch to ${dark ? "light" : "dark"} theme`}
+      onClick={() => {
+        onToggle();
+        showToast(`${dark ? "Light" : "Dark"} theme on`, { tone: "success" });
+      }}
+    >
+      {dark ? <Sun size={19} /> : <Moon size={19} />}
+    </button>
+  );
 }
 
 const financePaths = ["/investments", "/ledger", "/approvals", "/reconciliation", "/imports"];
@@ -112,25 +119,6 @@ function PreviewBanner() {
   return <div className="preview-banner" role="status"><span className="preview-dot" /><div><strong>Design preview</strong><span>This workspace uses sample figures and member names. Financial actions are unavailable until the secure backend is complete.</span></div></div>
 }
 
-function Overview({ asAt }: { asAt: string }) {
-  const cards = [
-    { label: 'Total member equity', value: '289666.00', detail: '+ 40,876.00 this year', icon: WalletCards, color: 'navy' },
-    { label: 'Total principal', value: '250811.50', detail: 'Across all members', icon: ArrowDownLeft, color: 'teal' },
-    { label: 'Income earned', value: '38854.50', detail: '15.49% return on principal', icon: ArrowUpRight, color: 'gold' },
-  ]
-  return <>
-    <PageHeader title="Good morning, Treasurer" subtitle="Here is your union at a glance." action={<button className="primary-button" disabled title="Available after member and ledger workflows are complete"><Plus size={18} /> New contribution</button>} />
-    <PreviewBanner />
-    <div className="section-heading"><div><h2>Financial overview</h2><p>As at {new Date(`${asAt}T12:00:00`).toLocaleDateString('en-GH', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div><button className="text-button" disabled>View report <ArrowRight size={16} /></button></div>
-    <div className="stat-grid">{cards.map(({ label, value, detail, icon: Icon, color }) => <div className={`stat-card ${color}`} key={label}><div className="stat-head"><span>{label}</span><span className="stat-icon"><Icon size={19} /></span></div><strong className="stat-value">{formatMoney(value)}</strong><span className="stat-detail">{detail}</span></div>)}</div>
-    <div className="overview-grid">
-      <section className="surface activity-card"><div className="card-title-row"><div><h2>Equity over time</h2><p>How member balances are growing</p></div><span className="quiet-tag">This year</span></div><div className="chart-wrap" aria-label="Sample equity trend from January to December"><div className="chart-lines"><span>GH₵ 300k</span><span>GH₵ 200k</span><span>GH₵ 100k</span><span>GH₵ 0</span></div><div className="chart-area"><div className="grid-line l1" /><div className="grid-line l2" /><div className="grid-line l3" /><svg viewBox="0 0 600 230" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop stopColor="#69a6a7" stopOpacity=".34" /><stop offset="1" stopColor="#69a6a7" stopOpacity=".02" /></linearGradient></defs><path d="M0 185 C50 181 70 175 105 164 S170 152 210 147 S270 129 315 122 S390 101 430 87 S510 67 600 28 L600 230 L0 230 Z" fill="url(#fill)" /><path d="M0 185 C50 181 70 175 105 164 S170 152 210 147 S270 129 315 122 S390 101 430 87 S510 67 600 28" fill="none" stroke="#407e8c" strokeWidth="4" strokeLinecap="round" /></svg></div></div><div className="chart-months"><span>Jan</span><span>Mar</span><span>May</span><span>Jul</span><span>Sep</span><span>Dec</span></div></section>
-      <section className="surface attention-card"><div className="card-title-row"><div><h2>At a glance</h2><p>A few things to keep in view</p></div><span className="attention-symbol"><Bell size={19} /></span></div><div className="attention-item"><span className="attention-icon aqua"><Users size={19} /></span><div><strong>16 active members</strong><span>Across the credit union</span></div><ArrowRight size={17} /></div><div className="attention-item"><span className="attention-icon sand"><Landmark size={19} /></span><div><strong>3 investment cycles</strong><span>2 active, 1 matured</span></div><ArrowRight size={17} /></div><div className="attention-item"><span className="attention-icon blush"><ShieldCheck size={19} /></span><div><strong>2 items need approval</strong><span>Review before they are posted</span></div><ArrowRight size={17} /></div><div className="small-note"><span className="small-note-mark">✦</span><div><strong>Clear records, confident decisions.</strong><span>Every posted movement will be traceable to a ledger entry.</span></div></div></section>
-    </div>
-    <section className="surface members-card"><div className="card-title-row"><div><h2>Member balances</h2><p>A quick view of your members</p></div><button className="text-button" disabled>View all members <ArrowRight size={16} /></button></div><MemberTable /></section>
-  </>
-}
-
 function MemberTable({ members = previewMembers }: { members?: typeof previewMembers }) {
   return <><div className="table-scroll"><table><thead><tr><th>Member</th><th>Member no.</th><th className="numeric">Principal</th><th className="numeric">Income</th><th className="numeric">Total equity</th><th className="numeric">Equity ratio</th></tr></thead><tbody>{members.map(member => <tr key={member.number}><td><div className="member-cell"><span className={`avatar ${member.tone}`}>{member.initials}</span><strong>{member.name}</strong></div></td><td className="muted">{member.number}</td><td className="numeric">{formatMoney(member.principal)}</td><td className="numeric">{formatMoney(member.income)}</td><td className="numeric strong">{formatMoney(member.equity)}</td><td className="numeric">{member.ratio}</td></tr>)}</tbody></table></div><div className="mobile-member-list">{members.map(member => <div className="mobile-member" key={member.number}><div className="mobile-member-top"><div className="member-cell"><span className={`avatar ${member.tone}`}>{member.initials}</span><div><strong>{member.name}</strong><small>{member.number}</small></div></div><span className="ratio">{member.ratio}</span></div><div className="mobile-member-bottom"><span>Total equity</span><strong>{formatMoney(member.equity)}</strong></div></div>)}</div></>
 }
@@ -146,6 +134,17 @@ function SimplePage({ title, subtitle, icon: Icon, heading, description }: { tit
 }
 
 function App() {
+  const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark" || (!localStorage.getItem("theme") && matchMedia("(prefers-color-scheme: dark)").matches));
+  useEffect(() => { document.documentElement.dataset.theme = dark ? "dark" : "light"; }, [dark]);
+  useEffect(() => {
+    const media = matchMedia("(prefers-color-scheme: dark)");
+    const update = () => { if (!localStorage.getItem("theme")) setDark(media.matches); };
+    media.addEventListener?.("change", update);
+    return () => media.removeEventListener?.("change", update);
+  }, []);
+  const toggleTheme = () => { localStorage.setItem("theme", dark ? "light" : "dark"); setDark(!dark); };
+
+
   const showToast = useToast();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -226,7 +225,7 @@ function App() {
   const section =
     nav.find((item) => item.path === location.pathname)?.label ?? "Overview";
   if (location.pathname === "/sign-in")
-    return <AuthPage onAuthenticated={signedIn} />;
+    return <><div className="auth-theme"><ThemeButton dark={dark} onToggle={toggleTheme} /></div><AuthPage onAuthenticated={signedIn} /></>;
   return (
     <div className={`app-shell${profile ? "" : " public-shell"}`}>
       {profile && <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
@@ -258,7 +257,7 @@ function App() {
             </span>}
           </div>
           <div className="topbar-right">
-            <label className="date-control">
+            {profile && <label className="date-control">
               <CalendarDays size={17} />
               <span>As at</span>
               <input
@@ -268,8 +267,8 @@ function App() {
                 onChange={(event) => updateAsAt(event.target.value)}
                 aria-label="As at date"
               />
-            </label>
-            <ThemeButton />
+            </label>}
+            <ThemeButton dark={dark} onToggle={toggleTheme} />
             {profile ? (
               <div className="account-menu" ref={accountMenu}>
                 <button className="profile profile-action" onClick={() => setProfileOpen(value => !value)} aria-label="Open account menu" aria-expanded={profileOpen} aria-controls="account-options">
@@ -296,7 +295,7 @@ function App() {
               ? profile.permissions.includes("DASHBOARD_READ_ALL")
                 ? <LiveDashboard asAt={asAt} onAsAtChange={updateAsAt} canExport={profile.permissions.includes("REPORT_EXPORT")} />
                 : <MemberPortal asAt={asAt} />
-              : <Overview asAt={asAt} />} />
+              : <LandingPage />} />
             <Route
               path="/members"
               element={
@@ -349,6 +348,7 @@ function App() {
                 <SettingsPage
                   profile={profile}
                   signOutAll={() => signOut(true)}
+                  onSessionEnded={() => { setProfile(null); setProfileOpen(false); navigate("/sign-in", { replace: true }); }}
                 />
               }
             />

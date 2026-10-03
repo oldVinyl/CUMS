@@ -25,7 +25,7 @@ public class OwnDataExportService {
     public byte[] export(UUID actor) {
         UUID member=portal.member(actor);
         ObjectNode root=json.createObjectNode().put("schemaVersion",1).put("exportedAt",Instant.now().toString());
-        ObjectNode identity=object(jdbc.queryForMap("SELECT id,member_number,full_name,email,id_type,join_date,status,version,created_at,updated_at FROM members WHERE id=?",member));
+        ObjectNode identity=object(jdbc.queryForMap("SELECT id,member_number,full_name,email,id_type,join_date,join_date_basis,status,version,created_at,updated_at FROM members WHERE id=?",member));
         Map<String,Object> encrypted=jdbc.queryForMap("SELECT encrypted_phone,encrypted_id_number,encrypted_date_of_birth,encrypted_address,encrypted_next_of_kin FROM members WHERE id=?",member);
         for(var field:Map.of("phone","encrypted_phone","id_number","encrypted_id_number","date_of_birth","encrypted_date_of_birth","address","encrypted_address").entrySet()) {
             identity.put(field.getKey(),fields.decrypt((byte[])encrypted.get(field.getValue())));
@@ -67,7 +67,7 @@ public class OwnDataExportService {
         section(root,"snapshot_history","SELECT fiscal_year,principal,income,equity,revision,original_created_at,archived_at FROM fiscal_snapshot_history WHERE member_id=? ORDER BY fiscal_year,revision",member);
         section(root,"receipts","SELECT id,content_type,byte_size,created_at FROM attachments WHERE member_id=? ORDER BY created_at,id",member);
         section(root,"role_history","SELECT r.code,a.start_date,a.end_date,a.revoked_at FROM user_role_assignments a JOIN roles r ON r.id=a.role_id WHERE a.user_id=? ORDER BY a.created_at,a.id",actor);
-        section(root,"passkeys","SELECT created_at,last_used_at,backup_eligible,backed_up FROM passkey_credentials WHERE user_id=? ORDER BY created_at",actor);
+        section(root,"passkeys","SELECT id,created_at,last_used_at,backup_eligible,backed_up,revoked_at FROM passkey_credentials WHERE user_id=? ORDER BY created_at",actor);
         byte[] bytes;
         try { bytes=json.writerWithDefaultPrettyPrinter().writeValueAsBytes(root); }
         catch(java.io.IOException e){throw new IllegalStateException("Your export could not be prepared. Please retry.");}

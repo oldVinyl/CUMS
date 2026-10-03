@@ -68,8 +68,8 @@ public class FinancialReportService {
         if (from == null || to == null || from.isBefore(LocalDate.of(2000, 1, 1)) || to.isAfter(today()) || from.isAfter(to)) {
             throw new IllegalArgumentException("Choose a valid statement range through today");
         }
-        var members = jdbc.query("SELECT member_number, full_name, join_date FROM members WHERE id = ?",
-            (row, ignored) -> new String[] { row.getString("member_number"), row.getString("full_name"), row.getDate("join_date").toString() }, memberId);
+        var members = jdbc.query("SELECT member_number, full_name, join_date, join_date_basis FROM members WHERE id = ?",
+            (row, ignored) -> new String[] { row.getString("member_number"), row.getString("full_name"), ("SOURCE_BASELINE".equals(row.getString("join_date_basis")) ? "Source baseline " : "") + row.getDate("join_date").toString() }, memberId);
         if (members.isEmpty()) throw new IllegalArgumentException("Member not found");
         var opening = jdbc.queryForObject("""
             SELECT coalesce(sum(amount) FILTER (WHERE component = 'PRINCIPAL'), 0) AS principal,
@@ -129,8 +129,8 @@ public class FinancialReportService {
         requireExport(actor);
         if (!permissions.hasPermission(actor, "MEMBER_READ")) throw new SecurityException("Access denied");
         if (asAt == null || asAt.isBefore(LocalDate.of(2000, 1, 1)) || asAt.isAfter(today())) throw new IllegalArgumentException("Choose a valid date");
-        List<List<Object>> rows = jdbc.query("SELECT member_number, full_name, status, join_date FROM members WHERE join_date <= ? ORDER BY member_number, id LIMIT 5001",
-            (row, ignored) -> List.<Object>of(row.getString("member_number"), row.getString("full_name"), row.getString("status"), row.getDate("join_date").toString()), asAt);
+        List<List<Object>> rows = jdbc.query("SELECT member_number, full_name, status, join_date, join_date_basis FROM members WHERE join_date <= ? ORDER BY member_number, id LIMIT 5001",
+            (row, ignored) -> List.<Object>of(row.getString("member_number"), row.getString("full_name"), row.getString("status"), ("SOURCE_BASELINE".equals(row.getString("join_date_basis")) ? "Source baseline " : "") + row.getDate("join_date").toString()), asAt);
         if (rows.size() > 5000) throw new IllegalArgumentException("Member directory is too large for one download");
         return download(actor, new Report("Member directory", "Joined through " + asAt + " | Current status | " + rows.size() + " members | Generated " + today(),
             List.of(new Column("Number", 20, false), new Column("Member", 45, false), new Column("Current status", 20, false), new Column("Joined", 20, false)),

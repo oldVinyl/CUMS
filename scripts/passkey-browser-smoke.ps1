@@ -19,6 +19,8 @@ try {
     $newAlphabet = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(30))
     $env:DB_URL = "jdbc:postgresql://localhost:5432/$database"
     $env:SPRING_PROFILES_ACTIVE = 'dev'
+    $env:DEV_SAMPLE_DATA = 'false'
+    $env:APP_MAIL_ENABLED = 'false'
     $env:DEV_BOOTSTRAP_EMAIL = "passkey-e2e-$PID@invalid.example"
     $env:DEV_BOOTSTRAP_PASSWORD = "Passkey $alphabet!"
     $env:CUMS_E2E_EMAIL = $env:DEV_BOOTSTRAP_EMAIL
@@ -61,6 +63,14 @@ try {
     $resolvedProfile = [IO.Path]::GetFullPath($profilePath)
     if ($resolvedProfile.StartsWith($resolvedTemp, [StringComparison]::OrdinalIgnoreCase) -and
         (Test-Path -LiteralPath $resolvedProfile)) {
-        Remove-Item -LiteralPath $resolvedProfile -Recurse -Force
+        for ($cleanupAttempt = 0; $cleanupAttempt -lt 5; $cleanupAttempt++) {
+            try {
+                Remove-Item -LiteralPath $resolvedProfile -Recurse -Force
+                break
+            } catch {
+                if ($cleanupAttempt -eq 4) { throw }
+                Start-Sleep -Milliseconds 500
+            }
+        }
     }
 }

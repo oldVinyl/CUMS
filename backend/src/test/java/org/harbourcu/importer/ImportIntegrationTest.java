@@ -76,6 +76,17 @@ class ImportIntegrationTest {
   UUID id=submit(maker,"MEMBERS",file);assertThatThrownBy(()->imports.cancel(ordinary,id,request(id),approvals)).hasMessageContaining("maker");
   imports.cancel(maker,id,request(id),approvals);assertThat(imports.list(maker,0).batches().getFirst().status()).isEqualTo("CANCELLED");
  }
+ @Test void legacyMemberBaselineIsExplicitAndOptionalContactsStayEmpty(){
+  UUID maker=user("ADMIN"),checker=user("PRESIDENT");
+  String number="LCU-"+UUID.randomUUID().toString().substring(0,8);
+  String csv=String.join(",",imports.columns("MEMBERS"))+"\n"+number+",Anonymous migration fixture,,,,,,,,,,"+today.minusYears(1)+",SOURCE_BASELINE\n";
+  byte[] file=bytes(csv);var report=imports.dryRun(maker,"MEMBERS","fixture.csv",file);
+  assertThat(report.valid()).isTrue();assertThat(report.warnings()).anyMatch(w->w.contains("joining"));
+  UUID batch=submit(maker,"MEMBERS",file);imports.decide(checker,batch,request(batch),"APPROVE",null,approvals);
+  assertThat(jdbc.queryForObject("SELECT join_date_basis FROM members WHERE member_number=?",String.class,number)).isEqualTo("SOURCE_BASELINE");
+  assertThat(jdbc.queryForObject("SELECT email FROM members WHERE member_number=?",String.class,number)).isNull();
+  assertThat(imports.dryRun(maker,"MEMBERS","fixture.csv",bytes(csv.replace(number,"OTHER-"+number).replace("SOURCE_BASELINE","INVENTED"))).valid()).isFalse();
+ }
  private UUID submit(UUID maker,String kind,byte[] file){var report=imports.dryRun(maker,kind,"fixture.csv",file);assertThat(report.valid()).isTrue();return imports.submit(maker,kind,"fixture.csv",file,report.fileHash(),"Reviewed source fixture",approvals);}
  private UUID request(UUID batch){return jdbc.queryForObject("SELECT approval_request_id FROM import_batches WHERE id=?",UUID.class,batch);}
  private byte[] ledger(String member,String ref,String amount,String total){return bytes(String.join(",",ImportService.LEDGER_COLUMNS)+"\n"+member+",ADDITION,PRINCIPAL,"+amount+","+today+","+ref+",\"Source, fixture\"\nTOTAL,,,"+total+",,,\n");}

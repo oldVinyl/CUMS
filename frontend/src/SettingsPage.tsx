@@ -1,17 +1,15 @@
-import { useState } from "react";
 import { Copy, ExternalLink, Fingerprint, Globe, LogOut } from "lucide-react";
 import type { Profile } from "./auth-api";
 import { linkGoogle } from "./auth-api";
-import { registerPasskey } from "./passkey-api";
+import AccountSecurity from "./AccountSecurity";
 import { useToast } from "./toast-context";
 import GoogleButton from "./GoogleButton";
 import FinancialPolicySettings from "./FinancialPolicySettings";
 
-export default function SettingsPage({ profile, signOutAll }: {
-  profile: Profile | null; signOutAll: () => void;
+export default function SettingsPage({ profile, signOutAll, onSessionEnded = () => {} }: {
+  profile: Profile | null; signOutAll: () => void; onSessionEnded?: () => void;
 }) {
   const showToast = useToast();
-  const [passkeyBusy, setPasskeyBusy] = useState(false);
   const github = "https://github.com/oldVinyl";
   const copyGithub = async () => {
     try { await navigator.clipboard.writeText(github); showToast("GitHub link copied", { tone: "success" }); }
@@ -22,13 +20,7 @@ export default function SettingsPage({ profile, signOutAll }: {
       <h1>Settings</h1><p>Your union’s policies and workspace details.</p></div></header>
     <div className="settings-grid setting-cards">
       {profile?.permissions.includes("SETTINGS_WRITE") && <FinancialPolicySettings />}
-      <section className="surface setting-card"><span className="settings-icon"><Fingerprint size={24} /></span>
-        <h2>Passkeys</h2><p>Sign in using your fingerprint, face, or device screen lock.</p>
-        {profile ? <button className="secondary-button" disabled={passkeyBusy} onClick={() => {
-          setPasskeyBusy(true); void registerPasskey().then(() => showToast("Passkey added", { tone: "success" }))
-            .catch(error => showToast("Could not add passkey", { detail: error instanceof Error ? error.message : "Please retry.", tone: "error" }))
-            .finally(() => setPasskeyBusy(false));
-        }}>{passkeyBusy ? "Please wait…" : "Add a passkey"}</button> : <p className="setting-help">Sign in to manage your passkeys.</p>}</section>
+      {profile ? <AccountSecurity onSessionEnded={onSessionEnded} /> : <section className="surface setting-card"><span className="settings-icon"><Fingerprint size={24} /></span><h2>Passkeys</h2><p>Sign in to manage your security methods.</p></section>}
       <section className="surface setting-card"><span className="settings-icon"><Globe size={24} /></span>
         <h2>Google sign-in</h2><p>Link your Google account as another sign-in option.</p>
         {profile ? <GoogleButton mode="link" onCredential={idToken => { void linkGoogle(idToken)

@@ -13,11 +13,14 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 describe('workspace preview', () => {
-  it('labels sample financial data and disables posting', () => {
-    renderApp()
-    expect(screen.getByText('Design preview')).toBeTruthy()
-    expect((screen.getByRole('button', { name: /new contribution/i }) as HTMLButtonElement).disabled).toBe(true)
-  })
+  it("shows a clear public login and developer credit without financial data", () => {
+    renderApp();
+    expect(screen.getByRole("heading", { name: "Harbour Credit Union" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Log in" }).getAttribute("href")).toBe("/sign-in");
+    expect(screen.getByText("Built by Vinette, by Vinyl.")).toBeTruthy();
+    expect(screen.queryByText("Design preview")).toBeNull();
+    expect(screen.queryByLabelText("As at date")).toBeNull();
+  });
 
   it('filters the sample member directory', () => {
     renderApp("/members")
@@ -30,16 +33,6 @@ describe('workspace preview', () => {
     renderApp()
     fireEvent.click(screen.getByRole('button', { name: 'Switch to dark theme' }))
     expect(screen.getByText('Dark theme on')).toBeTruthy()
-  })
-
-  it('explains preview date changes and rejects an empty date', () => {
-    renderApp()
-    const date = screen.getByLabelText('As at date')
-    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
-    fireEvent.change(date, { target: { value: yesterday } })
-    expect(screen.getByText('Preview date changed')).toBeTruthy()
-    fireEvent.change(date, { target: { value: '' } })
-    expect(screen.getByText('Choose a valid as-at date')).toBeTruthy()
   })
 
   it('credits Vinette and links to Vinyl’s GitHub', async () => {

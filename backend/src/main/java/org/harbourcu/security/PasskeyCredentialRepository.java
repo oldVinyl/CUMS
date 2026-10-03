@@ -36,7 +36,7 @@ public class PasskeyCredentialRepository implements CredentialRepository {
     public Set<PublicKeyCredentialDescriptor> getCredentialIdsForUsername(String username) {
         List<PublicKeyCredentialDescriptor> credentials = jdbc.query("""
             SELECT p.credential_id FROM passkey_credentials p
-            JOIN users u ON u.id = p.user_id WHERE u.email = ?
+            JOIN users u ON u.id = p.user_id WHERE u.email = ? AND p.revoked_at IS NULL
             """, (row, ignored) -> PublicKeyCredentialDescriptor.builder()
                 .id(new ByteArray(row.getBytes("credential_id"))).build(), username);
         return new HashSet<>(credentials);
@@ -62,7 +62,7 @@ public class PasskeyCredentialRepository implements CredentialRepository {
         if (id == null) return Optional.empty();
         return jdbc.query("""
             SELECT credential_id, public_key_cose, signature_count, user_id
-            FROM passkey_credentials WHERE credential_id = ? AND user_id = ?
+            FROM passkey_credentials WHERE credential_id = ? AND user_id = ? AND revoked_at IS NULL
             """, (row, ignored) -> credential(row.getBytes("credential_id"),
                 row.getBytes("public_key_cose"), row.getLong("signature_count"),
                 row.getObject("user_id", UUID.class)), credentialId.getBytes(), id)
@@ -73,7 +73,7 @@ public class PasskeyCredentialRepository implements CredentialRepository {
     public Set<RegisteredCredential> lookupAll(ByteArray credentialId) {
         return new HashSet<>(jdbc.query("""
             SELECT credential_id, public_key_cose, signature_count, user_id
-            FROM passkey_credentials WHERE credential_id = ?
+            FROM passkey_credentials WHERE credential_id = ? AND revoked_at IS NULL
             """, (row, ignored) -> credential(row.getBytes("credential_id"),
                 row.getBytes("public_key_cose"), row.getLong("signature_count"),
                 row.getObject("user_id", UUID.class)), credentialId.getBytes()));

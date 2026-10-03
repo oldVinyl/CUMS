@@ -126,7 +126,7 @@ public class PasskeyService {
                 .stream().findFirst().orElseThrow(() -> new BadCredentialsException("Account unavailable"));
             int updated = jdbc.update("""
                 UPDATE passkey_credentials SET signature_count = ?, backed_up = ?, last_used_at = now()
-                WHERE credential_id = ? AND user_id = ? AND signature_count <= ?
+                WHERE credential_id = ? AND user_id = ? AND signature_count <= ? AND revoked_at IS NULL
                 """, result.getSignatureCount(), result.isBackedUp(),
                 result.getCredential().getCredentialId().getBytes(), userId, result.getSignatureCount());
             if (updated != 1) throw new BadCredentialsException("Passkey counter changed");

@@ -21,7 +21,7 @@ public class DashboardService {
                             BigDecimal roePercent, BigDecimal equityRatioPercent) {}
     public record TrendPoint(LocalDate date, BigDecimal equity) {}
     public record Dashboard(LocalDate asAt, int fiscalYear, List<MemberRow> members,
-                            MemberRow totals, List<TrendPoint> trend, boolean developmentData, SnapshotReconciliation balanceForwardSnapshot) {}
+                            MemberRow totals, List<TrendPoint> trend, boolean developmentData, boolean summarizedHistory, SnapshotReconciliation balanceForwardSnapshot) {}
     public record SnapshotReconciliation(int fiscalYear, String state, int snapshotCount, int missingMembers, int mismatchedMembers) {}
 
     private final JdbcTemplate jdbc;
@@ -99,7 +99,8 @@ public class DashboardService {
         boolean samples = environment.matchesProfiles("dev") && Boolean.TRUE.equals(
             jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM ledger_entries WHERE reference LIKE 'DEV-SAMPLE-%' AND effective_date <= ?)",
                 Boolean.class, asAt));
-        return new Dashboard(asAt, asAt.getYear(), withRatios, totals, trend, samples, reconcile(yearStart.getYear()-1));
+        boolean summarized = Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM ledger_entries WHERE reference LIKE 'LEGACY-%' AND effective_date<=?)",Boolean.class,asAt));
+        return new Dashboard(asAt, asAt.getYear(), withRatios, totals, trend, samples, summarized, reconcile(yearStart.getYear()-1));
     }
 
     private SnapshotReconciliation reconcile(int year) {

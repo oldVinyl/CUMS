@@ -64,7 +64,7 @@ export async function registerPasskey(challenge?: string): Promise<AuthStep> {
   } }) as Promise<AuthStep>
 }
 
-export async function signInWithPasskey(): Promise<AuthStep> {
+export async function passkeyProof(): Promise<{ token: string; credential: object }> {
   available()
   const ceremony = await post('login/options', {}) as Ceremony
   const options = ceremony.options.publicKey as RequestJson
@@ -74,12 +74,16 @@ export async function signInWithPasskey(): Promise<AuthStep> {
   const credential = await navigator.credentials.get({ publicKey }) as PublicKeyCredential | null
   if (!credential) throw new Error('Passkey sign-in was cancelled.')
   const response = credential.response as AuthenticatorAssertionResponse
-  return post('login/finish', { token: ceremony.token, credential: {
+  return { token: ceremony.token, credential: {
     id: credential.id, rawId: encode(credential.rawId), type: credential.type,
     response: { authenticatorData: encode(response.authenticatorData),
       clientDataJSON: encode(response.clientDataJSON), signature: encode(response.signature),
       userHandle: encode(response.userHandle) },
     clientExtensionResults: credential.getClientExtensionResults(),
     authenticatorAttachment: credential.authenticatorAttachment,
-  } }) as Promise<AuthStep>
+  } }
+}
+
+export async function signInWithPasskey(): Promise<AuthStep> {
+  return post("login/finish", await passkeyProof()) as Promise<AuthStep>;
 }

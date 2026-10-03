@@ -1,0 +1,56 @@
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import AccountSecurity from "./AccountSecurity";
+import { ToastProvider } from "./toast";
+import { passkeyProof } from "./passkey-api";
+vi.mock("./passkey-api", () => ({ registerPasskey: vi.fn(), passkeyProof: vi.fn() }));
+const summary = { totpEnabled: true, recoveryCodesRemaining: 8, passkeys: [{ id: "opaque-fixture-id", createdAt: "2026-01-01T12:00:00Z", lastUsedAt: null, backedUp: true }] };
+const renderSecurity = (onSessionEnded = vi.fn()) => render(<ToastProvider><AccountSecurity onSessionEnded={onSessionEnded} /></ToastProvider>);
+beforeEach(() => { localStorage.clear(); vi.stubGlobal("matchMedia", () => ({ matches: false, addListener() {}, removeListener() {} })); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
+it("replaces codes only after verification and keeps the one-time display out of storage", async () => {
+ const calls: string[] = [];
+ vi.stubGlobal("fetch", vi.fn(async (_url: string, options?: RequestInit) => { if (options?.method === "POST") { calls.push(options.body as string); return new Response(JSON.stringify({ recoveryCodes: ["anonymous-recovery-fixture"] })); } return new Response(JSON.stringify(summary)); }));
+ renderSecurity(); fireEvent.click(await screen.findByRole("button", { name: /Replace recovery codes/ }));
+ expect(calls).toHaveLength(0);
+ fireEvent.change(screen.getByLabelText("Current password"), { target: { value: "Anonymous fixture password" } });
+ fireEvent.change(screen.getByLabelText("Authenticator or recovery code"), { target: { value: "123456" } });
+ fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+ expect(await screen.findByText("anonymous-recovery-fixture")).toBeTruthy();
+ expect(calls).toHaveLength(1); expect(JSON.parse(calls[0]).proof.code).toBe("123456");
+ expect(localStorage.length).toBe(0);
+ expect((screen.getByRole("button", { name: "Done" }) as HTMLButtonElement).disabled).toBe(true);
+ fireEvent.click(screen.getByLabelText("I have saved these codes securely")); fireEvent.click(screen.getByRole("button", { name: "Done" }));
+ await waitFor(() => expect(screen.queryByText("anonymous-recovery-fixture")).toBeNull());
+});
+it("shows verification rejection and preserves the signed-in account", async () => {
+ const ended = vi.fn();
+ vi.stubGlobal("fetch", vi.fn(async (_url: string, options?: RequestInit) => options?.method === "POST" ? new Response(JSON.stringify({message:"Account verification failed. Check your code."}), {status:401}) : new Response(JSON.stringify(summary))));
+ renderSecurity(ended); fireEvent.click(await screen.findByRole("button", { name: "Remove" }));
+ fireEvent.change(screen.getByLabelText("Current password"), { target: { value: "Anonymous fixture password" } });
+ fireEvent.change(screen.getByLabelText("Authenticator or recovery code"), { target: { value: "000000" } });
+ fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+ expect(await screen.findByText("Account verification failed. Check your code.")).toBeTruthy(); expect(ended).not.toHaveBeenCalled();
+ expect(screen.getByRole("dialog")).toBeTruthy();
+});
+it("confirms removal with a fresh passkey and ends the session after success", async () => {
+ const ended=vi.fn();const mutations: string[]=[];
+ vi.mocked(passkeyProof).mockResolvedValue({token:"single-use-proof",credential:{id:"credential-fixture"}});
+ vi.stubGlobal("fetch", vi.fn(async (_url: string, options?: RequestInit) => { if(options?.method === "POST") {mutations.push(options.body as string);return new Response(null,{status:204});} return new Response(JSON.stringify(summary)); }));
+ renderSecurity(ended); fireEvent.click(await screen.findByRole("button",{name:"Remove"}));
+ fireEvent.change(screen.getByLabelText("Current password"),{target:{value:"Anonymous fixture password"}});
+ fireEvent.change(screen.getByLabelText("Security verification"),{target:{value:"passkey"}});
+ fireEvent.click(screen.getByRole("button",{name:"Confirm"}));
+ await waitFor(()=>expect(ended).toHaveBeenCalledOnce());
+ expect(passkeyProof).toHaveBeenCalledOnce();expect(JSON.parse(mutations[0]).proof.passkeyToken).toBe("single-use-proof");
+});
+it("rejects mismatched passwords before sending a change", async () => {
+ const fetcher=vi.fn(async()=>new Response(JSON.stringify(summary)));vi.stubGlobal("fetch",fetcher);
+ renderSecurity();fireEvent.click(await screen.findByRole("button",{name:"Change password"}));
+ fireEvent.change(screen.getByLabelText("Current password"),{target:{value:"Anonymous fixture password"}});
+ fireEvent.change(screen.getByLabelText("New password"),{target:{value:"New anonymous fixture password"}});
+ fireEvent.change(screen.getByLabelText("Confirm new password"),{target:{value:"Different fixture password"}});
+ fireEvent.change(screen.getByLabelText("Authenticator or recovery code"),{target:{value:"123456"}});
+ fireEvent.click(screen.getByRole("button",{name:"Confirm"}));
+ expect(await screen.findByText("Passwords do not match")).toBeTruthy();expect(fetcher).toHaveBeenCalledOnce();
+});

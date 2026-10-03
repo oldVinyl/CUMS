@@ -13,6 +13,7 @@ Check only implemented and verified gates. This system is not yet production com
 - [x] Current-day reconciliation snapshots and source freshness checks
 - [x] Persistent email outbox and opt-in SMTP implementation
 - [x] Responsive fixture checks at 320/375/768/1024/1440 in both themes
+- [x] 40 Playwright/axe scenarios for public/sign-in/overview/settings/member creation in five sizes and both themes
 - [ ] Real browser financial workflows and full axe/accessibility acceptance
 - [ ] Real Paystack sandbox, direct MoMo prompts and settlement matching
 - [ ] SMTP/MailHog delivery and operational retry acceptance
@@ -22,7 +23,8 @@ Check only implemented and verified gates. This system is not yet production com
 - [x] CSV/XLSX member/opening-balance/contribution dry runs, approval and batch compensation
 - [ ] Historical investment/allocation imports and explicit dependent-cycle correction/repost
 - [x] Filterable audit metadata screen and audited CSV export with authorization and injection tests
-- [ ] Full audit IP/before-after coverage and recovery/session/account administration
+- [x] Own-account security controls, protected verification, passkey revocation, recovery-code replacement and password changes
+- [ ] Full audit IP/before-after coverage and fully lost-factor recovery/account administration
 - [ ] Complete original Sheet B workbook acceptance
 - [ ] HEIC conversion, malware scanner and file security review
 - [ ] Production CSP/TLS/security review and deployment

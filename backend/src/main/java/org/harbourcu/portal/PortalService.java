@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.*;
  public record Trend(LocalDate date,String equity){}
  public record Transaction(UUID id,String type,String component,String amount,LocalDate effectiveDate,String reference,String narration){}
  public record Allocation(UUID investmentId,String institution,String tenor,String status,LocalDate purchaseDate,LocalDate maturityDate,String participation,String costShare,String expectedIncome,String actualIncome){}
- public record Overview(UUID memberId,String memberNumber,String fullName,LocalDate asAt,Figures balanceBf,Figures ytd,Figures total,String roePercent,String equityRatioPercent,List<Trend> trend,List<Allocation> allocations){}
+ public record Overview(UUID memberId,String memberNumber,String fullName,LocalDate asAt,Figures balanceBf,Figures ytd,Figures total,String roePercent,String equityRatioPercent,List<Trend> trend,List<Allocation> allocations,boolean summarizedHistory){}
  public record History(List<Transaction> entries,int page,boolean hasNext){}
  public record Profile(long version,String email,String phone,String nextOfKinName,String nextOfKinPhone,String nextOfKinRelationship){}
  private final JdbcTemplate jdbc;private final PermissionService permissions;private final FieldEncryption fields;private final com.fasterxml.jackson.databind.ObjectMapper json;
@@ -40,7 +40,8 @@ import org.springframework.transaction.annotation.*;
    WHERE a.member_id=? AND i.status NOT IN ('DRAFT','REVERSED') AND i.purchase_date<=?
    ORDER BY i.purchase_date DESC,i.id LIMIT 100
    """,(r,n)->new Allocation(r.getObject("id",UUID.class),r.getString("institution"),r.getString("tenor"),r.getString("status"),r.getDate("purchase_date").toLocalDate(),r.getDate("maturity_date").toLocalDate(),r.getBigDecimal("participation").toPlainString(),r.getBigDecimal("cost_share").toPlainString(),r.getBigDecimal("income_share").toPlainString(),r.getString("actual_income_share")),id,asAt);
-  return new Overview(id,(String)name.get("member_number"),(String)name.get("full_name"),asAt,fig(bp,bi),fig(yp,yi),fig(p,i),percent(i,p),percent(p.add(i),union),trend,allocations);
+  boolean summarized=Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM ledger_entries WHERE member_id=? AND reference LIKE 'LEGACY-%' AND effective_date<=?)",Boolean.class,id,asAt));
+  return new Overview(id,(String)name.get("member_number"),(String)name.get("full_name"),asAt,fig(bp,bi),fig(yp,yi),fig(p,i),percent(i,p),percent(p.add(i),union),trend,allocations,summarized);
  }
  public History history(UUID actor,LocalDate asAt,int page){UUID id=member(actor);date(asAt);if(page<0||page>10000)throw new IllegalArgumentException("Invalid page.");
   var rows=jdbc.query("SELECT id,type,component,amount,effective_date,reference,narration FROM ledger_entries WHERE member_id=? AND effective_date<=? ORDER BY effective_date DESC,recorded_at DESC,id DESC LIMIT 51 OFFSET ?",(r,n)->new Transaction(r.getObject("id",UUID.class),r.getString("type"),r.getString("component"),r.getBigDecimal("amount").toPlainString(),r.getDate("effective_date").toLocalDate(),r.getString("reference"),r.getString("narration")),id,asAt,page*50);

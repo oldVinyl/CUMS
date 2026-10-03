@@ -34,12 +34,19 @@ public class ImportService {
     public ImportService(JdbcTemplate jdbc,PermissionService permissions,ImportFileParser parser,FieldEncryption fields,ObjectMapper json,MemberService members,FiscalYearLock years,FiscalSnapshotService snapshots){
         this.jdbc=jdbc;this.permissions=permissions;this.parser=parser;this.fields=fields;this.json=json;this.members=members;this.years=years;this.snapshots=snapshots;
     }
-    public List<String> columns(String kind){return switch(kind){case "MEMBERS"->MEMBER_COLUMNS;case "LEDGER"->LEDGER_COLUMNS;default->throw new IllegalArgumentException("Choose MEMBERS or LEDGER.");};}
-    public Report dryRun(UUID actor,String kind,String filename,byte[] bytes){requireMaker(actor,kind);return analyze(kind,hash(bytes),parser.parse(filename,bytes,columns(kind)));}
+    public List<String> columns(String kind){return switch(kind){case "MEMBERS"->java.util.stream.Stream.concat(MEMBER_COLUMNS.stream(),java.util.stream.Stream.of("join_date_basis")).toList();case "LEDGER"->LEDGER_COLUMNS;default->throw new IllegalArgumentException("Choose MEMBERS or LEDGER.");};}
+    private List<Map<String,String>> parse(String kind,String filename,byte[] bytes){
+        List<Map<String,String>> rows;
+        try{rows=parser.parse(filename,bytes,columns(kind));}
+        catch(IllegalArgumentException e){if(!"MEMBERS".equals(kind)||!e.getMessage().contains("Column headings"))throw e;rows=parser.parse(filename,bytes,MEMBER_COLUMNS);}
+        for(var row:rows)if("MEMBERS".equals(kind))row.putIfAbsent("join_date_basis","CONFIRMED");
+        return rows;
+    }
+    public Report dryRun(UUID actor,String kind,String filename,byte[] bytes){requireMaker(actor,kind);return analyze(kind,hash(bytes),parse(kind,filename,bytes));}
     @Transactional
     public UUID submit(UUID actor,String kind,String filename,byte[] bytes,String expectedHash,String reason,ApprovalService approvals){
         requireMaker(actor,kind);reason=reason(reason);
-        var data=parser.parse(filename,bytes,columns(kind));var report=analyze(kind,hash(bytes),data);
+        var data=parse(kind,filename,bytes);var report=analyze(kind,hash(bytes),data);
         if(!report.fileHash().equals(expectedHash))throw new IllegalArgumentException("The file changed. Run the dry run again before confirming.");
         jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");
         Boolean duplicate=jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM import_batches WHERE kind=? AND file_hash=? AND status IN ('PENDING','POSTED'))",Boolean.class,kind,report.fileHash());
@@ -80,6 +87,7 @@ public class ImportService {
         validatePost(maker,id);
         int n=0;for(var r:rows){n++;if("MEMBERS".equals(kind)){
             UUID member=members.create(maker,new MemberService.CreateMember(empty(r.get("member_number")),r.get("full_name"),empty(r.get("email")),empty(r.get("phone")),empty(r.get("id_type")),empty(r.get("id_number")),date(r.get("date_of_birth")),empty(r.get("address")),empty(r.get("next_of_kin_name")),empty(r.get("next_of_kin_phone")),empty(r.get("next_of_kin_relationship")),date(r.get("join_date"))));
+            jdbc.update("UPDATE members SET join_date_basis=? WHERE id=?",r.getOrDefault("join_date_basis","CONFIRMED").isBlank()?"CONFIRMED":r.get("join_date_basis"),member);
             jdbc.update("INSERT INTO import_member_results(batch_id,row_number,member_id) VALUES(?,?,?)",id,n,member);
         }else{
             UUID member=jdbc.queryForObject("SELECT id FROM members WHERE member_number=?",UUID.class,r.get("member_number"));LocalDate effective=date(r.get("effective_date"));
@@ -156,10 +164,11 @@ public class ImportService {
             if(totalsError||(declared!=null&&declared.compareTo(total)!=0)){totalsError=true;warnings.add("The supplied TOTAL does not match the valid data rows.");}
             if(total.precision()-total.scale()>15){totalsError=true;warnings.add("The batch total exceeds the financial storage limit.");}
             warnings.add("Historical dates require open years. Closed years need approved period unlock; affected snapshots are versioned and recomputed at approval. Dates affecting posted investment ratios require separate cycle correction and are blocked here.");
-        }else warnings.add("Blank member numbers are generated at approval. Private fields are encrypted when confirmed; no records are created by this dry run.");
+        }else warnings.add("SOURCE_BASELINE dates record the earliest source balance date, not a confirmed joining date. Blank member numbers are generated at approval. Private fields are encrypted when confirmed; no records are created by this dry run.");
         return new Report(kind,hash,reports.size(),total.toPlainString(),!totalsError&&reports.stream().allMatch(r->r.errors().isEmpty()),warnings,reports);
     }
     private void validateMember(Map<String,String> r,Set<String> seen){
+        if(!Set.of("","CONFIRMED","SOURCE_BASELINE").contains(r.getOrDefault("join_date_basis","CONFIRMED")))throw new IllegalArgumentException("Join date basis must be CONFIRMED or SOURCE_BASELINE.");
         String number=r.get("member_number");if(!number.isEmpty()){
             if(number.length()>40||!seen.add(number))throw new IllegalArgumentException("Member number is too long or repeated in this file.");
             if(Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM members WHERE member_number=?)",Boolean.class,number)))throw new IllegalArgumentException("Member number already exists.");

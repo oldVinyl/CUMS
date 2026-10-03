@@ -38,7 +38,7 @@ public class MemberService {
                          LocalDate dateOfBirth, String address,
                          String nextOfKinName, String nextOfKinPhone,
                          String nextOfKinRelationship, LocalDate joinDate, String status,
-                         long version) {}
+                         long version, String joinDateBasis) {}
     private record Kin(String name, String phone, String relationship) {}
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Africa/Accra");
@@ -237,7 +237,7 @@ public class MemberService {
         List<Detail> rows = jdbc.query("""
             SELECT id, member_number, full_name, email, id_type, encrypted_id_number,
                    encrypted_phone, encrypted_date_of_birth, encrypted_address,
-                   encrypted_next_of_kin, join_date, status, version
+                   encrypted_next_of_kin, join_date, status, version, join_date_basis
             FROM members WHERE id = ?
             """, (row, ignored) -> {
             byte[] kinCipher = row.getBytes("encrypted_next_of_kin");
@@ -252,7 +252,7 @@ public class MemberService {
                 fields.decrypt(row.getBytes("encrypted_address")),
                 kin.name(), kin.phone(), kin.relationship(),
                 row.getObject("join_date", LocalDate.class), row.getString("status"),
-                row.getLong("version"));
+                row.getLong("version"), row.getString("join_date_basis"));
         }, memberId);
         if (rows.isEmpty()) throw new IllegalArgumentException("Member not found");
         audit.record(actorId, AuditService.Action.SENSITIVE_MEMBER_VIEW, "MEMBER", memberId, requestId);

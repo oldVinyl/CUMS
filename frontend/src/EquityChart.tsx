@@ -4,9 +4,10 @@ import { formatMoney } from "./money";
 export type EquityPoint = { date: string; equity: string };
 const dateLabel = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString("en-GH", { day: "numeric", month: "short", year: "numeric" });
 const axisMoney = (value: number) => `GH₵ ${new Intl.NumberFormat("en-GH", { notation: "compact", maximumFractionDigits: 1 }).format(value)}`;
-export default function EquityChart({ points }: { points: EquityPoint[] }) {
+export default function EquityChart({ points, summarizedHistory = false }: { points: EquityPoint[]; summarizedHistory?: boolean }) {
   const ordered = [...points].filter(point => Number.isFinite(Number(point.equity))).sort((a, b) => a.date.localeCompare(b.date));
   if (!ordered.length || ordered.every(point => Number(point.equity) === 0)) return <div className="dashboard-empty"><WalletCards size={30} /><h3>No equity history yet</h3><p>Your posted contributions and income will build this chart.</p></div>;
+  if (summarizedHistory) return <div className="dashboard-empty"><WalletCards size={30} /><h3>Historical balances imported as summaries</h3><p>The source workbook has no transaction dates. A monthly growth chart would be misleading. Your balances and statement include the dated migration summaries.</p><p>Latest ledger balance: <strong>{formatMoney(ordered.at(-1)!.equity)}</strong> as at {dateLabel(ordered.at(-1)!.date)}.</p></div>;
   const values = ordered.map(point => Number(point.equity));
   const minimum = Math.min(0, ...values), maximum = Math.max(1, ...values), range = maximum - minimum;
   const y = (value: number) => 190 - (value - minimum) / range * 160;

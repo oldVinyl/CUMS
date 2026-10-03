@@ -52,7 +52,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Google ID token verification, one-use nonce, explicit account linking, and gated UI for configured client IDs
 - [x] WebAuthn passkey registration and assertion services with stored keys, one-use ceremonies, and user verification
 - [x] Browser passkey registration, sign-in, preference, and replay rejection with a virtual authenticator against a disposable PostgreSQL database
-- [ ] Test passkey device-loss recovery and credential removal paths
+- [x] Test lost-device recovery using a remaining protected factor/recovery code and verified own-passkey removal
 - [x] Require every account to choose a protected sign-in method on first sign-in
 - [x] React Hot Toast themes for light/dark success, information, and error feedback with multiline detail and promise feedback for member mutations
 - [x] Offer TOTP, passkey, and gated Google sign-in to every account, including first sign-in preference setup
@@ -144,7 +144,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Password/reset and recovery administration and invitation delivery acceptance
 
 ## Phase 7 — Import and reconciliation
-- [ ] Dry-run importer, approval and batch reversal
+- [x] Dry-run importer, approval and batch reversal
 - [x] Bounded UTF-8 CSV/single-sheet XLSX member and ledger imports, downloadable templates, row validation and source totals reconciliation
 - [x] Dry run writes no records; confirmation binds the exact file checksum and encrypts staged private rows
 - [x] Independently approve entire batches atomically; stale data, permissions, closed periods and duplicate references are rechecked
@@ -176,7 +176,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 ## Deferred follow-ups
 - [ ] MailHog startup and live email delivery remain deferred at the owner's request; the persistent outbox and gated SMTP implementation are built.
 - [ ] Google sign-in stays gated until OAuth credentials are supplied.
-- [ ] Complete passkey device-loss recovery and credential removal after the core financial workflows.
+- [x] Complete own-passkey removal, last-factor protection and lost-device recovery using saved codes/remaining passkeys; fully lost-factor administrative recovery remains open.
 
 ## Workspace usability fixes — 2026-10-03
 - [x] Signed-out pages use the full content width without workspace navigation; successful sign-in redirects to Overview
@@ -194,3 +194,35 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Backend suite: 143 tests and 250 generated allocation checks; frontend suite: 49 tests; production build and lint pass
 - [x] 80 isolated browser layout checks at 320/375/768/1024/1440 in light/dark themes; drawer/sheet outside dismissal, short/long drag, member receipt permissions, profile menu and signed-out widths verified
 - [ ] Live SMTP invitation delivery remains deferred with MailHog; the encrypted outbox queues email for configured delivery
+## Legacy workbook preparation and public landing — 2026-10-03
+- [x] Inspect source structures, numeric balances and income formulas locally without sending member names/details to tool output
+- [x] Ignore the private source workbooks and migration directory in Git
+- [x] Prepare 16 memberships and 54 ledger summaries, reconciling BF/YTD components to closing equity 289,666.0000
+- [x] Record the owner's assumption that all historical income was received; source maturity/receipt evidence remains unavailable
+- [x] Preserve blank unknown contact/identity details, stable legacy member numbers and explicit SOURCE_BASELINE membership dates
+- [x] Keep backward compatibility with the original membership import template; validate the new date-basis column
+- [x] Label baseline dates in member details/reports/exports and suppress misleading monthly charts when legacy summaries are present
+- [x] Replace the public overview with a simple landing page, clear login and responsive Vinette/Vinyl developer credits
+- [x] Document fresh-database migration, independent approval, double-counting prevention and reviewed corrections in LEGACY_IMPORT.md
+- [x] Verify 144 backend tests, 250 generated allocation cases, 50 frontend tests, three anonymous converter tests, production build and lint
+- [x] Verify 16 isolated mobile light/dark operational layouts, drawer/sheet interactions, member permissions and public layouts at 320/375/1440
+- [x] Apply V32 to the development database and restart the backend; health is UP
+- [ ] Post reviewed private imports into a fresh database without mock entries using a separate authorized checker
+- [ ] Collect actual joining/contact/identity details and historical investment evidence; prepared summaries do not reconstruct investment cycles
+
+## Account security and automated browser acceptance — 2026-10-03
+- [x] List owned passkeys using opaque management IDs and registration/last-use/backup metadata
+- [x] Verify fresh password plus authenticator/recovery code or verified passkey before account security changes
+- [x] Revoke lost passkeys, deny subsequent assertions, preserve credential metadata and prevent removal of the last protected method
+- [x] Revoke every session/challenge after password changes or passkey removal; repair an unavailable preferred method
+- [x] Replace hashed recovery codes atomically, invalidate all old codes and display replacements once without browser persistence
+- [x] Persist failed-verification lockouts; prevent TOTP/recovery-code replay and foreign-account credential access
+- [x] Add separate themed Settings cards, confirmation drawer/sheet, keyboard/focus behavior and promise feedback
+- [x] Use two real virtual authenticators against disposable PostgreSQL to verify registration, login, replay rejection, removed-key/session rejection, spare-key login and last-method protection
+- [x] Add Playwright/axe CI job and 40 browser scenarios at 320/375/768/1024/1440 in both themes; intercepted APIs never post to the financial database
+- [x] Fix low-contrast mobile navigation, authentication links/buttons and overview badges; direct sign-in supports the selected/OS theme and a toggle
+- [x] Verify 152 backend tests plus 250 generated allocation checks, 54 frontend tests, production build and lint
+- [x] Apply V33 and restart the local backend; health is UP
+- [x] Add SECURITY_CHECKLIST.md and account-security/setup instructions
+- [ ] Complete recovery when all protected factors/codes are lost, authorized administrative reset and password-reset delivery
+- [ ] Complete real financial browser E2E/coverage/dependency gates, remaining historical workflows, retention anonymization and production backup/deployment acceptance

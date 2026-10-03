@@ -9,7 +9,7 @@ import ReportDownloads from "./ReportDownloads";
 type Figures = { principal: string; income: string; equity: string };
 type Row = { memberId: string | null; memberNumber: string | null; fullName: string;
   balanceBf: Figures; ytd: Figures; total: Figures; roePercent: string; equityRatioPercent: string };
-type Dashboard = { asAt: string; fiscalYear: number; members: Row[]; totals: Row;
+type Dashboard = { summarizedHistory?: boolean; asAt: string; fiscalYear: number; members: Row[]; totals: Row;
   trend?: { date: string; equity: string }[]; developmentData?: boolean; balanceForwardSnapshot?: { fiscalYear: number; state: string; snapshotCount: number; missingMembers: number; mismatchedMembers: number } };
 
 export default function LiveDashboard({ asAt, canExport = false, onAsAtChange }: { asAt: string; canExport?: boolean; onAsAtChange?: (date: string) => void }) {
@@ -72,7 +72,7 @@ export default function LiveDashboard({ asAt, canExport = false, onAsAtChange }:
         <strong className="stat-value">{formatMoney(value)}</strong><span className="stat-detail">{detail}</span></div>)}</div>
       <div className="overview-grid dashboard-insights">
         <section className="surface activity-card"><div className="card-title-row"><div><h2>Equity over time</h2><p>Posted balances through the selected date</p></div><span className="quiet-tag">{data.fiscalYear}</span></div>
-          <EquityChart points={data.trend ?? []} />
+          <EquityChart points={data.trend ?? []} summarizedHistory={data.summarizedHistory} />
         </section>
         <section className="surface dashboard-year-card"><h2>This year's movement</h2><p>From balance forward to today's position</p>
           <dl><div><dt>Balance forward</dt><dd>{formatMoney(data.totals.balanceBf.equity)}</dd></div>
