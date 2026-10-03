@@ -68,7 +68,9 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Member balances computed from ledger entries through an as-at date
 - [x] Approved year-end close with balance-forward snapshots and fiscal-year locking
 - [ ] Historical corrections, backdating impact preview, period unlock, and snapshot recomputation
-- [ ] Attachment security and ledger UI
+- [x] Live paginated ledger UI, contribution/reversal/year-close request controls, maker cancellation, confirmation-based approvals, origin/CSRF and permission tests
+- [x] Recheck committed investment funds before approving manual contribution compensation
+- [ ] Attachment security and secure downloads
 
 ## Phase 3 — Investments
 - [x] Pesewa allocation engine and property tests

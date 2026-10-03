@@ -63,10 +63,17 @@ public class ContributionReversalHandler implements ApprovalActionHandler {
         if (Boolean.TRUE.equals(alreadyReversed)) {
             throw new IllegalArgumentException("Entry has already been reversed");
         }
+        Boolean safe = jdbc.queryForObject("""
+            SELECT coalesce((SELECT sum(amount) FROM ledger_entries WHERE member_id = ? AND effective_date <= ?), 0) - ?
+                >= coalesce((SELECT sum(a.participation) FROM investment_allocations a JOIN investments i ON i.id = a.investment_id
+                    WHERE a.member_id = ? AND i.status = 'POSTED'), 0)
+            """, Boolean.class, original.memberId(), today, original.amount(), original.memberId());
+        if (!Boolean.TRUE.equals(safe)) throw new IllegalStateException("Contribution funds are committed to a posted investment");
     }
 
     @Override
     public void execute(UUID requestId, UUID approverId, JsonNode payload) {
+        jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");
         fiscalYearLock.requireOpen(LocalDate.now(BUSINESS_ZONE).getYear());
         UUID makerId = jdbc.queryForObject(
             "SELECT made_by FROM approval_requests WHERE id = ?", UUID.class, requestId);
@@ -92,7 +99,7 @@ public class ContributionReversalHandler implements ApprovalActionHandler {
     private Reversal parse(JsonNode payload) {
         if (payload == null || !payload.isObject() || payload.size() != 2
             || !payload.path("entryId").isTextual() || !payload.path("reason").isTextual()
-            || payload.get("reason").textValue().isBlank()) {
+            || payload.get("reason").textValue().isBlank() || payload.get("reason").textValue().length() > 1000) {
             throw new IllegalArgumentException("Entry and reversal reason are required");
         }
         try {
@@ -106,7 +113,7 @@ public class ContributionReversalHandler implements ApprovalActionHandler {
     private Original original(UUID entryId) {
         List<Original> rows = jdbc.query("""
             SELECT member_id, amount, component, type, effective_date, payment_id
-            FROM ledger_entries WHERE id = ?
+            FROM ledger_entries WHERE id = ? AND investment_id IS NULL FOR UPDATE
             """, this::mapOriginal, entryId);
         if (rows.isEmpty()) {
             throw new IllegalArgumentException("Ledger entry does not exist");
