@@ -17,6 +17,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 ## Phase 1 — Foundation
 - [x] V22–V28 revision history, payments/proofs/jobs, reconciliation, policies, notification outbox and invitation migrations verified
 - [x] Signed-in navigation follows current profile permissions; ordinary members land on their own portal
+- [x] Hide restricted menu links before profile load; guard signed-in direct routes and refresh permissions on focus/once per minute; dev retains all known permissions
 - [x] Flyway V1–V21 core financial, role, approval, fiscal snapshot, authentication, member identity, Google link, passkey, investment allocation, maturity, rollover, settings, and admin investment-read migrations tested against PostgreSQL 16
 - [ ] Add remaining workflow tables and migration tests
 - [x] Structured API validation and access errors with trace IDs
@@ -56,7 +57,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] React Hot Toast themes for light/dark success, information, and error feedback with multiline detail and promise feedback for member mutations
 - [x] Offer TOTP, passkey, and gated Google sign-in to every account, including first sign-in preference setup
 - [x] Signed-in member directory and creation form use live API with role-aware controls and toast feedback
-- [ ] Replace remaining preview pages with live permission-aware navigation and financial data
+- [x] Financial workspace routes use live APIs and permission-aware navigation; signed-out demonstration remains clearly labelled
 
 ## Phase 2 — Members and ledger
 - [x] Member create, list, and private detail read with encrypted fields, blind indexes, permission checks, CSRF, and integration tests
@@ -100,7 +101,9 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Restore overview summary cards, add monthly ledger equity trends, period views and sorting, and replace the wide table with compact desktop rows and expandable mobile cards
 - [x] Verify overview empty and error states, light/dark themes, and desktop/mobile layouts without page overflow
 - [x] Provide opt-in, idempotent fictitious member and ledger samples scoped to the dev profile
-- [x] Separate Settings controls into individual cards and adapt the Vinette credit for smaller screens
+- [x] Group organization policies, limits, approvals, fees and rollover in one block; keep personal settings in their own cards and adapt the Vinette credit for smaller screens
+- [x] Shared pagination across members, ledger, payments, portal, reconciliation, accounts, audit and import previews/history
+- [x] Unify uppercase eyebrow subtitles, themed surfaces/borders/text/buttons and readable desktop/tablet typography
 - [x] Verify the supplied Sheet B aggregate totals, ROE/equity-share examples, and exclusion of future effective entries with an independent ledger fixture
 - [ ] Explicit fiscal-year selector and closed-snapshot reconciliation for the as-at dashboard
 - [x] Sheet B xlsx/PDF downloads with grouped headings, numeric totals, audit and visual checks
@@ -120,7 +123,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Own payment history and confirmation PDFs with IDOR tests
 - [x] Live payment screen, bounded status polling and clearly labelled development simulation
 - [x] Persistent payment/approval/invitation email outbox and opt-in SMTP Notifier
-- [x] Configurable 1–3 approvals, online limits and captured fee policy with separate Settings cards
+- [x] Configurable 1–3 approvals, online limits and captured fee policy in the organization Settings block
 - [ ] Real Paystack sandbox acceptance, direct MoMo prompts, settlement matching and operational exception review
 - [ ] Historical payment posting, receipt amendments, HEIC conversion and malware scan hook
 - [ ] MailHog/SMTP delivery acceptance and notification administration
@@ -137,6 +140,12 @@ Check an item only after implementation and tests pass. Each item is small enoug
 
 ## Phase 7 — Import and reconciliation
 - [ ] Dry-run importer, approval and batch reversal
+- [x] Bounded UTF-8 CSV/single-sheet XLSX member and ledger imports, downloadable templates, row validation and source totals reconciliation
+- [x] Dry run writes no records; confirmation binds the exact file checksum and encrypts staged private rows
+- [x] Independently approve entire batches atomically; stale data, permissions, closed periods and duplicate references are rechecked
+- [x] Reviewed exact ledger batch compensation and unused-member deactivation, retaining original source and financial records
+- [x] Live import validation/review/history screens, pagination, CSRF/origin/permission and rollback tests
+- [ ] Historical investment/allocation imports and closed-period snapshot correction/recomputation
 - [x] Current-day ledger/holdings/cash comparison with exact differences and immutable snapshots
 - [x] Separate finalization/rejection/cancellation with source freshness and transaction rollback tests
 - [x] Live reconciliation screen and paginated decision history
@@ -151,9 +160,10 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] User guide, runbook, privacy implementation notes and release checklist drafts
 
 ## Latest verified pass — 2026-10-03
-- [x] Complete backend suite: 124 tests, no failures/errors/skips, including 250 generated financial allocation cases
-- [x] Frontend regression suite: 30 tests; production build and lint
+- [x] Complete backend suite: 131 tests, no failures/errors/skips, including 250 generated financial allocation cases
+- [x] Frontend regression suite: 34 tests; production build and lint
 - [x] Ten additional audit responsive checks at 320/375/768/1024/1440 in both themes; 70 checks across the new operational screens
+- [x] Recheck all 70 operational layouts after theme/type/settings/pagination changes and add ten import review checks; 80 checks total
 - [ ] Imports, historical corrections, audit/recovery administration and production delivery gates remain open. No phase is declared complete while its gates remain.
 
 ## Deferred follow-ups

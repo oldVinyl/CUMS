@@ -65,8 +65,18 @@ SMTP is opt-in with `APP_MAIL_ENABLED=true`, host/port/from, optional user/passw
 The production service worker caches only public static assets and a reconnection page. API data, receipts, financial documents and navigation responses are excluded. Development Vite does not register it. Bump the shell-cache version when changing the offline shell.
 
 The isolated scripts `operations-browser-smoke.mjs` and `accounts-browser-smoke.mjs` use Chrome port 9223 and reject financial mutations. `pwa-browser-smoke.mjs` verifies the production preview on port 5174 and offline API exclusion. These do not establish real provider/payment acceptance.
-# Audit metadata
+## Audit metadata
 
 The `/audit` screen and `/api/v1/audit` require `AUDIT_READ`. `/api/v1/audit/export.csv` exports the applied date/action/entity/actor filters and records an export event. Date boundaries use Africa/Accra; pagination is 50 events, and CSV exports reject more than 5,000 results instead of silently truncating. Raw audit details are deliberately excluded from these responses. Full IP/before-after event coverage is still a release gate.
 
 Run `node scripts/audit-browser-smoke.mjs` from `frontend` against the isolated development Chrome debugger on port 9223 to check audit fixtures in both themes at five viewport widths. The script intercepts API reads and rejects mutations.
+
+## Reviewed imports
+
+Migration V29 adds encrypted immutable import source rows, batches and member-result mappings. `/imports` supports member and opening-balance/contribution CSV or XLSX files. Treasurers receive MEMBER_IMPORT; submitting additionally requires MEMBER_WRITE for members or LEDGER_POST plus LEDGER_BACKDATE for ledger rows. Review is available to MEMBER_IMPORT, APPROVE or AUDIT_READ. The dev bootstrap account retains every known permission.
+
+POST `/api/v1/imports/dry-run` with multipart `kind` (MEMBERS/LEDGER) and `file`. A dry run does not write audit, staging, member or ledger rows. To submit, POST the same file/kind to `/api/v1/imports` with `expectedHash` from the dry run and a `reason`. Approval revalidates the batch under financial/fiscal locks before posting it atomically. Private source fields are encrypted; no uploaded file is kept in a public folder. Reversals compensate ledger rows today or deactivate unused imported members, retaining original records.
+
+Use `/api/v1/imports/template.csv?kind=MEMBERS` or `kind=LEDGER` for templates. Limits are 5 MB, 1,000 data rows and one worksheet. Formulas are rejected; use UTF-8 for CSV. Totals mismatch, stale references, inactive members, closed years and later dependent snapshots block confirmation/posting. Historical investment/allocation imports and period unlock/recomputation remain pending.
+
+`node scripts/imports-browser-smoke.mjs` checks the review screen with isolated read fixtures in both themes at five viewport widths. It rejects mutations to the running API.

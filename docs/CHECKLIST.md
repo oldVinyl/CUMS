@@ -17,7 +17,8 @@ Check only implemented and verified gates. This system is not yet production com
 - [ ] Real Paystack sandbox, direct MoMo prompts and settlement matching
 - [ ] SMTP/MailHog delivery and operational retry acceptance
 - [ ] Historical backdate preview, period unlock and snapshot recomputation
-- [ ] CSV/XLSX imports, approval and batch compensation
+- [x] CSV/XLSX member/opening-balance/contribution dry runs, approval and batch compensation
+- [ ] Historical investment/allocation imports and closed-period correction integration
 - [x] Filterable audit metadata screen and audited CSV export with authorization and injection tests
 - [ ] Full audit IP/before-after coverage and recovery/session/account administration
 - [ ] Complete original Sheet B workbook acceptance
