@@ -1,3 +1,5 @@
+import ResponsiveOverlay from "./ResponsiveOverlay";
+import MemberPicker from "./MemberPicker";
 import Pagination from "./Pagination";
 import FiscalSnapshots from "./FiscalSnapshots";
 import { useEffect, useState } from "react";
@@ -11,7 +13,6 @@ import ReportDownloads from "./ReportDownloads";
 
 type Entry = { id: string; memberId: string; memberNumber: string; fullName: string; type: string; component: string; amount: string;
   effectiveDate: string; reference: string; narration: string | null; reversalOf: string | null; reversed: boolean; canReverse: boolean };
-type Member = { id: string; memberNumber: string; fullName: string };
 type Year = { year: number; status: string };
 export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: string }) {
   const canRead = profile.permissions.includes("LEDGER_READ");
@@ -23,8 +24,7 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
   const [page, setPage] = useState(0); const [hasNext, setHasNext] = useState(false);
   const [retry, setRetry] = useState(0); const [loading, setLoading] = useState(true); const [failed, setFailed] = useState(false);
   const [formOpen, setFormOpen] = useState(false); const [busy, setBusy] = useState(false);
-  const [search, setSearch] = useState(""); const [members, setMembers] = useState<Member[]>([]); const [memberId, setMemberId] = useState("");
-  const [memberFailed, setMemberFailed] = useState(false);
+  const [memberId, setMemberId] = useState("");
   const [amount, setAmount] = useState(""); const [type, setType] = useState("ADDITION");
   const [reverse, setReverse] = useState<Entry | null>(null); const [reason, setReason] = useState("");
   const [years, setYears] = useState<Year[]>([]); const [closeYear, setCloseYear] = useState(""); const [closeConfirm, setCloseConfirm] = useState(false);
@@ -47,17 +47,6 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
     ledgerRequest<Year[]>("/fiscal-years", "GET", undefined, controller.signal).then(setYears).catch(() => { if (!controller.signal.aborted) toast("Could not load fiscal years", { tone: "error" }); });
     return () => controller.abort();
   }, [canRead, retry, toast]);
-  useEffect(() => {
-    if (!formOpen || !canPost) return;
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => {
-      setMemberFailed(false);
-      fetch(`/api/v1/members?search=${encodeURIComponent(search)}&size=25`, { credentials: "same-origin", signal: controller.signal })
-        .then(async response => { if (!response.ok) throw new Error(); return response.json() as Promise<{ items: Member[] }>; })
-        .then(data => { if (!controller.signal.aborted) setMembers(data.items); }).catch(() => { if (!controller.signal.aborted) { setMemberFailed(true); setMembers([]); } });
-    }, 250);
-    return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [formOpen, canPost, search]);
   const mutation = async (promise: Promise<unknown>, success: string) => {
     setBusy(true);
     try { await promiseToast(promise, { loading: "Sending for approval…", success, error: "Could not submit request" });
@@ -68,16 +57,14 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
   if (!canRead) return <section className="surface investment-panel"><h1>Ledger access required</h1><p>Your account cannot view union ledger entries.</p></section>;
   return <>
     <header className="page-heading"><div><span className="eyebrow">Harbour Credit Union</span><h1>Ledger</h1><p>Approved movements, with a permanent record of every correction.</p></div>
-      {canPost && <button className="primary-button" onClick={() => setFormOpen(value => !value)}><Plus size={18} style={{ transform: formOpen ? "rotate(45deg)" : undefined, transition: "transform 180ms" }} />{formOpen ? "Close form" : "Add contribution"}</button>}</header>
-    {formOpen && <section className="surface investment-panel"><h2>Manual contribution</h2><p>Seed and addition entries increase principal only after a different person approves, on the approval date.</p>
+      {canPost && <button className="primary-button" onClick={() => { setMemberId(""); setFormOpen(value => !value); }}><Plus size={18} style={{ transform: formOpen ? "rotate(45deg)" : undefined, transition: "transform 180ms" }} />{formOpen ? "Close form" : "Add contribution"}</button>}</header>
+    {formOpen && <ResponsiveOverlay open={formOpen} onClose={() => { setFormOpen(false); setMemberId(""); }} title="Add contribution"><section className="surface investment-panel"><h2>Manual contribution</h2><p>Seed and addition entries increase principal only after a different person approves, on the approval date.</p>
       <form onSubmit={event => { event.preventDefault(); void mutation(ledgerRequest("/contributions", "POST", { memberId, type, amount }), "Contribution approval requested"); }}>
-        <div className="investment-form-grid"><label>Find member<input value={search} onChange={event => { setSearch(event.target.value); setMemberId(""); }} placeholder="Name or member number" /></label>
-          <label>Member<select required value={memberId} onChange={event => setMemberId(event.target.value)}><option value="">Choose member</option>{members.map(member => <option key={member.id} value={member.id}>{member.fullName} · {member.memberNumber}</option>)}</select></label>
+        <div className="investment-form-grid"><MemberPicker onSelect={member => setMemberId(member?.id ?? "")} />
           <label>Contribution type<select value={type} onChange={event => setType(event.target.value)}><option value="SEED">Seed capital</option><option value="ADDITION">Additional contribution</option></select></label>
           <label>Amount (GH₵)<input required type="number" min="0.01" step="0.01" value={amount} onChange={event => setAmount(event.target.value)} /></label></div>
-        {memberFailed && <p role="alert">Members could not be loaded. Close and reopen this form to retry.</p>}
         <button className="primary-button" disabled={busy || !memberId}>Request contribution approval</button>
-      </form></section>}
+      </form></section></ResponsiveOverlay>}
     <section className="surface investment-panel"><div className="card-title-row"><div><h2>Posted entries</h2><p>Through {asAt}. 50 entries per page.</p></div><label>From date<input type="date" min="2000-01-01" max={asAt} value={from} onChange={event => { setFrom(event.target.value); setPage(0); }} /></label></div>
       {validRange && profile.permissions.includes("REPORT_EXPORT") && <ReportDownloads path={`/api/v1/reports/ledger?from=${from}&to=${asAt}`} filename={`ledger-${from}-${asAt}`} />}
       {!validRange ? <p role="alert">Choose a valid start date on or before {asAt}.</p> : loading ? <p role="status">Loading ledger…</p> : failed ? <button className="secondary-button" onClick={changed}>Try again</button> : !entries.length ? <div className="dashboard-empty"><BookOpen size={28} /><h3>No entries in this period</h3><p>Approved contributions and investment income will appear here.</p></div> : <>

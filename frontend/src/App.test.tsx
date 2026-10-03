@@ -45,8 +45,7 @@ describe('workspace preview', () => {
   it('credits Vinette and links to Vinyl’s GitHub', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
-    renderApp()
-    fireEvent.click(screen.getAllByRole('link', { name: 'Settings' })[0])
+    renderApp("/settings")
     expect(screen.getByRole('heading', { name: 'Built by Vinette' })).toBeTruthy()
     expect(screen.getByRole('link', { name: /github.com\/oldVinyl/i }).getAttribute('href')).toBe('https://github.com/oldVinyl')
     fireEvent.click(screen.getByRole('button', { name: 'Copy link' }))
@@ -105,7 +104,7 @@ describe('live member directory', () => {
     await screen.findByText('No members yet')
     const add = await screen.findByRole('button', { name: 'Add member' })
     fireEvent.click(add)
-    expect(screen.getByRole('button', { name: 'Close form' }).querySelector('svg')
+    expect(screen.getByRole('button', { name: 'Close form', hidden: true }).querySelector('svg')
       ?.classList.contains('open')).toBe(true)
     expect(screen.queryByLabelText('Member number')).toBeNull()
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'New Member' } })

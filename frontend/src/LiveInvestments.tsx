@@ -1,3 +1,4 @@
+import ResponsiveOverlay from "./ResponsiveOverlay";
 import { useCallback, useEffect, useState } from "react";
 import { Landmark, Plus } from "lucide-react";
 import ReportDownloads from "./ReportDownloads";
@@ -461,6 +462,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
         )}
       </div>
       {formOpen && (
+      <ResponsiveOverlay open={formOpen} onClose={() => setFormOpen(false)} title={rolloverSource ? "Create rollover draft" : "New investment cycle"}>
         <section className="surface member-form">
           <h2>{rolloverSource ? "New rollover draft" : "New treasury bill draft"}</h2>
           <p>
@@ -556,6 +558,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
             </button>
           </form>
         </section>
+        </ResponsiveOverlay>
       )}
       <section className="surface investment-panel">
         <div className="card-title-row">

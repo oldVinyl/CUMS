@@ -29,6 +29,58 @@ import org.springframework.transaction.annotation.Transactional;
  @Test @Transactional void accountListAndInvitationAcceptanceHaveAuthorizationAndOriginGuards() throws Exception {var token=sessions.create(user("MEMBER"));mvc.perform(get("/api/v1/users").cookie(new Cookie("cu_access",token.access()))).andExpect(status().isForbidden());mvc.perform(get("/api/v1/users")).andExpect(status().isUnauthorized());mvc.perform(post("/api/v1/auth/invitations/accept").header("Origin","https://foreign.invalid").contentType("application/json").content("{\"token\":\"invalid\",\"password\":\"invalid\"}")).andExpect(status().isForbidden());
   UUID admin=user("ADMIN"),target=user("MEMBER");assertThatThrownBy(()->service.role(admin,json.createObjectNode().put("operation","ASSIGN").put("userId",target.toString()).put("roleCode","PRESIDENT").put("reason","Fixture").put("endDate",today.plusDays(10).toString()))).hasMessageContaining("automatic expiry");
  }
+
+ @Test @Transactional void emailInvitationCreatesMembershipOnlyOnAcceptance(){
+  UUID admin=user("ADMIN");String email=UUID.randomUUID()+"@invalid.example";
+  var invitation=service.inviteEmail(admin,email,"Prospective Member");String token=invitation.url().split("token=")[1];
+  UUID account=jdbc.queryForObject("SELECT id FROM users WHERE email=?",UUID.class,email);
+  assertThat(jdbc.queryForObject("SELECT member_id FROM users WHERE id=?",UUID.class,account)).isNull();
+  assertThat(jdbc.queryForObject("SELECT count(*) FROM members WHERE email=?",Integer.class,email)).isZero();
+  assertThat(permissions.currentPermissions(account)).isEmpty();
+  assertThat(jdbc.queryForObject("SELECT payload::text FROM notifications WHERE user_id=?",String.class,account)).doesNotContain(token);
+  service.accept(token,"Quartz!Portal2026#Welcome");
+  UUID memberId=jdbc.queryForObject("SELECT member_id FROM users WHERE id=?",UUID.class,account);
+  assertThat(jdbc.queryForObject("SELECT member_number FROM members WHERE id=?",String.class,memberId)).matches("CU-[0-9]{6,}");
+  assertThat(jdbc.queryForObject("SELECT full_name FROM members WHERE id=?",String.class,memberId)).isEqualTo("Prospective Member");
+  assertThat(permissions.currentPermissions(account)).containsExactly("OWN_DATA_READ");
+  assertThatThrownBy(()->service.accept(token,"Quartz!Portal2026#Welcome")).hasMessageContaining("invalid or expired");
+ }
+ @Test @Transactional void emailInvitationLinksExistingMembershipAndRejectsAmbiguousContacts(){
+  UUID admin=user("ADMIN"),existing=member();String email=UUID.randomUUID()+"@invalid.example";
+  jdbc.update("UPDATE members SET email=? WHERE id=?",email,existing);
+  var invitation=service.inviteEmail(admin,email,"Email Recipient");
+  assertThat(jdbc.queryForObject("SELECT member_id FROM users WHERE email=?",UUID.class,email)).isEqualTo(existing);
+  service.accept(invitation.url().split("token=")[1],"Quartz!Portal2026#Welcome");
+  UUID duplicate=member();jdbc.update("UPDATE members SET email=? WHERE id=?",email,duplicate);
+  assertThatThrownBy(()->service.inviteEmail(admin,email,"Email Recipient")).hasMessageContaining("Several memberships");
+ }
+ @Test @Transactional void emailInvitationReplacementAndRevokedInviterCannotCreateMembership(){
+  UUID admin=user("ADMIN");String email=UUID.randomUUID()+"@invalid.example";
+  String old=service.inviteEmail(admin,email,"First Name").url().split("token=")[1];
+  String fresh=service.inviteEmail(admin,email,"Corrected Name").url().split("token=")[1];
+  assertThatThrownBy(()->service.accept(old,"Quartz!Portal2026#Welcome")).hasMessageContaining("invalid or expired");
+  jdbc.update("UPDATE user_role_assignments SET revoked_at=now(),revoked_by=?,reason='Test revocation' WHERE user_id=?",admin,admin);
+  assertThatThrownBy(()->service.accept(fresh,"Quartz!Portal2026#Welcome")).hasMessageContaining("no longer authorized");
+  assertThat(jdbc.queryForObject("SELECT count(*) FROM members WHERE email=?",Integer.class,email)).isZero();
+  assertThatThrownBy(()->service.inviteEmail(user("MEMBER"),email,"Unauthorised Recipient")).isInstanceOf(SecurityException.class);
+ }
+ @Test @Transactional void emailInvitationDoesNotDuplicateMembershipCreatedWhileWaiting(){
+  UUID admin=user("ADMIN");String email=UUID.randomUUID()+"@invalid.example";
+  String token=service.inviteEmail(admin,email,"Waiting Recipient").url().split("token=")[1];
+  UUID added=member();jdbc.update("UPDATE members SET email=? WHERE id=?",email,added);
+  assertThatThrownBy(()->service.accept(token,"Quartz!Portal2026#Welcome")).hasMessageContaining("A membership now uses");
+  assertThat(jdbc.queryForObject("SELECT count(*) FROM members WHERE email=?",Integer.class,email)).isEqualTo(1);
+ }
+ @Test @Transactional void emailInvitationEndpointEnforcesSessionPermissionCsrfAndOrigin() throws Exception {
+  String body=json.createObjectNode().put("fullName","HTTP Recipient").put("email",UUID.randomUUID()+"@invalid.example").toString();
+  mvc.perform(post("/api/v1/users/invitations/email").contentType("application/json").content(body)).andExpect(status().isUnauthorized());
+  var memberSession=sessions.create(user("MEMBER"));
+  mvc.perform(post("/api/v1/users/invitations/email").cookie(new Cookie("cu_access",memberSession.access())).header("X-CSRF-Token",memberSession.csrf()).contentType("application/json").content(body)).andExpect(status().isForbidden());
+  var adminSession=sessions.create(user("ADMIN"));
+  mvc.perform(post("/api/v1/users/invitations/email").cookie(new Cookie("cu_access",adminSession.access())).contentType("application/json").content(body)).andExpect(status().isForbidden());
+  mvc.perform(post("/api/v1/users/invitations/email").cookie(new Cookie("cu_access",adminSession.access())).header("X-CSRF-Token",adminSession.csrf()).header("Origin","https://foreign.invalid").contentType("application/json").content(body)).andExpect(status().isForbidden());
+  mvc.perform(post("/api/v1/users/invitations/email").cookie(new Cookie("cu_access",adminSession.access())).header("X-CSRF-Token",adminSession.csrf()).header("Origin","http://localhost:5173").contentType("application/json").content(body)).andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store")).andExpect(jsonPath("$.expiresAt").exists());
+ }
  private UUID member(){UUID id=UUID.randomUUID();jdbc.update("INSERT INTO members(id,member_number,full_name,join_date) VALUES(?,?,'Invitation fixture',?)",id,"IV-"+id,today);return id;}
  private UUID user(String role){UUID id=UUID.randomUUID();jdbc.update("INSERT INTO users(id,email,password_hash) VALUES(?,?,'fixture')",id,id+"@invalid.example");jdbc.update("INSERT INTO user_role_assignments(user_id,role_id,start_date) SELECT ?,id,? FROM roles WHERE code=?",id,today,role);return id;}
 }

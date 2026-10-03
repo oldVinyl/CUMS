@@ -1,3 +1,4 @@
+import EquityChart from "./EquityChart";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Search, Users, WalletCards, ChevronDown, RefreshCw } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -104,18 +105,4 @@ export default function LiveDashboard({ asAt, canExport = false, onAsAtChange }:
 }
 function SummaryCells({ row, view }: { row: Row; view: "total" | "balanceBf" | "ytd" }) {
   return <>{[row[view].principal, row[view].income, row[view].equity].map((value, index) => <td className={`numeric${Number(value) < 0 ? " negative" : ""}`} key={index}>{formatMoney(value)}</td>)}<td className="numeric">{row.roePercent}%</td><td className="numeric">{row.equityRatioPercent}%</td></>;
-}
-function EquityChart({ points }: { points: { date: string; equity: string }[] }) {
-  if (!points.length || points.every(point => Number(point.equity) === 0)) return <div className="dashboard-empty"><WalletCards size={30} /><h3>No equity history yet</h3><p>Your posted contributions and income will build this chart.</p></div>;
-  const values = points.map(point => Number(point.equity));
-  const minimum = Math.min(0, ...values); const maximum = Math.max(1, ...values); const range = maximum - minimum;
-  const coordinates = values.map((value, index) => `${20 + index * 560 / Math.max(1, values.length - 1)},${190 - (value - minimum) / range * 160}`);
-  return <div className="live-equity-chart"><div className="trend-range"><span>{formatMoney(String(maximum))}</span><span>{formatMoney(String(minimum))}</span></div>
-    <svg viewBox="0 0 600 220" role="img" aria-label={`Equity moved from ${formatMoney(String(values[0]))} to ${formatMoney(String(values[values.length - 1]))}`}><defs><linearGradient id="live-equity-fill" x1="0" x2="0" y1="0" y2="1"><stop stopColor="#407e8c" stopOpacity=".28" /><stop offset="1" stopColor="#407e8c" stopOpacity=".02" /></linearGradient></defs>
-      {[30, 110, 190].map(y => <line key={y} x1="20" x2="580" y1={y} y2={y} className="trend-grid" />)}
-      <polygon points={`20,190 ${coordinates.join(" ")} ${20 + (values.length - 1) * 560 / Math.max(1, values.length - 1)},190`} fill="url(#live-equity-fill)" />
-      <polyline points={coordinates.join(" ")} fill="none" stroke="#407e8c" strokeWidth="3" strokeLinejoin="round" />
-      {coordinates.map((coordinate, index) => { const [cx, cy] = coordinate.split(","); return <circle key={points[index].date} cx={cx} cy={cy} r="4" fill="#407e8c"><title>{points[index].date}: {formatMoney(points[index].equity)}</title></circle>; })}</svg>
-    <div className="trend-months">{points.filter((_, index) => index === 0 || index === points.length - 1 || index % 3 === 0).map(point => <span key={point.date}>{new Date(`${point.date}T12:00:00`).toLocaleDateString("en-GH", { month: "short" })}</span>)}</div>
-  </div>;
 }

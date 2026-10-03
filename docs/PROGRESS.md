@@ -16,7 +16,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 
 ## Phase 1 — Foundation
 - [x] V22–V28 revision history, payments/proofs/jobs, reconciliation, policies, notification outbox and invitation migrations verified
-- [x] Signed-in navigation follows current profile permissions; ordinary members land on their own portal
+- [x] Signed-in navigation follows current profile permissions; sign-in lands on the Overview route, with own membership figures for ordinary members
 - [x] Hide restricted menu links before profile load; guard signed-in direct routes and refresh permissions on focus/once per minute; dev retains all known permissions
 - [x] Flyway V1–V21 core financial, role, approval, fiscal snapshot, authentication, member identity, Google link, passkey, investment allocation, maturity, rollover, settings, and admin investment-read migrations tested against PostgreSQL 16
 - [ ] Add remaining workflow tables and migration tests
@@ -177,3 +177,20 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] MailHog startup and live email delivery remain deferred at the owner's request; the persistent outbox and gated SMTP implementation are built.
 - [ ] Google sign-in stays gated until OAuth credentials are supplied.
 - [ ] Complete passkey device-loss recovery and credential removal after the core financial workflows.
+
+## Workspace usability fixes — 2026-10-03
+- [x] Signed-out pages use the full content width without workspace navigation; successful sign-in redirects to Overview
+- [x] Profile menu includes permitted membership/settings links and explicit sign-out; theme toggle remains visible on mobile
+- [x] Permission-filtered Financial operations and Administration groups reduce the main navigation length; dev retains every permission
+- [x] Shared focus-trapped desktop side drawer and draggable mobile/tablet bottom sheet, outside-click/Escape dismissal and opener focus restoration
+- [x] Member details, add member, investment/rollover drafts, contribution entry and receipt submissions use the shared overlay
+- [x] Debounced member results appear while typing in contributions, payments and reports, with keyboard selection, cancellation, loading/error/empty feedback and selection reset
+- [x] Overview and membership equity charts use API ledger balances, labelled dates/currency, a zero baseline for losses and exact balance tables; misleading progress bars removed
+- [x] Contact details and member statement precede transactions; only own data export follows the transaction list
+- [x] Members can see active union bank/wallet instructions and submit receipts for their server-linked membership; staff verification and independent approval remain enforced
+- [x] Email-based invitations support prospective members without preselecting a membership; acceptance generates the unique member number and activates only MEMBER access
+- [x] Existing matching memberships link automatically; ambiguous/inactive contact matches, reused/replaced links, revoked inviters and membership changes during the wait are rejected
+- [x] V31 applied to local development; restarted backend health reports UP
+- [x] Backend suite: 143 tests and 250 generated allocation checks; frontend suite: 49 tests; production build and lint pass
+- [x] 80 isolated browser layout checks at 320/375/768/1024/1440 in light/dark themes; drawer/sheet outside dismissal, short/long drag, member receipt permissions, profile menu and signed-out widths verified
+- [ ] Live SMTP invitation delivery remains deferred with MailHog; the encrypted outbox queues email for configured delivery

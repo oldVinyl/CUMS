@@ -546,3 +546,84 @@ td { color: var(--ink); }
   background: var(--surface); color: var(--ink); font: inherit;
 }
 .investment-form-grid textarea { resize: vertical; }
+
+/* Account navigation, shared drawers/sheets, search results and labelled ledger charts. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.public-shell .main-area { width: 100%; min-width: 0; }
+.public-shell .content { max-width: 1500px; margin-inline: auto; }
+.public-brand { display: flex; align-items: center; gap: 9px; color: var(--ink); }
+.nav-group { margin-top: 8px; }
+.nav-group > summary { display: flex; align-items: center; gap: 10px; padding: 12px 10px; min-height: 44px; cursor: pointer; color: #c0d5d6; font-size: .875rem; list-style: none; }
+.nav-group > summary::-webkit-details-marker { display: none; }
+.nav-group > summary > svg:last-child { margin-left: auto; transition: transform 150ms; }
+.nav-group[open] > summary > svg:last-child { transform: rotate(180deg); }
+.nav-group .side-link { margin-left: 12px; }
+.account-menu { position: relative; }
+.account-options { position: absolute; right: 0; top: calc(100% + 12px); width: min(300px, calc(100vw - 28px)); background: var(--surface); border: 1px solid var(--control-border); box-shadow: 0 12px 36px #083a4f26; padding: 10px; border-radius: 12px; z-index: 60; }
+.account-options > p { padding: 8px 10px 12px; overflow-wrap: anywhere; font-size: var(--text-small); border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.account-options > a, .account-options > button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px; border: 0; background: transparent; color: var(--ink); text-align: left; font: inherit; border-radius: 6px; }
+.account-options > a:hover, .account-options > button:hover { background: var(--surface-soft); }
+.overlay-backdrop { position: fixed; inset: 0; background: #041a258c; backdrop-filter: blur(2px); z-index: 100; animation: backdrop-in 150ms ease-out; }
+.responsive-overlay { position: fixed; z-index: 101; bottom: 0; left: 0; right: 0; height: 90dvh; max-height: 94dvh; display: flex; flex-direction: column; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 20px 20px 0 0; box-shadow: 0 -8px 40px #041a2530; outline: 0; animation: sheet-in 180ms ease-out; }
+.sheet-drag-handle { display: flex; align-items: center; justify-content: center; flex-shrink: 0; height: 40px; width: 100%; padding: 0; border: 0; background: transparent; touch-action: none; cursor: grab; }
+.sheet-drag-handle span { display: block; width: 44px; height: 4px; background: var(--control-border); border-radius: 3px; }
+.overlay-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 8px 22px 18px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.overlay-heading h2 { font-size: 1.3rem; }
+.overlay-heading h2:focus { outline: none; }
+.overlay-heading p { line-height: 1.5; margin-top: 5px; }
+.overlay-body { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 22px; min-height: 0; flex: 1; }
+.overlay-body > .surface { margin: 0; padding: 0; border: 0; box-shadow: none; border-radius: 0; }
+.overlay-body .member-form-grid, .overlay-body .investment-form-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+.overlay-body .member-detail { position: static; }
+.overlay-body .member-form { padding: 0; }
+.overlay-body .side-link, .overlay-body .nav-group > summary { color: var(--ink); }
+.overlay-body .side-link:hover, .overlay-body .side-link.active { background: var(--surface-soft); color: var(--accent-text); }
+.overlay-body .side-label { color: var(--muted); }
+.overlay-body .brand { padding: 0 12px 20px; }
+.overlay-body .sidebar-bottom { display: none; }
+.member-picker { display: grid; gap: 7px; min-width: 0; align-self: start; }
+.member-picker > label { color: var(--ink); font-size: var(--text-body); font-weight: 600; }
+.member-picker-control { display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--surface); border: 1px solid var(--control-border); border-radius: 8px; color: var(--muted); }
+.member-picker-control > svg { flex-shrink: 0; }
+.member-picker .member-picker-control input { min-width: 0; width: 100%; border: 0; border-radius: 0; background: transparent; color: var(--ink); padding: 10px 0; min-height: 44px; font: inherit; outline: 0; }
+.member-picker-control:focus-within { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.member-picker-results { background: var(--surface-soft); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.member-picker-feedback { padding: 10px 12px; font-size: var(--text-small); }
+.member-picker-results [role=listbox] { max-height: 240px; overflow-y: auto; }
+.member-picker-results [role=option] { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; min-height: 56px; padding: 10px 12px; border: 0; border-top: 1px solid var(--line); background: var(--surface); color: var(--ink); text-align: left; }
+.member-picker-results [role=option]:hover, .member-picker-results [aria-selected=true] { background: var(--surface-soft); }
+.member-picker-results [role=option] span, .member-picker > small { color: var(--muted); font-size: var(--text-small); }
+.equity-chart > p { font-size: var(--text-small); line-height: 1.6; margin-bottom: 16px; }
+.equity-plot { display: grid; grid-template-columns: 70px minmax(0,1fr); align-items: stretch; }
+.equity-axis { display: flex; flex-direction: column; justify-content: space-between; padding: 23px 5px 21px 0; font-size: var(--text-small); color: var(--muted); }
+.equity-plot svg { width: 100%; height: 220px; overflow: visible; }
+.equity-plot .trend-grid { stroke: var(--line); }
+.equity-zero { stroke: var(--muted); stroke-dasharray: 5 5; }
+.equity-dates { margin-left: 70px; display: flex; justify-content: space-between; gap: 10px; font-size: var(--text-small); color: var(--muted); }
+.equity-dates span { max-width: 33%; }
+.equity-dates span:last-child { text-align: right; }
+.equity-values { margin-top: 20px; color: var(--ink); font-size: var(--text-small); }
+.equity-values summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent-text); }
+.equity-values table { width: 100%; }
+.equity-values td, .equity-values th { padding: 10px; white-space: normal; }
+.equity-values td { text-align: right; }
+@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheet-in { from { transform: translateY(40px); opacity: .5; } to { transform: translateY(0); opacity: 1; } }
+@keyframes drawer-in { from { transform: translateX(40px); opacity: .5; } to { transform: translateX(0); opacity: 1; } }
+@media (min-width: 1024px) {
+  .responsive-overlay { top: 0; left: auto; right: 0; bottom: 0; width: clamp(480px,46vw,680px); height: 100dvh; max-height: 100dvh; border-radius: 0; animation-name: drawer-in; }
+  .sheet-drag-handle { display: none; }
+  .overlay-heading { padding: 24px; }
+  .overlay-body { padding: 24px; }
+}
+@media (max-width: 680px) {
+  .public-shell .date-control { display: none; }
+  .topbar .theme-toggle { display: inline-flex !important; width: 44px; height: 44px; align-items: center; justify-content: center; }
+  .account-menu .profile { display: flex; width: 44px; height: 44px; padding: 0; justify-content: center; border-left: 0; }
+  .account-menu .profile-avatar { width: 34px; height: 34px; font-size: .75rem; }
+  .topbar-right { gap: 2px; }
+  .overlay-body { padding: 18px; }
+  .overlay-body .member-form-grid, .overlay-body .investment-form-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 390px) { .app-shell:not(.public-shell) .breadcrumb { display: none; } .date-control input { width: 94px; } }
+@media (prefers-reduced-motion: reduce) { .responsive-overlay, .overlay-backdrop { animation: none; } }

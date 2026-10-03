@@ -1,13 +1,14 @@
+import ResponsiveOverlay from "./ResponsiveOverlay";
 import ImportsPage from "./ImportsPage";
 import { canSeeRoute } from "./navigation";
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowDownLeft, ArrowRight, ArrowUpRight, Bell, CalendarDays, ChartNoAxesCombined,
   ChevronDown, CircleHelp, ClipboardCheck, CreditCard, FileChartColumnIncreasing,
   Landmark, LayoutDashboard, Menu, Moon, Plus, Search, Settings, ShieldCheck, Sun,
-  Users, WalletCards, X,
+  Users, WalletCards,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { formatMoney } from './money'
@@ -61,18 +62,46 @@ function ThemeButton() {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light'
     localStorage.setItem('theme', dark ? 'dark' : 'light')
   }, [dark])
-  return <button className="icon-button" aria-label={`Switch to ${dark ? 'light' : 'dark'} theme`} onClick={() => { setDark(!dark); showToast(`${dark ? 'Light' : 'Dark'} theme on`, { tone: 'success' }) }}>{dark ? <Sun size={19} /> : <Moon size={19} />}</button>
+  return <button className="icon-button theme-toggle" aria-label={`Switch to ${dark ? 'light' : 'dark'} theme`} onClick={() => { setDark(!dark); showToast(`${dark ? 'Light' : 'Dark'} theme on`, { tone: 'success' }) }}>{dark ? <Sun size={19} /> : <Moon size={19} />}</button>
 }
 
+const financePaths = ["/investments", "/ledger", "/approvals", "/reconciliation", "/imports"];
+const adminPaths = ["/accounts", "/audit"];
 function Sidebar({ close, items }: { close: () => void; items: NavItem[] }) {
-  return <>
-    <div className="brand"><div className="brand-mark"><Landmark size={23} strokeWidth={2.2} /></div><div><strong>Harbour</strong><span>Credit Union</span></div></div>
-    <div className="side-label">WORKSPACE</div>
-    <nav className="side-nav" aria-label="Main navigation">
-      {items.map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} end={path === '/'} onClick={close} className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}><Icon size={19} strokeWidth={1.9} /><span>{label}</span></NavLink>)}
-    </nav>
-    <div className="sidebar-bottom"><div className="help-icon"><CircleHelp size={19} /></div><div><strong>Need a hand?</strong><span>View the user guide</span></div><ArrowRight size={17} /></div>
-  </>
+  const location = useLocation();
+  const [financeOpen, setFinanceOpen] = useState(financePaths.includes(location.pathname));
+  const [adminOpen, setAdminOpen] = useState(adminPaths.includes(location.pathname));
+  useEffect(() => { if (financePaths.includes(location.pathname)) setFinanceOpen(true); if (adminPaths.includes(location.pathname)) setAdminOpen(true); }, [location.pathname]);
+  const renderLink = ({ label, path, icon: Icon }: NavItem) => <NavLink key={path} to={path} end={path === "/"} onClick={close} className={({ isActive }) => `side-link${isActive ? " active" : ""}`}><Icon size={19} /><span>{label}</span></NavLink>;
+  return (
+    <>
+      <div className="brand">
+        <div className="brand-mark">
+          <Landmark size={23} strokeWidth={2.2} />
+        </div>
+        <div>
+          <strong>Harbour</strong>
+          <span>Credit Union</span>
+        </div>
+      </div>
+      <div className="side-label">WORKSPACE</div>
+      <nav className="side-nav" aria-label="Main navigation">
+        {items.filter(item => !financePaths.includes(item.path) && !adminPaths.includes(item.path)).map(renderLink)}
+        {items.some(item => financePaths.includes(item.path)) && <details className="nav-group" open={financeOpen} onToggle={event => setFinanceOpen(event.currentTarget.open)}><summary><Landmark size={19} />Financial operations<ChevronDown size={16} /></summary>{items.filter(item => financePaths.includes(item.path)).map(renderLink)}</details>}
+        {items.some(item => adminPaths.includes(item.path)) && <details className="nav-group" open={adminOpen} onToggle={event => setAdminOpen(event.currentTarget.open)}><summary><ShieldCheck size={19} />Administration<ChevronDown size={16} /></summary>{items.filter(item => adminPaths.includes(item.path)).map(renderLink)}</details>}
+      </nav>
+      <div className="sidebar-bottom">
+        <div className="help-icon">
+          <CircleHelp size={19} />
+        </div>
+        <div>
+          <strong>Need a hand?</strong>
+          <span>View the user guide</span>
+        </div>
+        <ArrowRight size={17} />
+      </div>
+    </>
+  );
 }
 
 function PageHeader({ title, subtitle, action }: { title: string; subtitle: string; action?: ReactNode }) {
@@ -117,29 +146,46 @@ function SimplePage({ title, subtitle, icon: Icon, heading, description }: { tit
 }
 
 function App() {
-  const showToast = useToast()
-  const navigate = useNavigate()
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const showToast = useToast();
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const visibleNav = nav.filter(item => canSeeRoute(item.path, profile));
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [moreOpen, setMoreOpen] = useState(false)
-  const [asAt, setAsAt] = useState(new Date().toISOString().slice(0, 10))
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const accountMenu = useRef<HTMLDivElement>(null);
+  const mainNav = visibleNav.filter(item => !financePaths.includes(item.path) && !adminPaths.includes(item.path));
+  const [asAt, setAsAt] = useState(new Date().toISOString().slice(0, 10));
   const updateAsAt = (value: string) => {
     if (!value || value > new Date().toISOString().slice(0, 10)) {
-      showToast('Choose a valid as-at date', { detail: 'The date cannot be empty or in the future.', tone: 'error' })
-      return
+      showToast("Choose a valid as-at date", {
+        detail: "The date cannot be empty or in the future.",
+        tone: "error",
+      });
+      return;
     }
     if (value !== asAt) {
-      setAsAt(value)
-      showToast(profile?.permissions.includes('DASHBOARD_READ_ALL') ? 'As-at date changed' : 'Preview date changed', { detail: profile?.permissions.includes('DASHBOARD_READ_ALL') ? 'Figures are updating for the selected date.' : 'Sample balances do not change with the date yet.' })
+      setAsAt(value);
+      showToast(profile
+        ? "As-at date changed" : "Preview date changed", {
+        detail: profile
+          ? "Figures are updating for the selected date."
+          : "Sample balances do not change with the date yet.",
+      });
     }
-  }
-  const location = useLocation()
-  const [initialPath] = useState(() => location.pathname)
-  useEffect(() => { setMenuOpen(false); setMoreOpen(false) }, [location.pathname])
+  };
+  const location = useLocation();
+  const [initialPath] = useState(() => location.pathname);
   useEffect(() => {
-    if (initialPath !== '/sign-in') void currentProfile().then(setProfile).catch(() => {})
-  }, [initialPath])
+    setMenuOpen(false);
+    setMoreOpen(false); setProfileOpen(false);
+  }, [location.pathname]);
+  useEffect(() => {
+    if (initialPath !== "/sign-in")
+      void currentProfile()
+        .then(setProfile)
+        .catch(() => {});
+  }, [initialPath]);
   useEffect(() => {
     if (!profile?.userId) return;
     let active = true;
@@ -148,28 +194,102 @@ function App() {
     window.addEventListener('focus', updateProfile);
     return () => { active = false; window.clearInterval(interval); window.removeEventListener('focus', updateProfile); };
   }, [profile?.userId]);
+  useEffect(() => {
+    if (!profileOpen) return;
+    const close = (event: PointerEvent) => { if (!accountMenu.current?.contains(event.target as Node)) setProfileOpen(false); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { setProfileOpen(false); accountMenu.current?.querySelector<HTMLButtonElement>("button")?.focus(); } };
+    document.addEventListener("pointerdown", close); document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", escape); };
+  }, [profileOpen]);
   const signedIn = async () => {
-    const confirmed = await currentProfile()
-    if (!confirmed) throw new Error('Your session could not be confirmed. Please sign in again.')
-    setProfile(confirmed)
-    navigate(confirmed.permissions.includes('MEMBER_READ') ? '/members' : '/')
-  }
+    const confirmed = await currentProfile();
+    if (!confirmed)
+      throw new Error(
+        "Your session could not be confirmed. Please sign in again.",
+      );
+    setProfile(confirmed);
+    navigate("/", { replace: true });
+  };
   const signOut = async (allDevices = false) => {
     try {
-      await logout(allDevices)
-      setProfile(null)
-      showToast(allDevices ? 'Signed out on all devices' : 'Signed out', { tone: 'success' })
+      await logout(allDevices);
+      setProfile(null); setProfileOpen(false); navigate("/", { replace: true });
+      showToast(allDevices ? "Signed out on all devices" : "Signed out", {
+        tone: "success",
+      });
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not sign out', { tone: 'error' })
+      showToast(error instanceof Error ? error.message : "Could not sign out", {
+        tone: "error",
+      });
     }
-  }
-  const section = nav.find(item => item.path === location.pathname)?.label ?? 'Overview'
-  if (location.pathname === '/sign-in') return <AuthPage onAuthenticated={signedIn} />
-  return <div className="app-shell">
-    <aside className={`sidebar ${menuOpen ? 'open' : ''}`}><Sidebar close={() => setMenuOpen(false)} items={visibleNav} /></aside>
-    {menuOpen && <button className="scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
-    <div className="main-area"><header className="topbar"><div className="topbar-left"><button className="icon-button desktop-hidden" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button><span className="breadcrumb"><span className="breadcrumb-root">Workspace <span>/</span></span><strong>{section}</strong></span></div><div className="topbar-right"><label className="date-control"><CalendarDays size={17} /><span>As at</span><input type="date" value={asAt} max={new Date().toISOString().slice(0, 10)} onChange={event => updateAsAt(event.target.value)} aria-label="As at date" /></label><ThemeButton /><button className="icon-button notification-button" aria-label="Notifications" onClick={() => showToast("Email notifications", { detail: "Payment and approval updates are queued for configured email delivery. The in-app inbox is not available yet." })}><Bell size={19} /><span /></button>{profile ? <button className="profile profile-action" onClick={() => signOut()} title="Sign out"><div className="profile-avatar">{profile.email.slice(0, 2).toUpperCase()}</div><div><strong>{profile.email}</strong><span>Sign out</span></div><ChevronDown size={15} /></button> : <NavLink to="/sign-in" className="sign-in-link">Sign in <ArrowRight size={16} /></NavLink>}</div></header>
-      <main className="content">{profile && location.pathname !== '/accept-invitation' && !canSeeRoute(location.pathname, profile)
+  };
+  const section =
+    nav.find((item) => item.path === location.pathname)?.label ?? "Overview";
+  if (location.pathname === "/sign-in")
+    return <AuthPage onAuthenticated={signedIn} />;
+  return (
+    <div className={`app-shell${profile ? "" : " public-shell"}`}>
+      {profile && <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
+        <Sidebar close={() => setMenuOpen(false)} items={visibleNav} />
+      </aside>}
+      {menuOpen && (
+        <button
+          className="scrim"
+          aria-label="Close navigation"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+      <div className="main-area">
+        <header className="topbar">
+          <div className="topbar-left">
+            {profile && <button
+              className="icon-button desktop-hidden"
+              aria-label="Open navigation"
+              onClick={() => setMenuOpen(true)}
+            >
+              <Menu size={22} />
+            </button>}
+            {!profile && <NavLink to="/" className="public-brand"><Landmark size={22} /><strong>Harbour</strong></NavLink>}
+            {profile && <span className="breadcrumb">
+              <span className="breadcrumb-root">
+                Workspace <span>/</span>
+              </span>
+              <strong>{section}</strong>
+            </span>}
+          </div>
+          <div className="topbar-right">
+            <label className="date-control">
+              <CalendarDays size={17} />
+              <span>As at</span>
+              <input
+                type="date"
+                value={asAt}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(event) => updateAsAt(event.target.value)}
+                aria-label="As at date"
+              />
+            </label>
+            <ThemeButton />
+            {profile ? (
+              <div className="account-menu" ref={accountMenu}>
+                <button className="profile profile-action" onClick={() => setProfileOpen(value => !value)} aria-label="Open account menu" aria-expanded={profileOpen} aria-controls="account-options">
+                  <div className="profile-avatar">{profile.email.slice(0, 2).toUpperCase()}</div><div><strong>{profile.email}</strong><span>My account</span></div><ChevronDown size={15} />
+                </button>
+                {profileOpen && <nav id="account-options" className="account-options" aria-label="Your account"><p>{profile.email}</p>
+                  {canSeeRoute("/portal", profile) && <NavLink to="/portal" onClick={() => setProfileOpen(false)}><Users size={18} />My membership</NavLink>}
+                  <NavLink to="/settings" onClick={() => setProfileOpen(false)}><Settings size={18} />Settings</NavLink>
+                  <button onClick={() => void signOut()}>Sign out</button>
+                </nav>}
+              </div>
+            ) : (
+              <NavLink to="/sign-in" className="sign-in-link">
+                Sign in <ArrowRight size={16} />
+              </NavLink>
+            )}
+          </div>
+        </header>
+        <main className="content">
+          {profile && location.pathname !== '/accept-invitation' && !canSeeRoute(location.pathname, profile)
             ? <SimplePage title="Access required" subtitle="This page is not included in your current permissions." icon={ShieldCheck} heading="Choose an available page" description="Use the workspace menu to open a page your account can access." />
             : <Routes>
             <Route path="/" element={profile
@@ -232,11 +352,19 @@ function App() {
                 />
               }
             />
-          </Routes>}</main>
+          </Routes>}
+        </main>
+      </div>
+      {profile && <nav className={`bottom-nav${mainNav.length <= 4 && visibleNav.length === mainNav.length ? " compact" : ""}`} aria-label="Mobile navigation">
+        {mainNav.slice(0, 3).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} end={path === "/"} className={({ isActive }) => `bottom-link${isActive ? " active" : ""}`}><Icon size={20} /><span>{label}</span></NavLink>)}
+        <button className={`bottom-link${moreOpen ? " active" : ""}`} onClick={() => setMoreOpen(true)}><Menu size={20} /><span>More</span></button>
+      </nav>}
+      <ResponsiveOverlay open={moreOpen} onClose={() => setMoreOpen(false)} title="Workspace menu">
+        <Sidebar close={() => setMoreOpen(false)} items={visibleNav} />
+      </ResponsiveOverlay>
+
     </div>
-    <nav className={`bottom-nav${visibleNav.length <= 4 ? " compact" : ""}`} aria-label="Mobile navigation">{visibleNav.slice(0, 4).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} end={path === '/'} className={({ isActive }) => `bottom-link${isActive ? ' active' : ''}`}><Icon size={20} /><span>{label}</span></NavLink>)}{visibleNav.length > 4 && <button className={`bottom-link${moreOpen ? ' active' : ''}`} onClick={() => setMoreOpen(!moreOpen)}><Menu size={20} /><span>More</span></button>}</nav>
-    {moreOpen && <div className="more-sheet"><div className="sheet-top"><strong>More</strong><button className="icon-button" aria-label="Close more menu" onClick={() => setMoreOpen(false)}><X size={19} /></button></div>{visibleNav.slice(4).map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} className="sheet-link"><Icon size={20} />{label}<ArrowRight size={17} /></NavLink>)}</div>}
-  </div>
+  );
 }
 
 export default App

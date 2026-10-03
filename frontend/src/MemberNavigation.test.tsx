@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import App from "./App";
 import { ToastProvider } from "./toast";
@@ -13,5 +13,8 @@ it("shows own membership navigation without union financial or staff routes", as
  const nav=within(screen.getByRole("navigation",{name:"Main navigation"}));
  expect(nav.getByRole("link",{name:"My membership"})).toBeTruthy();expect(nav.getByRole("link",{name:"Payments"})).toBeTruthy();
  for(const name of ["Members","Investments","Ledger","Accounts and roles","Reconciliation","Reports","Audit log"]) expect(nav.queryByRole("link",{name})).toBeNull();
- expect(within(screen.getByRole("navigation",{name:"Mobile navigation"})).queryByRole("button",{name:"More"})).toBeNull();
+ fireEvent.click(within(screen.getByRole("navigation",{name:"Mobile navigation"})).getByRole("button",{name:"More"}));
+ const sheet=within(screen.getByRole("dialog"));
+ expect(sheet.getByRole("link",{name:"Settings"})).toBeTruthy();
+ expect(sheet.queryByText("Financial operations")).toBeNull();
 });
