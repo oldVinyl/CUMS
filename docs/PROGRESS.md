@@ -87,6 +87,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 
 ## Phase 4 — Dashboards and exports
 - [x] Persist balance-forward snapshots at approved year-end close
+- [x] Serve an authorized live dashboard for any as-at date with balance forward, year-to-date, totals, ROE, equity ratios, and member search
 - [ ] As-at dashboard, Sheet B calculations, and filters
 - [ ] Sheet B fixture test, statements, xlsx/PDF, charts
 
