@@ -251,3 +251,8 @@
   .dashboard-summary strong { font-size: 1rem; }
   .dashboard-sheet .card-title-row { display: grid; }
 }
+.rollover-settings { display: grid; gap: 13px; margin: 18px 0; }
+.rollover-settings label { display: grid; gap: 7px; font-size: .76rem; font-weight: 700; }
+.rollover-settings select { width: 100%; min-height: 42px; }
+.rollover-settings p { margin: 0; font-size: .75rem; line-height: 1.5; color: var(--muted); }
+.rollover-settings .primary-button { justify-self: start; }

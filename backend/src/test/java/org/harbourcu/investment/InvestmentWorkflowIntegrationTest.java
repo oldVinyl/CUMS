@@ -21,6 +21,25 @@ class InvestmentWorkflowIntegrationTest {
     @Autowired ApprovalService approvals;
     @Autowired JdbcTemplate jdbc;
     @Autowired ObjectMapper json;
+    @Autowired RolloverSettingsService rolloverSettings;
+
+    @Test
+    @Transactional
+    void authorisedDefaultPolicyIsAuditedAndAppliedToNewDrafts() {
+        UUID admin = user("ADMIN");
+        UUID maker = user("TREASURER");
+        assertThatThrownBy(() -> rolloverSettings.update(maker, "ROLL_PRINCIPAL_ONLY"))
+            .isInstanceOf(SecurityException.class);
+        rolloverSettings.update(admin, "ROLL_PRINCIPAL_ONLY");
+        member("Policy member", "100.00");
+        UUID draft = investments.create(maker, draft("100.00", "110.00"));
+        assertThat(jdbc.queryForObject("SELECT rollover_policy FROM investments WHERE id = ?",
+            String.class, draft)).isEqualTo("ROLL_PRINCIPAL_ONLY");
+        assertThat(jdbc.queryForObject("""
+            SELECT count(*) FROM audit_log WHERE action = 'ROLLOVER_DEFAULT_CHANGED'
+                AND actor_id = ?
+            """, Integer.class, admin)).isEqualTo(1);
+    }
 
     @Test
     @Transactional

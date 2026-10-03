@@ -57,11 +57,14 @@ public class InvestmentService {
     private final JdbcTemplate jdbc;
     private final PermissionService permissions;
     private final FiscalYearLock fiscalYears;
+    private final RolloverSettingsService rolloverSettings;
 
-    public InvestmentService(JdbcTemplate jdbc, PermissionService permissions, FiscalYearLock fiscalYears) {
+    public InvestmentService(JdbcTemplate jdbc, PermissionService permissions,
+                             FiscalYearLock fiscalYears, RolloverSettingsService rolloverSettings) {
         this.jdbc = jdbc;
         this.permissions = permissions;
         this.fiscalYears = fiscalYears;
+        this.rolloverSettings = rolloverSettings;
     }
 
     public List<Summary> list(UUID actor) {
@@ -171,7 +174,7 @@ public class InvestmentService {
         fiscalYears.requireOpen(input.purchaseDate().getYear());
         List<AvailableMember> members = available(input.purchaseDate(), null);
         if (members.isEmpty()) throw new IllegalArgumentException("No members have uninvested funds today");
-        return persistDraft(actor, input, members, null, "ROLL_PRINCIPAL_AND_INCOME");
+        return persistDraft(actor, input, members, null, rolloverSettings.defaultPolicy());
     }
 
     @Transactional

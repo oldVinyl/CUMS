@@ -16,6 +16,7 @@ import type { Profile } from './auth-api'
 import LiveMembers from './LiveMembers'
 import LiveInvestments from './LiveInvestments'
 import LiveDashboard from './LiveDashboard'
+import RolloverSettings from './RolloverSettings'
 import GoogleButton from './GoogleButton'
 import { registerPasskey } from './passkey-api'
 
@@ -111,9 +112,9 @@ function SettingsPage({ profile, signOutAll }: { profile: Profile | null; signOu
 
   return <>
     <PageHeader title="Settings" subtitle="Your union’s policies and workspace details." />
-    <PreviewBanner />
+    {!profile && <PreviewBanner />}
     <div className="settings-grid">
-      <section className="surface settings-placeholder"><span className="settings-icon"><Settings size={25} /></span><h2>Organisation settings</h2><p>Approval rules, rollover policy, payment methods, and branding will be available here when the secure backend is connected.</p><span className="phase-label">Configuration is in progress</span></section>
+      <section className="surface settings-placeholder"><span className="settings-icon"><Settings size={25} /></span><h2>Organisation settings</h2>{profile?.permissions.includes("SETTINGS_WRITE") ? <RolloverSettings /> : <p>Sign in with settings access to manage the organisation’s rollover default.</p>}<span className="phase-label">Other settings are in progress</span></section>
       {profile && <section className="surface settings-placeholder"><span className="settings-icon"><ShieldCheck size={25} /></span><h2>Account security</h2><p>Signed in as {profile.email}. {profile.preferredSignInMethod && <>Preferred sign-in: {profile.preferredSignInMethod === 'TOTP' ? 'authenticator app' : profile.preferredSignInMethod === 'PASSKEY' ? 'passkey' : 'Google'}. </>}Add a passkey or link Google for another sign-in option. End every active session if you have lost a device.</p><button type="button" className="secondary-button" disabled={passkeyBusy} onClick={() => { setPasskeyBusy(true); void registerPasskey().then(() => showToast('Passkey added', { tone: 'success' })).catch(error => showToast('Could not add passkey', { detail: error instanceof Error ? error.message : 'Please try again.', tone: 'error' })).finally(() => setPasskeyBusy(false)) }}>{passkeyBusy ? 'Please wait…' : 'Add a passkey'}</button><GoogleButton mode="link" onCredential={idToken => { void linkGoogle(idToken).then(() => showToast('Google account linked', { tone: 'success' })).catch(error => showToast('Could not link Google', { detail: error instanceof Error ? error.message : 'Please try again.', tone: 'error' })) }} /><button type="button" className="secondary-button" onClick={signOutAll}>Sign out on all devices</button></section>}
       <section className="surface creator-card" aria-labelledby="creator-title"><div className="creator-mark" aria-hidden="true">V<span>.</span></div><span className="creator-eyebrow">MADE WITH CARE</span><h2 id="creator-title">Built by Vinette</h2><p>By Vinyl. Thoughtful tools for the people who keep communities moving.</p><div className="creator-actions"><a href={github} target="_blank" rel="noopener noreferrer" className="creator-link">github.com/oldVinyl <ExternalLink size={16} /></a><button type="button" className="copy-link" onClick={copyGithub}><Copy size={16} /> Copy link</button></div></section>
     </div>
@@ -138,7 +139,7 @@ function App() {
     }
     if (value !== asAt) {
       setAsAt(value)
-      showToast('Preview date changed', { detail: 'Sample balances do not change with the date yet.' })
+      showToast(profile?.permissions.includes('DASHBOARD_READ_ALL') ? 'Dashboard date changed' : 'Preview date changed', { detail: profile?.permissions.includes('DASHBOARD_READ_ALL') ? 'Ledger figures are updating for the selected date.' : 'Sample balances do not change with the date yet.' })
     }
   }
   const location = useLocation()
