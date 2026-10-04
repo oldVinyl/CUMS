@@ -15,7 +15,8 @@ Check only implemented and verified gates. This system is not yet production com
 - [x] Responsive fixture checks at 320/375/768/1024/1440 in both themes
 - [x] 40 Playwright/axe scenarios for public/sign-in/overview/settings/member creation in five sizes and both themes
 - [x] Expand to 140 Playwright/axe scenarios including ten operational screens and provide synthetic role-guide screenshots
-- [ ] Real browser financial workflows and full axe/accessibility acceptance
+- [x] Real synthetic financial browser workflows: historical year/contributions, maturity/rollover, receipt/provider posting and role revocation
+- [ ] Final full accessibility/release acceptance
 - [ ] Real Paystack sandbox, direct MoMo prompts and settlement matching
 - [ ] SMTP/MailHog delivery and operational retry acceptance
 - [x] Historical contribution impact preview, future-only/repost, period unlock and snapshot recomputation
@@ -28,7 +29,8 @@ Check only implemented and verified gates. This system is not yet production com
 - [x] Fully lost-factor recovery and independent account-reset administration
 - [ ] Complete audit before/after coverage and personal-data log-scrubbing acceptance
 - [ ] Complete original Sheet B workbook acceptance
-- [ ] HEIC conversion, malware scanner and file security review
+- [x] Local HEIC-to-JPEG conversion, bounded input/dimensions/time and production CSP browser acceptance
+- [ ] Real malware scanner and final file security acceptance
 - [ ] Production CSP/TLS/security review and deployment
 - [x] Production Compose/Caddy configuration, startup guards, separate leadership bootstrap and synthetic encrypted recovery tooling
 - [x] Local age-encrypted database/receipt restore drill with exact totals, wrong-key and populated-target rejection

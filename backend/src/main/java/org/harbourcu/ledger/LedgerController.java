@@ -73,6 +73,10 @@ public class LedgerController {
             @CookieValue(name = "cu_access", required = false) String access, @RequestHeader(name = "X-CSRF-Token", required = false) String csrf, HttpServletRequest request) {
         return call(access, csrf, true, request, actor -> ResponseEntity.ok(new Submitted(ledger.unlock(actor, year, body.reason()))));
     }
+    @PostMapping("/fiscal-years/{year}/create") public ResponseEntity<?> createHistoricalYear(@PathVariable int year,@RequestBody Reason body,
+            @CookieValue(name="cu_access",required=false) String access,@RequestHeader(name="X-CSRF-Token",required=false) String csrf,HttpServletRequest request) {
+        return call(access,csrf,true,request,actor->ResponseEntity.ok(new Submitted(ledger.createHistoricalYear(actor,year,body.reason()))));
+    }
     @PostMapping("/approvals/{id}/decide") public ResponseEntity<?> decide(@PathVariable UUID id, @RequestBody Decision body,
             @CookieValue(name = "cu_access", required = false) String access, @RequestHeader(name = "X-CSRF-Token", required = false) String csrf, HttpServletRequest request) {
         return call(access, csrf, true, request, actor -> { ledger.decide(actor, id, body.decision(), body.comment()); return ResponseEntity.noContent().build(); });

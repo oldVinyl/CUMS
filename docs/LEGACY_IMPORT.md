@@ -45,9 +45,10 @@ When posting the reviewed migration:
 
 1. Create a separate database owned by the application's database user. Configure the local backend's `DB_URL` for it and set `DEV_SAMPLE_DATA=false`.
 2. Start the backend so migrations and the development administrator bootstrap run. Configure a separate authorized checker account.
-3. In Imports, dry-run `members.csv` as MEMBERS. Review baseline-date warnings, submit, and have the independent checker approve.
-4. Dry-run `ledger.csv` as LEDGER after membership approval. Verify the component and closing totals, submit, and have the independent checker approve.
-5. Check Overview, individual statements, and data exports. Collect missing contact and identity details through the member forms later.
+3. In Ledger, choose **Set up historical year**, enter 2025 and a source reason, then have the independent checker approve. This creates an open fiscal period without posting balances. Repeat for any other missing historical year required by a reviewed source.
+4. In Imports, dry-run `members.csv` as MEMBERS. Review baseline-date warnings, submit, and have the independent checker approve.
+5. Dry-run `ledger.csv` as LEDGER after membership approval. Verify the component and closing totals, submit, and have the independent checker approve.
+6. Check Overview, individual statements, and data exports. Collect missing contact and identity details through the member forms later.
 
 A development administrator still cannot approve their own financial request. Imported joining dates are explicitly unconfirmed. Historical charts display a summary-history notice instead of inventing monthly growth. Statements identify migration summaries in their narrations. Unknown historical investment transactions and maturity receipts need a separate reviewed migration; these prepared files do not create investment cycles.
 

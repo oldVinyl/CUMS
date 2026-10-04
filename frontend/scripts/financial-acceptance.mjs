@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { createServer } from "vite";
 import { chromium, expect } from "@playwright/test";
 import Decimal from "decimal.js";
@@ -18,7 +19,8 @@ if (
 }
 const origin = "http://localhost:5185";
 const today = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Accra" });
-const yearStart = `${today.slice(0, 4)}-01-01`;
+const yearStart = `${Number(today.slice(0, 4)) - 1}-01-01`;
+const yesterday = new Date(Date.parse(`${today}T12:00:00Z`) - 86400000).toISOString().slice(0, 10);
 const tomorrow = new Date(Date.parse(`${today}T12:00:00Z`) + 86400000).toISOString().slice(0, 10);
 const frontendRoot = fileURLToPath(new URL("..", import.meta.url));
 const workspaceRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -133,6 +135,7 @@ try {
     root: frontendRoot,
     configFile: false,
     plugins: [(await import("@vitejs/plugin-react")).default()],
+    optimizeDeps: { include: ["heic-to/csp"] },
     server: {
       host: "localhost",
       port: 5185,
@@ -180,6 +183,15 @@ try {
     { cwd: workspaceRoot, stdio: "pipe" },
   );
   const memberIds = [];
+  const period = await call(
+    maker,
+    "POST",
+    `/ledger/fiscal-years/${Number(today.slice(0, 4)) - 1}/create`,
+    { reason: "Synthetic historical baseline acceptance" },
+  );
+  await call(checker, "POST", `/ledger/approvals/${period.approvalRequestId}/decide`, {
+    decision: "APPROVE",
+  });
   for (const letter of ["A", "B"]) {
     const created = await call(maker, "POST", "/members", {
       fullName: `Anonymous member ${letter}`,
@@ -192,7 +204,7 @@ try {
   console.log(
     "PASS real authenticator enrollment, member creation and independent historical seed approval",
   );
-  const cycle = await call(maker, "POST", "/investments", {
+  let cycle = await call(maker, "POST", "/investments", {
     tenor: "CUSTOM",
     customDays: 1,
     institution: "Synthetic institution",
@@ -216,8 +228,79 @@ try {
   let detail = await call(maker, "GET", `/investments/${cycle.id}`);
   assert.equal(detail.investment.status, "POSTED");
   assert.equal(detail.allocations.length, 2);
+  // Date fixture only, guarded by the disposable database prefix above. Simulate the day
+  // passing without changing the host clock or weakening production purchase/maturity rules.
+  assert.match(cycle.id, /^[0-9a-f-]{36}$/);
+  execFileSync(
+    "docker",
+    [
+      "compose",
+      "exec",
+      "-T",
+      "postgres",
+      "psql",
+      "-U",
+      "cums",
+      "-d",
+      database,
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      `UPDATE investments SET purchase_date='${yesterday}'::date,maturity_date='${today}'::date WHERE id='${cycle.id}'::uuid AND status='POSTED'`,
+    ],
+    { cwd: workspaceRoot, stdio: "pipe" },
+  );
+  const maturityPreview = await call(
+    maker,
+    "GET",
+    `/investments/${cycle.id}/maturity-preview?actualProceeds=200`,
+  );
+  assert.ok(new Decimal(maturityPreview.totalIncome).isZero());
+  const maturity = await call(maker, "POST", `/investments/${cycle.id}/mature`, {
+    actualProceeds: "200",
+  });
+  await call(
+    maker,
+    "POST",
+    `/investments/approvals/${maturity.approvalRequestId}/decide`,
+    { decision: "APPROVE" },
+    400,
+  );
+  await call(checker, "POST", `/investments/approvals/${maturity.approvalRequestId}/decide`, {
+    decision: "APPROVE",
+  });
+  detail = await call(maker, "GET", `/investments/${cycle.id}`);
+  assert.equal(detail.investment.status, "MATURED");
+  assert.ok(new Decimal(detail.investment.actualProceeds).equals("200"));
+  const sourceId = cycle.id;
+  cycle = await call(maker, "POST", `/investments/${sourceId}/rollover-draft`, {
+    policy: "ROLL_PRINCIPAL_ONLY",
+    draft: {
+      tenor: "CUSTOM",
+      customDays: 1,
+      institution: "Synthetic institution",
+      referenceNumber: "ACCEPTANCE-ROLLOVER-001",
+      purchaseDate: today,
+      maturityDate: tomorrow,
+      cost: "200",
+      maturityValue: "220",
+    },
+  });
+  detail = await call(maker, "GET", `/investments/${cycle.id}`);
+  assert.ok(new Decimal(detail.pool).equals("200"));
+  const rollover = await call(maker, "POST", `/investments/${cycle.id}/submit`);
+  await call(checker, "POST", `/investments/approvals/${rollover.approvalRequestId}/decide`, {
+    decision: "APPROVE",
+  });
+  assert.equal(
+    (await call(maker, "GET", `/investments/${sourceId}`)).investment.status,
+    "ROLLED_OVER",
+  );
+  console.log(
+    "PASS real maturity preview/independent approval and principal-only rollover creation/approval (synthetic maturity-date fixture)",
+  );
   const preview = await historical(maker, checker, memberIds[0], "ADDITION", "100", "REPOST");
-  assert.equal(preview.affectedCycles.length, 1);
+  assert.equal(preview.affectedCycles.length, 2);
   detail = await call(maker, "GET", `/investments/${cycle.id}`);
   assert.equal(detail.investment.revision, 2);
   assert.equal(detail.investment.status, "POSTED");
@@ -248,18 +331,7 @@ try {
   });
   const page = await member.newPage();
   await page.setViewportSize({ width: 375, height: 850 });
-  const receipt = Buffer.from(
-    await page.evaluate(() => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 32;
-      canvas.height = 32;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#407e8c";
-      ctx.fillRect(0, 0, 32, 32);
-      return canvas.toDataURL("image/png").split(",")[1];
-    }),
-    "base64",
-  );
+  const receipt = readFileSync(new URL("../e2e/fixtures/synthetic-receipt.heic", import.meta.url));
   await page.goto(`${origin}/payments`);
   await page.getByRole("button", { name: "Submit receipt", exact: true }).click();
   const form = page.getByRole("dialog");
@@ -268,8 +340,8 @@ try {
   await form.getByRole("button", { name: "Create transfer reference" }).click();
   await expect(form.getByText("Then attach the receipt below.", { exact: false })).toBeVisible();
   await form
-    .getByLabel("Receipt (JPEG, PNG or PDF; up to 10 MB)")
-    .setInputFiles({ name: "synthetic.png", mimeType: "image/png", buffer: receipt });
+    .getByLabel("Receipt (JPEG, PNG, PDF or HEIC; up to 10 MB)")
+    .setInputFiles({ name: "synthetic.heic", mimeType: "image/heic", buffer: receipt });
   const submitted = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&

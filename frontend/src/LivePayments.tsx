@@ -1,4 +1,5 @@
 import ResponsiveOverlay from "./ResponsiveOverlay";
+import { prepareReceipt } from "./receipt-conversion";
 
 import MemberPicker from "./MemberPicker";
 
@@ -100,11 +101,11 @@ export default function LivePayments({ profile }: { profile: Profile }) {
 
    let proof = submission.proofId;
 
-   if (!proof) { const data = new FormData(); data.append("memberId", member); data.append("file", file); proof = (await api<{id:string}>("/proofs", "POST", data)).id; setSubmission(v => ({...v, proofId: proof})); }
+   if (!proof) { const normalized = await prepareReceipt(file); const data = new FormData(); data.append("memberId", member); data.append("file", normalized); proof = (await api<{id:string}>("/proofs", "POST", data)).id; setSubmission(v => ({...v, proofId: proof})); }
 
    await api("", "POST", { memberId: member, methodId, amount, purpose, paidDate, proofId: proof }, submission.key);
 
-  })(), { loading: "Uploading receipt and submitting payment…", success: "Payment submitted for verification", error: "Could not submit payment" });
+  })(), { loading: "Preparing receipt and submitting payment…", success: "Payment submitted for verification", error: "Could not submit payment" });
 
    setOpen(false); setAmount(""); setFile(null); setSubmission({key: crypto.randomUUID()}); refresh();
 
@@ -184,7 +185,7 @@ export default function LivePayments({ profile }: { profile: Profile }) {
 
     <label>Date paid<input required type="date" min="2000-01-01" max={today} value={paidDate} onChange={e => {setPaidDate(e.target.value); }} /></label>
 
-    <label>Receipt (JPEG, PNG or PDF; up to 10 MB)<input required type="file" accept="image/jpeg,image/png,application/pdf" onChange={e => {setFile(e.target.files?.[0] ?? null);setSubmission(v=>({...v,proofId:undefined}));}} /></label>
+     <label>Receipt (JPEG, PNG, PDF or HEIC; up to 10 MB)<input required type="file" accept="image/jpeg,image/png,application/pdf,image/heic,image/heif,.heic,.heif" onChange={e => {setFile(e.target.files?.[0] ?? null);setSubmission(v=>({...v,proofId:undefined}));}} /></label><small>HEIC photos are converted to JPEG on your device before upload.</small>
 
     <button className="primary-button" disabled={busy || !activeMethods.length || !(verifier ? memberId : own) || !file}>Submit for verification</button>
 

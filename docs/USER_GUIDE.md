@@ -109,3 +109,11 @@ In Ledger, open **Add contribution**, select **Use a historical date**, enter th
 A different eligible approver reviews the bound impact. Changed financial source requires cancellation and a fresh preview/request. Pending dependencies and previously moved historical purchase dates need individual review first.
 
 Administrators can inspect **Email delivery** in Accounts and roles. Filter queued, failed and sent messages, and confirm an eligible failure retry. This queues delivery; SMTP must be enabled. Sent messages cannot be retried. Expired or consumed invitation links require a new invitation. Message payloads and private links are excluded from the administration screen.
+
+## HEIC receipts
+
+Choose a JPEG, PNG, PDF or HEIC receipt up to 10 MB. HEIC photos are converted to JPEG on your device before upload. Keep the form open while the preparation toast is showing. Images must be at most 25 megapixels. If conversion fails or times out, use a smaller image or a JPEG/PDF copy. Submitted receipts still require staff verification and independent approval before your balance changes.
+
+### Set up a missing historical year
+
+In Ledger, leadership can choose **Set up historical year**, select a year before the current year and record the source reason. An independent checker reviews the request in Approvals. Approval opens the missing calendar year without adding money. Import or contribute historical amounts through their separate reviewed workflows afterward. An existing closed year uses **Unlock year** instead.

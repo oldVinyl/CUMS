@@ -85,7 +85,7 @@ public class LedgerWorkflowService {
             FROM approval_requests r
             LEFT JOIN ledger_entries l ON l.id::text = r.payload ->> 'entryId'
             LEFT JOIN members m ON m.id::text = r.payload ->> 'memberId' OR m.id = l.member_id
-            WHERE r.status = 'PENDING' AND r.action_type IN ('LEDGER_POST', 'LEDGER_BACKDATED_POST', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK')
+            WHERE r.status = 'PENDING' AND r.action_type IN ('LEDGER_POST', 'LEDGER_BACKDATED_POST', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK', 'PERIOD_CREATE')
                 AND (? OR r.made_by = ?) ORDER BY r.created_at LIMIT 100
             """, (row, ignored) -> new Pending(row.getObject("id", UUID.class), row.getObject("made_by", UUID.class),
                 row.getString("action_type"), tree(row.getString("payload")), row.getString("member_number"),
@@ -121,6 +121,13 @@ public class LedgerWorkflowService {
         }
         return approvals.submit("PERIOD_UNLOCK", json.createObjectNode().put("year", year).put("reason", reason == null ? null : reason.trim()), actor, 1);
     }
+    @Transactional public UUID createHistoricalYear(UUID actor, int year, String reason) {
+        require(actor,"PERIOD_UNLOCK");
+        jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");
+        if(Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM approval_requests WHERE action_type='PERIOD_CREATE' AND status='PENDING' AND payload->>'year'=?)",Boolean.class,Integer.toString(year))))
+            throw new IllegalStateException("This historical year already awaits setup approval.");
+        return approvals.submit("PERIOD_CREATE",json.createObjectNode().put("year",year).put("reason",reason==null?null:reason.trim()),actor,1);
+    }
     @Transactional public void decide(UUID actor, UUID id, String decision, String reason) {
         require(actor, "LEDGER_READ"); require(actor, "APPROVE"); requireRequest(id);
         if (decision == null) throw new IllegalArgumentException("Choose a decision");
@@ -130,7 +137,7 @@ public class LedgerWorkflowService {
         require(actor, "LEDGER_READ"); requireRequest(id); approvals.cancel(id, actor);
     }
     private void requireRequest(UUID id) {
-        if (!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM approval_requests WHERE id = ? AND action_type IN ('LEDGER_POST', 'LEDGER_BACKDATED_POST', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK'))", Boolean.class, id))) {
+        if (!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM approval_requests WHERE id = ? AND action_type IN ('LEDGER_POST', 'LEDGER_BACKDATED_POST', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK', 'PERIOD_CREATE'))", Boolean.class, id))) {
             throw new IllegalArgumentException("Ledger approval not found");
         }
     }

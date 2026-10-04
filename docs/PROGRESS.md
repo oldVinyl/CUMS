@@ -86,7 +86,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Live paginated ledger UI, contribution/reversal/year-close request controls, maker cancellation, confirmation-based approvals, origin/CSRF and permission tests
 - [x] Recheck committed investment funds before approving manual contribution compensation
 - [x] JPEG/PNG/PDF magic-byte validation, metadata normalization, private storage and authorized audited downloads
-- [ ] HEIC conversion and real private scanner acceptance
+- [x] Local HEIC-to-JPEG receipt conversion with bounded dimensions, worker timeout and strict-CSP production acceptance
+- [ ] Real private scanner acceptance
 
 ## Phase 3 — Investments
 
@@ -140,7 +141,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Persistent payment/approval/invitation email outbox and opt-in SMTP Notifier
 - [x] Configurable 1–3 approvals, online limits and captured fee policy in the organization Settings block
 - [ ] Real Paystack sandbox acceptance, direct MoMo prompts, settlement matching and operational exception review
-- [ ] Historical payment posting, receipt amendments, HEIC conversion and malware scan hook
+- [x] Local HEIC conversion and bounded private malware scan hook with protocol tests
+- [ ] Historical payment posting, receipt amendments and real scanner acceptance
 - [x] Permission-protected notification administration with filters/pagination, failed-message retry confirmation, private-payload exclusion and before/after audit
 - [x] Prevent expired/consumed invitation delivery and notifications for ineligible accounts
 - [ ] MailHog/SMTP delivery acceptance (still deferred)
@@ -278,7 +280,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Live password/reset email delivery acceptance (SMTP deferred)
 - [ ] Retention-based personal-data anonymization, including historical private copies
 - [ ] Complete financial before/after audit coverage, failed-login/log-scrubbing and distributed rate-limit acceptance
-- [ ] HEIC conversion and real private scanner acceptance
+- [x] Local HEIC-to-JPEG receipt conversion with bounded dimensions, worker timeout and strict-CSP production acceptance
+- [ ] Real private scanner acceptance
 - [ ] Actual bank/gateway settlement matching and direct mobile-money/provider acceptance
 - [ ] Real financial browser E2E, original row-level workbook acceptance, required coverage/dependency gates and verified hosted CI
 - [ ] Review/post private migration with separate authorized checker; collect missing actual member dates/details
@@ -324,8 +327,29 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] FakeProvider exact-once simulation, own-data export and cross-member access rejection
 - [x] Actual overview/member pages consume real test API responses; financial acceptance wrapper added to CI
 - [x] Independently approved role grant/revocation, immediate backend denial and refreshed route/menu restriction
-- [ ] Real maturity/rollover browser scenarios remain open
+- [x] Real maturity preview/independent approval and principal-only rollover creation/approval; day passing uses an explicit synthetic date fixture in the disposable test database
 - [x] Clean 187-test backend run plus 250 generated allocation cases and fresh-container migration/immutability smoke
 - [x] Enforce per-package line coverage: ledger 91.41%, allocation 92.00%, dashboard 95.95%, approval 91.18%, payment 85.81%
 - [x] JaCoCo report artifacts and OWASP CVSS 7+ fail-on-error CI configuration
 - [ ] Successful live OWASP dependency scan and hosted CI acceptance
+
+## HEIC receipt acceptance — 2026-10-04
+- [x] Local HEIC/HEIF byte/property inspection, 10 MB and 25-megapixel limits, bounded structure traversal and 20-second worker termination
+- [x] Lazy self-hosted CSP decoder, generic diagnostics and anonymous JPEG output before the standard server validation/scan path
+- [x] Production bundle passes strict CSP without unsafe-eval at 375px light and 1440px dark using a generated 64×64 synthetic receipt
+- [x] Four converter unit tests cover malformed/oversized inputs, pass-through, success cleanup and timeout cleanup
+- [x] Distribute unmodified decoder license/source/rebuild notice and add production HEIC acceptance to CI
+- [x] Full frontend regression: 70 tests, production build/lint and strict-CSP HEIC browser checks pass
+- [ ] Live OWASP attempt rejected missing NVD API key; provide a valid key and pass analysis before release
+
+## Historical-year setup — 2026-10-04
+
+- [x] Independently approved leadership requests create missing historical calendar years without posting balances
+- [x] Source reason, year bounds, duplicate/replay prevention and final maker-permission checks
+- [x] Responsive drawer/sheet and checker review explain that balances require separate approval
+- [x] Four backend integration tests and two frontend tests; real financial browser acceptance creates the prior year through the API before importing test balances
+- [x] Full frontend regression: 72 tests pass
+
+- [x] Clean 191-test backend regression plus 250 generated allocation checks and PostgreSQL 16 Testcontainers smoke: 36 migrations
+- [x] Per-package coverage gate passes: ledger 91.93%, allocation 92.00%, dashboard 95.95%, approval 91.18%, payment 85.95%
+- [x] Frontend production build/lint and repeated strict-CSP HEIC production acceptance pass

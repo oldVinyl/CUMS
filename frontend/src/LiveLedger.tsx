@@ -48,6 +48,9 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
   const [closeConfirm, setCloseConfirm] = useState(false);
   const [unlockYear, setUnlockYear] = useState("");
   const [unlockReason, setUnlockReason] = useState("");
+  const [yearSetupOpen, setYearSetupOpen] = useState(false);
+  const [setupYear, setSetupYear] = useState("");
+  const [setupReason, setSetupReason] = useState("");
   const toast = useToast();
   const promiseToast = usePromiseToast();
   const validRange = from >= "2000-01-01" && from <= asAt;
@@ -110,6 +113,9 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
       setCloseYear("");
       setUnlockYear("");
       setUnlockReason("");
+      setYearSetupOpen(false);
+      setSetupYear("");
+      setSetupReason("");
       changed();
     } catch {
       /* Promise toast includes the server error. */
@@ -394,6 +400,76 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
         </section>
       )}
       <FiscalSnapshots years={years} refresh={retry} />
+      {canUnlock && (
+        <section className="surface investment-panel">
+          <h2>Historical fiscal years</h2>
+          <p>
+            Set up a missing earlier year before importing historical balances. A different approver
+            must confirm the source and year. Existing years use their close or unlock workflow.
+          </p>
+          <button className="secondary-button" onClick={() => setYearSetupOpen(true)}>
+            Set up historical year
+          </button>
+        </section>
+      )}
+      {yearSetupOpen && (
+        <ResponsiveOverlay
+          open
+          onClose={() => {
+            if (!busy) setYearSetupOpen(false);
+          }}
+          title="Set up historical fiscal year"
+        >
+          <form
+            className="investment-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void mutation(
+                ledgerRequest(`/fiscal-years/${setupYear}/create`, "POST", { reason: setupReason }),
+                "Historical fiscal-year setup requested",
+              );
+            }}
+          >
+            <p>
+              This creates an open period after independent approval. It does not post balances or
+              mark the source as reconciled.
+            </p>
+            <label>
+              Historical year
+              <input
+                type="number"
+                min={2000}
+                max={new Date().getFullYear() - 1}
+                step={1}
+                required
+                value={setupYear}
+                onChange={(event) => setSetupYear(event.target.value)}
+              />
+            </label>
+            <label>
+              Source and setup reason
+              <textarea
+                required
+                maxLength={1000}
+                rows={3}
+                value={setupReason}
+                onChange={(event) => setSetupReason(event.target.value)}
+              />
+            </label>
+            <button
+              className="primary-button"
+              disabled={
+                busy ||
+                !setupYear ||
+                !setupReason.trim() ||
+                years.some((year) => String(year.year) === setupYear)
+              }
+            >
+              Request year setup approval
+            </button>
+          </form>
+        </ResponsiveOverlay>
+      )}
       <LedgerApprovals key={retry} profile={profile} onChanged={changed} />
     </>
   );

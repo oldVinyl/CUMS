@@ -71,6 +71,11 @@ jobs:
       - name: Responsive browser and WCAG checks
         working-directory: frontend
         run: npm run test:e2e
+      - name: Production HEIC conversion and CSP acceptance
+        working-directory: frontend
+        run: |
+          npm run build
+          node scripts/heic-acceptance.mjs
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

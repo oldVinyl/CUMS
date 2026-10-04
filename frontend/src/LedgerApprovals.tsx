@@ -136,7 +136,9 @@ export default function LedgerApprovals({
                     ? "Contribution reversal"
                     : item.actionType === "PERIOD_UNLOCK"
                       ? `Unlock fiscal year ${item.payload.year}`
-                      : `Close fiscal year ${item.payload.year}`}
+                      : item.actionType === "PERIOD_CREATE"
+                        ? `Set up historical fiscal year ${item.payload.year}`
+                        : `Close fiscal year ${item.payload.year}`}
             </h3>
             {item.fullName && (
               <p>
@@ -219,6 +221,15 @@ export default function LedgerApprovals({
                     </button>
                   </>
                 )
+              )}
+              {item.actionType === "PERIOD_CREATE" && (
+                <>
+                  <p>
+                    Creates a missing historical period as open. No balances are posted by this
+                    decision. Review the source and year before approving.
+                  </p>
+                  <p>Reason: {item.payload.reason}</p>
+                </>
               )}
             </div>
             {review?.item.id === item.id && (
