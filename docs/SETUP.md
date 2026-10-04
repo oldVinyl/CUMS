@@ -118,3 +118,10 @@ npm run test:e2e
 On Linux/macOS, use `npx playwright install --with-deps chromium` where system dependencies are needed. The suite starts Vite automatically when needed, uses five viewport sizes in both themes, and intercepts every API request with synthetic fixtures. It does not submit changes to the actual financial database. Results/traces are under `frontend/artifacts/`; CI uploads failing fixture traces for seven days. These tests cover browser behavior and WCAG rules on the specified pages, while real financial browser workflows remain an open release gate.
 
 See SECURITY_CHECKLIST.md for the explicit remaining security and delivery requirements. No v1.0.0 completion is claimed.
+# Formatting and container acceptance
+
+Java formatting is available through `./mvnw spotless:apply` and `./mvnw spotless:check`; frontend formatting through `npm run format` / `npm run format:check` in `frontend`. Existing files may still need a separately reviewed formatting pass; new workflows were formatted without rewriting unrelated local edits.
+
+With Docker running, `./mvnw -Pcontainer-tests verify` in `backend` includes a fresh PostgreSQL 16 Testcontainers smoke test. Its database never uses the developer connection. Ordinary integration tests still require PostgreSQL and should use a disposable `DB_URL`. Test pools and context caching are bounded. CI includes the container profile and frontend dependency auditing.
+
+Configured authentication uses V35 shared PostgreSQL rate buckets. Instances must use the same throttle key/database. The in-process fallback serves only an unconfigured skeleton. Configured database outages reject authentication requests.

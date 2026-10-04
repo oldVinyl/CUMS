@@ -108,6 +108,28 @@ class LedgerControllerIntegrationTest {
             """, member, today, today.getYear(), "GUARD-REV-" + original, original)).hasMessageContaining("exactly compensate");
     }
 
+    @Test @Transactional
+    void historicalEndpointsRequireAuthenticationCsrfOriginAndReviewPermission() throws Exception {
+        UUID maker=user("TREASURER"), ordinary=user("MEMBER"), member=member();
+        var tokens=sessions.create(maker);var ordinaryTokens=sessions.create(ordinary);
+        String body=json.writeValueAsString(new BackdatedContributionService.Input(member,"ADDITION","5.25",today,"FUTURE_ONLY",today,"Fixture historical review",null));
+        mvc.perform(post("/api/v1/ledger/contributions/preview").contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/ledger/contributions/preview").cookie(new Cookie("cu_access",tokens.access())).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/ledger/contributions/preview").cookie(new Cookie("cu_access",tokens.access())).header("X-CSRF-Token",tokens.csrf()).header("Origin","https://foreign.invalid").contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/ledger/contributions/preview").cookie(new Cookie("cu_access",ordinaryTokens.access())).header("X-CSRF-Token",ordinaryTokens.csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+        String preview=mvc.perform(post("/api/v1/ledger/contributions/preview").cookie(new Cookie("cu_access",tokens.access())).header("X-CSRF-Token",tokens.csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store")).andReturn().getResponse().getContentAsString();
+        var payload=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(body);payload.put("sourceFingerprint",json.readTree(preview).path("sourceFingerprint").asText());
+        mvc.perform(post("/api/v1/ledger/contributions/historical").cookie(new Cookie("cu_access",tokens.access())).contentType(MediaType.APPLICATION_JSON).content(payload.toString())).andExpect(status().isForbidden());
+        String response=mvc.perform(post("/api/v1/ledger/contributions/historical").cookie(new Cookie("cu_access",tokens.access())).header("X-CSRF-Token",tokens.csrf()).contentType(MediaType.APPLICATION_JSON).content(payload.toString())).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String id=json.readTree(response).path("approvalRequestId").asText();
+        mvc.perform(get("/api/v1/ledger/approvals/"+id+"/impact")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/ledger/approvals/"+id+"/impact").cookie(new Cookie("cu_access",ordinaryTokens.access()))).andExpect(status().isForbidden());
+        var auditor=sessions.create(user("AUDITOR"));
+        mvc.perform(get("/api/v1/ledger/approvals/"+id+"/impact").cookie(new Cookie("cu_access",auditor.access()))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/ledger/approvals/"+id+"/impact").cookie(new Cookie("cu_access",tokens.access()))).andExpect(status().isOk());
+        assertThat(balance(member)).isZero();
+    }
+
     private BigDecimal balance(UUID member) { return jdbc.queryForObject("SELECT coalesce(sum(amount), 0) FROM ledger_entries WHERE member_id = ?", BigDecimal.class, member); }
     private UUID member() {
         UUID id = UUID.randomUUID(); jdbc.update("INSERT INTO members (id, member_number, full_name, join_date) VALUES (?, ?, 'Ledger fixture', ?)", id, "L-" + id, today); return id;

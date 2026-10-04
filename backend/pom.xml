@@ -28,7 +28,12 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+        <testcontainers.version>2.0.5</testcontainers.version>
 	</properties>
+    <dependencyManagement><dependencies><dependency>
+        <groupId>org.testcontainers</groupId><artifactId>testcontainers-bom</artifactId>
+        <version>${testcontainers.version}</version><type>pom</type><scope>import</scope>
+    </dependency></dependencies></dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -109,10 +114,29 @@
 			<version>1.9.3</version>
 			<scope>test</scope>
 		</dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId><artifactId>testcontainers-postgresql</artifactId><scope>test</scope>
+        </dependency>
 	</dependencies>
 
 	<build>
 		<plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
+                <configuration><systemPropertyVariables>
+                    <spring.test.context.cache.maxSize>8</spring.test.context.cache.maxSize>
+                    <spring.datasource.hikari.maximum-pool-size>3</spring.datasource.hikari.maximum-pool-size>
+                    <spring.datasource.hikari.minimum-idle>0</spring.datasource.hikari.minimum-idle>
+                </systemPropertyVariables></configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <configuration>
+                    <java><googleJavaFormat><version>1.30.0</version></googleJavaFormat></java>
+                </configuration>
+            </plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
@@ -120,4 +144,9 @@
 		</plugins>
 	</build>
 
+    <profiles><profile><id>container-tests</id><build><plugins><plugin>
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><version>3.5.4</version>
+        <executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions>
+        <configuration><includes><include>**/ContainerPostgresSmokeIT.java</include></includes></configuration>
+    </plugin></plugins></build></profile></profiles>
 </project>

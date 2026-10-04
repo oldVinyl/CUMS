@@ -11,8 +11,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] CI workflow, gitleaks configuration, ESLint
 - [x] Start PostgreSQL 16 and verify API health and protected-route denial against it
 - [ ] Confirm MailHog starts (deferred at the owner's request after repeated Docker Hub pull failures; revisit before email notifications and Phase 8 acceptance)
-- [ ] Testcontainers PostgreSQL smoke test (local dependency download failed; PostgreSQL startup was verified manually)
-- [ ] Java and frontend formatter configuration
+- [x] Testcontainers PostgreSQL 16 smoke: all migrations, schema validation and immutable exact ledger posting in a disposable container
+- [x] Java Spotless/google-java-format and frontend Prettier configuration; new workflows formatted and checked
 
 ## Phase 1 — Foundation
 - [x] V22–V28 revision history, payments/proofs/jobs, reconciliation, policies, notification outbox and invitation migrations verified
@@ -40,7 +40,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Account-wide session revocation and authenticated sign-out-on-all-devices action
 - [x] Bucket4j per-IP and global auth POST limit with HTTP 429 feedback and tests
 - [x] Recovery-code regeneration and permission/ownership enforcement on implemented authenticated routes
-- [ ] Distributed HTTP rate limiting and complete route permission sweep acceptance
+- [x] PostgreSQL-backed global/per-IP greedy authentication limits shared across instances, digest-only addresses and concurrency/refill/expiry tests
+- [ ] Complete route permission sweep acceptance
 - [x] Seed six roles and permission grants; reject overlapping active assignments
 - [x] Read live permissions on each check; approved role changes take effect immediately
 - [x] Give the configured local bootstrap account every known permission only under the `dev` profile, without weakening production ADMIN grants or maker-checker separation
@@ -73,7 +74,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Approved current-day manual contribution reversal with exact negative amount and reason
 - [x] Member balances computed from ledger entries through an as-at date
 - [x] Approved year-end close with balance-forward snapshots and fiscal-year locking
-- [ ] Historical corrections, backdating impact preview, period unlock, and snapshot recomputation
+- [x] Historical contribution impact preview with independently approved future-only posting or chronological cycle reverse/repost, checksum-bound source and snapshot recomputation
+- [ ] Historical payment amendments and previously moved/archived cycle evidence reconstruction
 - [x] Independently approved, reasoned period unlock with current permission rechecks, duplicate-request prevention, maker cancellation and rejection
 - [x] Append-only snapshot revision history; recompute the corrected year and every later snapshot on unlock, approved import and reclose
 - [x] Permit reviewed historical ledger imports into open or approved-unlocked years, while blocking changes to posted or archived investment ratios
@@ -132,7 +134,9 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Configurable 1–3 approvals, online limits and captured fee policy in the organization Settings block
 - [ ] Real Paystack sandbox acceptance, direct MoMo prompts, settlement matching and operational exception review
 - [ ] Historical payment posting, receipt amendments, HEIC conversion and malware scan hook
-- [ ] MailHog/SMTP delivery acceptance and notification administration
+- [x] Permission-protected notification administration with filters/pagination, failed-message retry confirmation, private-payload exclusion and before/after audit
+- [x] Prevent expired/consumed invitation delivery and notifications for ineligible accounts
+- [ ] MailHog/SMTP delivery acceptance (still deferred)
 
 ## Phase 6 — Member portal
 - [x] Hashed expiring single-use invitations, encrypted queued links, replacement invalidation and password activation
@@ -249,7 +253,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Real production host/domain/bucket, live scanner, provider/mail credentials and owner restore/delivery acceptance remain external gates
 
 ## Remaining master-prompt completion gates
-- [ ] Historical contribution impact preview with both future-only and dependent-cycle reverse/repost options; historical payment amendments and investment/allocation imports
+- [x] Historical contribution impact preview with future-only and dependent-cycle reverse/repost options for current cycle purchase dates
+- [ ] Historical payment amendments, previously moved-cycle evidence reconstruction and investment/allocation imports
 - [ ] Fully lost-factor recovery and independently authorized reset administration/delivery
 - [ ] Retention-based personal-data anonymization, including historical private copies
 - [ ] Complete financial before/after audit coverage, failed-login/log-scrubbing and distributed rate-limit acceptance
@@ -258,3 +263,21 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Real financial browser E2E, original row-level workbook acceptance, required coverage/dependency gates and verified hosted CI
 - [ ] Review/post private migration with separate authorized checker; collect missing actual member dates/details
 - [ ] Owner production/off-site restore acceptance, then finalize release/tag. The master prompt is not declared complete.
+
+## Backdating, shared auth limits and email administration — 2026-10-04
+- [x] Read-only affected-cycle previews with exact participation/cost/expected/actual income by member number
+- [x] Preserve original dates for future-only posting; require a next start after affected purchases and no future ledger dates
+- [x] Maker/checker impact review; stale source, revoked maker permission, closed years and pending dependencies block reposting
+- [x] Archive allocation revisions, append exact income compensation/replacement at original maturity dates and propagate later-cycle income and principal-only rollovers
+- [x] Preserve explicit participation edits/exclusions, recheck committed balances and recompute snapshots
+- [x] Reject replay and roll back failed approval decisions across real transaction boundaries
+- [x] Historical drawer/sheet form with reviewed confirmation, promise feedback, stale-input reset and late-response rejection
+- [x] Shared database-clock authentication buckets; multiple-instance/concurrency/refill/expiry acceptance and digest-only addresses
+- [x] Failed-password audit omits submitted identifiers/credentials and leaves unauthenticated actor unset
+- [x] Admin notification review/retry with private-payload exclusion, sent-message replay rejection and invalid-invitation delivery prevention
+- [x] Upgrade React Router to 7.18.4 and Vitest to 4.1.11; npm audit reports zero vulnerabilities
+- [x] Bound integration-test connection pools/context caching
+- [x] Verify 178 backend tests, 250 generated allocation cases and separate Testcontainers PostgreSQL 16 smoke with all 35 migrations
+- [x] Verify 61 frontend tests, production build/lint and 22 focused responsive/axe scenarios
+- [x] Apply V35 to development and restart the updated backend; health UP
+- [ ] Recovery/reset administration, retention, historical imports/payment amendments, real financial browser/coverage/backend dependency gates and external acceptance remain open

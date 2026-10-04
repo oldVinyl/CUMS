@@ -69,6 +69,7 @@ public class LoginThrottleService {
             INSERT INTO login_attempts (user_id, account_digest, ip_digest, success)
             VALUES (?, ?, ?, false)
             """, userId, accountDigest, ipDigest);
+        jdbc.update("INSERT INTO audit_log(action,entity_type,entity_id) VALUES('LOGIN_FAILED','USER',?)",userId);
         if (userId != null) {
             Integer failures = jdbc.queryForObject("""
                 SELECT count(*) FROM login_attempts

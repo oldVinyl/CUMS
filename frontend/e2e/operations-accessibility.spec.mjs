@@ -24,6 +24,7 @@ async function fixtures(page) {
   '/api/v1/payments/online/config':{provider:'FAKE',enabled:true,development:true},
   '/api/v1/reconciliations/preview':{equity:'0',principal:'0',income:'0',integrityDifference:'0',invested:'0',expectedCash:'0',sourceFingerprint:'anonymous'},
   '/api/v1/reconciliations':{records:[],page:0,hasNext:false},
+  '/api/v1/notifications':{items:[],page:0,hasNext:false},
   '/api/v1/users':{users:[],page:0,hasNext:false}, '/api/v1/users/roles/pending':[],
   '/api/v1/imports':{batches:[],page:0,hasNext:false},
   '/api/v1/audit':{events:[{id:'anonymous-audit-event',actorId:null,actorEmail:null,action:'FILE_DOWNLOADED',entityType:'ATTACHMENT',entityId:null,occurredAt:`${today}T12:00:00Z`,requestId:null,requestIp:'2001:db8::7'}],page:0,hasNext:false},

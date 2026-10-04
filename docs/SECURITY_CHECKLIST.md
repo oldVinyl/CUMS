@@ -45,7 +45,7 @@ This tracks the master prompt's security requirements. A checked implementation 
 - [x] Production-only static PWA cache excludes API/documents; private responses use no-store headers
 - [ ] Finish axe/keyboard acceptance across payments, investment/approval/reconciliation screens and real financial browser workflows
 - [ ] Production HTTPS/CSP/cookie review, dependency scan, coverage thresholds and verified CI acceptance
-- [ ] Resolve reviewed frontend dependency advisories: the local npm audit reports four moderate issues in the existing React Router/Vitest dependency families. No forced major upgrade was performed during account-security work.
+- [x] Resolve React Router/Vitest advisories with 7.18.4/4.1.11 and verify zero npm-audit vulnerabilities plus frontend regression/build/lint acceptance
 
 ## External services
 
@@ -54,3 +54,11 @@ This tracks the master prompt's security requirements. A checked implementation 
 - [ ] SMTP delivery acceptance; MailHog remains explicitly deferred by the owner
 
 Do not tag v1.0.0 or mark the master prompt complete while these gates remain open.
+
+## Additional verified acceptance — 2026-10-04
+
+- [x] Shared PostgreSQL authentication limits across instances, atomic overspend protection, refill/expiry and address-digest privacy checks
+- [x] Failed-password audit omits submitted identifiers/credentials and does not attribute an unauthenticated actor
+- [x] Historical contribution checksums, period/permission guards, independent impact review and transaction rollback tests
+- [x] Notification session/permission/CSRF/origin gates, private-payload exclusion and replay/expired-invitation rejection
+- [x] Fresh PostgreSQL 16 Testcontainers migration and immutable ledger acceptance

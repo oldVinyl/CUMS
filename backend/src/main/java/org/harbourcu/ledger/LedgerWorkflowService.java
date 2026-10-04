@@ -85,7 +85,7 @@ public class LedgerWorkflowService {
             FROM approval_requests r
             LEFT JOIN ledger_entries l ON l.id::text = r.payload ->> 'entryId'
             LEFT JOIN members m ON m.id::text = r.payload ->> 'memberId' OR m.id = l.member_id
-            WHERE r.status = 'PENDING' AND r.action_type IN ('LEDGER_POST', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK')
+            WHERE r.status = 'PENDING' AND r.action_type IN ('LEDGER_POST', 'LEDGER_BACKDATED_POST', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK')
                 AND (? OR r.made_by = ?) ORDER BY r.created_at LIMIT 100
             """, (row, ignored) -> new Pending(row.getObject("id", UUID.class), row.getObject("made_by", UUID.class),
                 row.getString("action_type"), tree(row.getString("payload")), row.getString("member_number"),
@@ -130,7 +130,7 @@ public class LedgerWorkflowService {
         require(actor, "LEDGER_READ"); requireRequest(id); approvals.cancel(id, actor);
     }
     private void requireRequest(UUID id) {
-        if (!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM approval_requests WHERE id = ? AND action_type IN ('LEDGER_POST', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK'))", Boolean.class, id))) {
+        if (!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM approval_requests WHERE id = ? AND action_type IN ('LEDGER_POST', 'LEDGER_BACKDATED_POST', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK'))", Boolean.class, id))) {
             throw new IllegalArgumentException("Ledger approval not found");
         }
     }

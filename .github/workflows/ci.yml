@@ -28,7 +28,7 @@ jobs:
           cache: maven
       - name: Backend tests
         working-directory: backend
-        run: bash ./mvnw --batch-mode verify
+        run: bash ./mvnw --batch-mode -Pcontainer-tests verify
   frontend:
     runs-on: ubuntu-latest
     steps:
@@ -47,6 +47,7 @@ jobs:
           npm run lint
           npm run test
           npm run build
+          npm audit --audit-level=moderate
   browser-accessibility:
     runs-on: ubuntu-latest
     steps:

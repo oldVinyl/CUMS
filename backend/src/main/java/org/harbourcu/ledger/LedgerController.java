@@ -9,6 +9,7 @@ import java.util.function.Function;
 import org.harbourcu.common.ApiError;
 import org.harbourcu.common.TraceIdFilter;
 import org.harbourcu.security.SessionService;
+import org.harbourcu.approval.ApprovalService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.*;
@@ -24,8 +25,10 @@ public class LedgerController {
     private final LedgerWorkflowService ledger;
     private final SessionService sessions;
     private final String origin;
-    public LedgerController(LedgerWorkflowService ledger, SessionService sessions, @Value("${APP_ALLOWED_ORIGIN:http://localhost:5173}") String origin) {
-        this.ledger = ledger; this.sessions = sessions; this.origin = origin;
+    private final BackdatedContributionService historical;
+    private final ApprovalService approvals;
+    public LedgerController(LedgerWorkflowService ledger, SessionService sessions, BackdatedContributionService historical, ApprovalService approvals, @Value("${APP_ALLOWED_ORIGIN:http://localhost:5173}") String origin) {
+        this.ledger = ledger; this.sessions = sessions; this.historical=historical; this.approvals=approvals; this.origin = origin;
     }
     @GetMapping public ResponseEntity<?> entries(@RequestParam String from, @RequestParam String to,
             @RequestParam(required = false) UUID memberId, @RequestParam(defaultValue = "0") int page,
@@ -49,6 +52,18 @@ public class LedgerController {
     @PostMapping("/{id}/reverse") public ResponseEntity<?> reverse(@PathVariable UUID id, @RequestBody Reason body,
             @CookieValue(name = "cu_access", required = false) String access, @RequestHeader(name = "X-CSRF-Token", required = false) String csrf, HttpServletRequest request) {
         return call(access, csrf, true, request, actor -> ResponseEntity.ok(new Submitted(ledger.reverse(actor, id, body.reason()))));
+    }
+    @PostMapping("/contributions/preview") public ResponseEntity<?> preview(@RequestBody BackdatedContributionService.Input body,
+            @CookieValue(name="cu_access",required=false) String access,@RequestHeader(name="X-CSRF-Token",required=false) String csrf,HttpServletRequest request){
+        return call(access,csrf,true,request,actor->ResponseEntity.ok(historical.preview(actor,body)));
+    }
+    @GetMapping("/approvals/{id}/impact") public ResponseEntity<?> impact(@PathVariable UUID id,
+            @CookieValue(name="cu_access",required=false) String access,HttpServletRequest request){
+        return call(access,null,false,request,actor->ResponseEntity.ok(historical.review(actor,id)));
+    }
+    @PostMapping("/contributions/historical") public ResponseEntity<?> historical(@RequestBody BackdatedContributionService.Input body,
+            @CookieValue(name="cu_access",required=false) String access,@RequestHeader(name="X-CSRF-Token",required=false) String csrf,HttpServletRequest request){
+        return call(access,csrf,true,request,actor->ResponseEntity.ok(new Submitted(historical.submit(actor,body,approvals))));
     }
     @PostMapping("/fiscal-years/{year}/close") public ResponseEntity<?> close(@PathVariable int year,
             @CookieValue(name = "cu_access", required = false) String access, @RequestHeader(name = "X-CSRF-Token", required = false) String csrf, HttpServletRequest request) {

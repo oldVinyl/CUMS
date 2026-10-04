@@ -67,6 +67,16 @@ class LoginThrottleIntegrationTest {
             .hasMessageContaining("32 bytes");
     }
 
+    @Test @Transactional
+    void failedLoginAuditContainsNoSubmittedIdentifiersOrCredentials() {
+        UUID id=user();
+        throttle.failed("private-fixture-identity@invalid.example","192.0.2.88",id);
+        var row=jdbc.queryForMap("SELECT actor_id,details::text FROM audit_log WHERE action='LOGIN_FAILED' AND entity_id=?",id);
+        assertThat(row.get("actor_id")).isNull();
+        assertThat(row.get("details").toString()).doesNotContain("private-fixture","192.0.2.88","password");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_log WHERE action='LOGIN_FAILED' AND entity_id=?",Integer.class,id)).isEqualTo(1);
+    }
+
     private UUID user() {
         UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO users (id, email, password_hash) VALUES (?, ?, 'fixture-hash')",

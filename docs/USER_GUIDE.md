@@ -97,3 +97,13 @@ To remove a lost passkey, change your password or replace recovery codes, confir
 If your authenticator is lost, sign in using your password, choose **Use a recovery code**, and enter one of your saved codes. Each code works once. If you can still use a passkey, that also provides an independent sign-in route. In Settings, **Replace recovery codes** invalidates every old code; save the new codes securely before closing the panel. They are not saved in browser storage or shown again.
 
 Recovery after losing every protected method and every recovery code remains an administrative recovery requirement; do not treat a password alone as sufficient proof for removing security methods.
+# Historical contributions and email delivery
+
+In Ledger, open **Add contribution**, select **Use a historical date**, enter the original date and correction reason, then preview the impact. Review every affected cycle before selecting a handling option.
+
+- **Future cycles only** keeps existing allocations unchanged. Supply the next cycle start after all affected purchases. The original date remains recorded. If the next start is in the future, wait until it arrives.
+- **Reverse and repost** requires backdating, investment-writing and cycle-repost permissions, with affected years independently unlocked. Approval archives old allocations, compensates/replaces income at original maturity dates, recalculates later cycles and recomputes snapshots. Explicit participation edits and exclusions remain respected.
+
+A different eligible approver reviews the bound impact. Changed financial source requires cancellation and a fresh preview/request. Pending dependencies and previously moved historical purchase dates need individual review first.
+
+Administrators can inspect **Email delivery** in Accounts and roles. Filter queued, failed and sent messages, and confirm an eligible failure retry. This queues delivery; SMTP must be enabled. Sent messages cannot be retried. Expired or consumed invitation links require a new invitation. Message payloads and private links are excluded from the administration screen.

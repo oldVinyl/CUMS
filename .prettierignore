@@ -1,0 +1,9 @@
+node_modules/
+**/node_modules/
+**/target/
+**/dist/
+private-migration/
+docs/*.xlsx
+docs/screenshots/
+frontend/playwright-report/
+frontend/test-results/

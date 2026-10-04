@@ -18,14 +18,16 @@ import org.springframework.http.MediaType;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/** In-process guard for public auth POSTs; account/IP lockouts remain in PostgreSQL. */
+/** Shared PostgreSQL guard for configured auth; unconfigured skeleton uses an in-process fallback. */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class AuthRateLimitFilter extends OncePerRequestFilter {
     private static final int MAX_IPS = 4096;
     private final ObjectMapper json;
+    private final ObjectProvider<DistributedAuthRateLimiter> distributed;
     private final Bucket global = Bucket.builder()
         .addLimit(limit -> limit.capacity(1000).refillGreedy(1000, Duration.ofMinutes(1)))
         .build();
@@ -36,8 +38,9 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
         }
     };
 
-    public AuthRateLimitFilter(ObjectMapper json) {
+    public AuthRateLimitFilter(ObjectMapper json, ObjectProvider<DistributedAuthRateLimiter> distributed) {
         this.json = json;
+        this.distributed = distributed;
     }
 
     @Override
@@ -49,13 +52,29 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
-        Bucket local;
-        synchronized (byIp) {
-            local = byIp.computeIfAbsent(request.getRemoteAddr(), ignored -> Bucket.builder()
-                .addLimit(limit -> limit.capacity(20).refillGreedy(20, Duration.ofMinutes(1)))
-                .build());
+        boolean allowed;
+        var shared=distributed.getIfAvailable();
+        if(shared!=null){
+            try{allowed=shared.allow(request.getRemoteAddr());}
+            catch(org.springframework.dao.DataAccessException unavailable){
+                response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.setHeader("Retry-After","60");
+                response.setHeader("Cache-Control","no-store");
+                json.writeValue(response.getOutputStream(),new ApiError("AUTH_UNAVAILABLE","Authentication is temporarily unavailable. Please try again.",List.of(),TraceIdFilter.traceId(request)));
+                return;
+            }
+        }else{
+            Bucket local;
+            synchronized (byIp) {
+                local = byIp.computeIfAbsent(request.getRemoteAddr(), ignored -> Bucket.builder()
+                    .addLimit(limit -> limit.capacity(20).refillGreedy(20, Duration.ofMinutes(1)))
+                    .build());
+            }
+            allowed=global.tryConsume(1)&&local.tryConsume(1);
         }
-        if (!global.tryConsume(1) || !local.tryConsume(1)) {
+        if (!allowed) {
+            response.setHeader("Cache-Control","no-store");
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.setHeader("Retry-After", "60");
