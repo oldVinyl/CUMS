@@ -78,7 +78,7 @@ Run the dry run, resolve every row error and compare the calculated total with y
 
 An authorized PRESIDENT can request a closed year's unlock from Ledger, with a reason. A different eligible approver must review it; the maker cannot approve it. Rejection or cancellation leaves the period closed. Unlock preserves earlier snapshots and recomputes that year's balance forward and all later recorded snapshots. Submit the reviewed correction through Imports, obtain independent approval, verify the updated balances, then request year-end close again.
 
-An import date that would change an existing or archived investment cycle's ratios is blocked. Explicit investment correction/repost and historical investment/allocation imports remain pending; do not alter dates to bypass the warning.
+An import date that would change an existing or archived investment cycle's ratios is blocked. Use the explicit Historical contributions workflow for a reviewed contribution impact; previously moved-cycle reconstruction and historical investment/allocation imports remain pending. Do not alter dates to bypass the warning.
 
 Overview's Fiscal year selector changes the shared as-at date. Balance-forward verification identifies missing or mismatched prior-year snapshots and open correction periods. The Ledger balance-forward panel shows each member's snapshot, revision and ledger comparison. Overview figures always derive from the immutable ledger.
 
@@ -86,7 +86,7 @@ Overview's Fiscal year selector changes the shared as-at date. Balance-forward v
 
 In My membership, use Download my data for a JSON file containing your profile, financial records, own allocation revisions, snapshot history and account metadata. Decimal amounts remain exact strings. It contains personal information; keep it securely. Receipt metadata is included; download the actual files separately from Payments. Passwords, authenticator secrets and session tokens are excluded.
 
-Backdating impact preview and both cycle-handling options, historical investment/allocation imports, full recovery administration and production delivery gates remain incomplete. See PROGRESS and CHECKLIST.
+Historical contribution impact preview and both cycle-handling options are available, as is independently reviewed account recovery. Historical investment/allocation imports, payment amendments and production delivery gates remain incomplete. See PROGRESS and CHECKLIST.
 
 ## Account security and lost devices
 
@@ -96,7 +96,9 @@ To remove a lost passkey, change your password or replace recovery codes, confir
 
 If your authenticator is lost, sign in using your password, choose **Use a recovery code**, and enter one of your saved codes. Each code works once. If you can still use a passkey, that also provides an independent sign-in route. In Settings, **Replace recovery codes** invalidates every old code; save the new codes securely before closing the panel. They are not saved in browser storage or shown again.
 
-Recovery after losing every protected method and every recovery code remains an administrative recovery requirement; do not treat a password alone as sufficient proof for removing security methods.
+If you forget your password, use **Forgot password?** on Sign in. The response is the same whether an eligible account exists. The registered email receives a single-use link valid for 30 minutes when SMTP delivery is configured. Resetting your password signs out all devices and retains your authenticator, passkeys and Google identity. You must still use your protected sign-in method.
+
+If every protected method and recovery code is lost, contact an administrator. In Accounts and roles, **Account recovery** requires documented identity verification and approval by a different person with approval and role-assignment permissions. The affected account cannot approve its own recovery. Approval revokes every session and protected method, then queues a 30-minute link to the registered email. After setting a new password, sign in and set up a new protected method. Changes to account security invalidate a pending review; changes to the registered email invalidate an issued link. Expired links cannot be replayed or retried for delivery.
 # Historical contributions and email delivery
 
 In Ledger, open **Add contribution**, select **Use a historical date**, enter the original date and correction reason, then preview the impact. Review every affected cycle before selecting a handling option.

@@ -3,6 +3,7 @@
 Check an item only after implementation and tests pass. Each item is small enough to show partial phase progress accurately.
 
 ## Phase 0 — Setup
+
 - [x] Initialize Git and `.gitignore`
 - [x] Add README and initial SETUP, ARCHITECTURE, PROGRESS, ASSUMPTIONS, OPEN_QUESTIONS
 - [x] Docker Compose development services defined and config validated
@@ -15,6 +16,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Java Spotless/google-java-format and frontend Prettier configuration; new workflows formatted and checked
 
 ## Phase 1 — Foundation
+
 - [x] V22–V28 revision history, payments/proofs/jobs, reconciliation, policies, notification outbox and invitation migrations verified
 - [x] Signed-in navigation follows current profile permissions; sign-in lands on the Overview route, with own membership figures for ordinary members
 - [x] Hide restricted menu links before profile load; guard signed-in direct routes and refresh permissions on focus/once per minute; dev retains all known permissions
@@ -62,6 +64,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Financial workspace routes use live APIs and permission-aware navigation; signed-out demonstration remains clearly labelled
 
 ## Phase 2 — Members and ledger
+
 - [x] Member create, list, and private detail read with encrypted fields, blind indexes, permission checks, CSRF, and integration tests
 - [x] Versioned member editing with encrypted-field replacement, stale-save conflict response, audit event, and tests
 - [x] Full create and edit member forms with validation controls and success/error toasts
@@ -82,9 +85,11 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Fiscal-year balance-forward inspection with exact component reconciliation, revision numbers, pagination and empty/error states
 - [x] Live paginated ledger UI, contribution/reversal/year-close request controls, maker cancellation, confirmation-based approvals, origin/CSRF and permission tests
 - [x] Recheck committed investment funds before approving manual contribution compensation
-- [ ] Attachment security and secure downloads
+- [x] JPEG/PNG/PDF magic-byte validation, metadata normalization, private storage and authorized audited downloads
+- [ ] HEIC conversion and real private scanner acceptance
 
 ## Phase 3 — Investments
+
 - [x] Pesewa allocation engine and property tests
 - [x] Persist investment drafts with proposed participation from live uninvested balances, exact allocation shares, and a Sheet A style preview
 - [x] Allow the draft creator to edit participation with a recorded reason, including zero to exclude a member; recalculate shares and prevent edits while approval is pending
@@ -97,13 +102,14 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Let a maker cancel their pending investment request before editing or discarding its draft
 - [x] Approve settlement without rollover and leave member balances uninvested
 - [x] Audit an ADMIN/PRESIDENT-managed organisation rollover default and apply it to new drafts
-- [ ] Investment lifecycle, rollover, reversal
+- [x] Current-day investment lifecycle, rollover, settlement and independently approved compensating reversal
 - [x] Approved current-day investment reversal with exact gain/loss compensation, immutable revision history, dependency checks, return to draft and fresh posting approval
 - [x] Approved fiscal-period unlock and immutable snapshot recomputation
 - [ ] Historical investment correction dates and dependent-cycle repost
 - [x] Sheet A xlsx/PDF downloads with grouped headings, reconciled supplied fixture totals, permissions, audit and visual checks
 
 ## Phase 4 — Dashboards and exports
+
 - [x] Persist balance-forward snapshots at approved year-end close
 - [x] Serve an authorized live dashboard for any as-at date with balance forward, year-to-date, totals, ROE, equity ratios, and member search
 - [x] Restore overview summary cards, add monthly ledger equity trends, period views and sorting, and replace the wide table with compact desktop rows and expandable mobile cards
@@ -122,6 +128,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Complete original Sheet B row-by-row workbook acceptance and snapshot reconciliation
 
 ## Phase 5 — Payments
+
 - [x] Provider interface, dev-only simulator and credential-gated Paystack hosted checkout adapter
 - [x] Persist references before provider calls; verify member/reference/currency/amount; exact-once ledger credit and separate fee policy
 - [x] Raw-body HMAC-SHA512 webhook verification, durable jobs, retries and tampering tests
@@ -139,6 +146,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] MailHog/SMTP delivery acceptance (still deferred)
 
 ## Phase 6 — Member portal
+
 - [x] Hashed expiring single-use invitations, encrypted queued links, replacement invalidation and password activation
 - [x] Own balances, BF/YTD/Total, ROE/share, monthly trend, allocations and paginated transactions
 - [x] Own statements and encrypted versioned contact/next-of-kin editing
@@ -147,9 +155,11 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] ADMIN/PRESIDENT grants require explicit approved revocation rather than automatic expiry
 - [x] Dev-only linked sample membership and initially disabled fictitious reviewer for separate-account testing
 - [x] Own JSON profile/account/ledger/payment/allocation/revision/snapshot/receipt-metadata export, exact decimal strings, audited private download and ownership/secret-exclusion tests
-- [ ] Password/reset and recovery administration and invitation delivery acceptance
+- [x] Password/reset and independently reviewed fully lost-factor recovery administration
+- [ ] Live invitation and recovery email delivery acceptance
 
 ## Phase 7 — Import and reconciliation
+
 - [x] Dry-run importer, approval and batch reversal
 - [x] Bounded UTF-8 CSV/single-sheet XLSX member and ledger imports, downloadable templates, row validation and source totals reconciliation
 - [x] Dry run writes no records; confirmation binds the exact file checksum and encrypts staged private rows
@@ -163,6 +173,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Historical reconstruction and gateway/bank settlement matching
 
 ## Phase 8 — Delivery
+
 - [x] 60 isolated responsive checks for payments, portal, reconciliation, accounts, invitations and settings at 320/375/768/1024/1440 in both themes
 - [x] PWA manifest/icon and production-only public-static service worker; private API/documents excluded
 - [ ] Security and accessibility review, responsive E2E, PWA
@@ -171,6 +182,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] User guide, runbook, privacy implementation notes and release checklist drafts
 
 ## Latest verified pass — 2026-10-03
+
 - [x] Complete backend suite: 138 tests, no failures/errors/skips, including 250 generated financial allocation cases
 - [x] Frontend regression suite: 39 tests; production build and lint; four focused overview tests rechecked after the final header layout adjustment
 - [x] Ten additional audit responsive checks at 320/375/768/1024/1440 in both themes; 70 checks across the new operational screens
@@ -180,11 +192,13 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Imports, historical corrections, audit/recovery administration and production delivery gates remain open. No phase is declared complete while its gates remain.
 
 ## Deferred follow-ups
+
 - [ ] MailHog startup and live email delivery remain deferred at the owner's request; the persistent outbox and gated SMTP implementation are built.
 - [ ] Google sign-in stays gated until OAuth credentials are supplied.
 - [x] Complete own-passkey removal, last-factor protection and lost-device recovery using saved codes/remaining passkeys; fully lost-factor administrative recovery remains open.
 
 ## Workspace usability fixes — 2026-10-03
+
 - [x] Signed-out pages use the full content width without workspace navigation; successful sign-in redirects to Overview
 - [x] Profile menu includes permitted membership/settings links and explicit sign-out; theme toggle remains visible on mobile
 - [x] Permission-filtered Financial operations and Administration groups reduce the main navigation length; dev retains every permission
@@ -201,6 +215,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] 80 isolated browser layout checks at 320/375/768/1024/1440 in light/dark themes; drawer/sheet outside dismissal, short/long drag, member receipt permissions, profile menu and signed-out widths verified
 - [ ] Live SMTP invitation delivery remains deferred with MailHog; the encrypted outbox queues email for configured delivery
 ## Legacy workbook preparation and public landing — 2026-10-03
+
 - [x] Inspect source structures, numeric balances and income formulas locally without sending member names/details to tool output
 - [x] Ignore the private source workbooks and migration directory in Git
 - [x] Prepare 16 memberships and 54 ledger summaries, reconciling BF/YTD components to closing equity 289,666.0000
@@ -217,6 +232,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Collect actual joining/contact/identity details and historical investment evidence; prepared summaries do not reconstruct investment cycles
 
 ## Account security and automated browser acceptance — 2026-10-03
+
 - [x] List owned passkeys using opaque management IDs and registration/last-use/backup metadata
 - [x] Verify fresh password plus authenticator/recovery code or verified passkey before account security changes
 - [x] Revoke lost passkeys, deny subsequent assertions, preserve credential metadata and prevent removal of the last protected method
@@ -230,10 +246,12 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Verify 152 backend tests plus 250 generated allocation checks, 54 frontend tests, production build and lint
 - [x] Apply V33 and restart the local backend; health is UP
 - [x] Add SECURITY_CHECKLIST.md and account-security/setup instructions
-- [ ] Complete recovery when all protected factors/codes are lost, authorized administrative reset and password-reset delivery
+- [x] Complete recovery when all protected factors/codes are lost and independently authorized administrative reset
+- [ ] Live password-reset email delivery acceptance
 - [ ] Complete real financial browser E2E/coverage/dependency gates, remaining historical workflows, retention anonymization and production backup/deployment acceptance
 
 ## Production delivery and security pass — 2026-10-03
+
 - [x] Add production Compose with internal PostgreSQL, private receipt volume, read-only backend, bounded memory and Caddy HTTPS/security headers/CSP
 - [x] Prevent private uploads/build artifacts from entering Docker build contexts
 - [x] Reject unsafe production startup settings, dev samples/bootstrap, fake provider, weak/shared keys, insecure cookies/origin and enabled non-TLS mail
@@ -253,9 +271,11 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Real production host/domain/bucket, live scanner, provider/mail credentials and owner restore/delivery acceptance remain external gates
 
 ## Remaining master-prompt completion gates
+
 - [x] Historical contribution impact preview with future-only and dependent-cycle reverse/repost options for current cycle purchase dates
 - [ ] Historical payment amendments, previously moved-cycle evidence reconstruction and investment/allocation imports
-- [ ] Fully lost-factor recovery and independently authorized reset administration/delivery
+- [x] Fully lost-factor recovery and independently authorized reset administration
+- [ ] Live password/reset email delivery acceptance (SMTP deferred)
 - [ ] Retention-based personal-data anonymization, including historical private copies
 - [ ] Complete financial before/after audit coverage, failed-login/log-scrubbing and distributed rate-limit acceptance
 - [ ] HEIC conversion and real private scanner acceptance
@@ -265,6 +285,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Owner production/off-site restore acceptance, then finalize release/tag. The master prompt is not declared complete.
 
 ## Backdating, shared auth limits and email administration — 2026-10-04
+
 - [x] Read-only affected-cycle previews with exact participation/cost/expected/actual income by member number
 - [x] Preserve original dates for future-only posting; require a next start after affected purchases and no future ledger dates
 - [x] Maker/checker impact review; stale source, revoked maker permission, closed years and pending dependencies block reposting
@@ -281,3 +302,30 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Verify 61 frontend tests, production build/lint and 22 focused responsive/axe scenarios
 - [x] Apply V35 to development and restart the updated backend; health UP
 - [ ] Recovery/reset administration, retention, historical imports/payment amendments, real financial browser/coverage/backend dependency gates and external acceptance remain open
+
+## Password and fully lost-factor recovery — 2026-10-04
+
+- [x] Account-neutral password recovery, encrypted email links, hashed single-use tokens and 30-minute expiry
+- [x] Bind links to the registered email; reject changed-email, expired, disabled-account and consumed links at completion/delivery retry
+- [x] Password-only recovery retains protected methods and revokes all sessions/challenges
+- [x] Full administrative reset requires documented identity verification, current maker permission and a distinct eligible checker; affected account cannot approve itself
+- [x] Bind approval to current account security, revoke lost factors/codes/Google links and require new protected-method enrollment
+- [x] Lock account before tokens across recovery flows; verify concurrent completion/reset rollback and replay protection
+- [x] Clear secret URL fragments and avoid browser persistence; responsive administration and matching-password confirmation
+- [x] Verify eight recovery integration tests, four notification tests, 66 frontend tests and four focused mobile/desktop Playwright/axe scenarios
+- [ ] Live SMTP delivery acceptance remains deferred; no real email acceptance is claimed
+
+## Real financial browser and coverage acceptance — 2026-10-04
+
+- [x] Fresh disposable PostgreSQL and generated synthetic accounts/keys, separate application ports and automatic cleanup
+- [x] Real TOTP enrollment, generated member IDs, historical seed/addition impact review, distinct checker approval and maker rejection
+- [x] Real investment posting and historical allocation reverse/repost: exact 133.33/66.67 cost shares, preserved revision history and ledger-derived equity
+- [x] Mobile receipt upload, transfer reference, staff verification, independent approval, duplicate decision rejection and posted member balance
+- [x] FakeProvider exact-once simulation, own-data export and cross-member access rejection
+- [x] Actual overview/member pages consume real test API responses; financial acceptance wrapper added to CI
+- [x] Independently approved role grant/revocation, immediate backend denial and refreshed route/menu restriction
+- [ ] Real maturity/rollover browser scenarios remain open
+- [x] Clean 187-test backend run plus 250 generated allocation cases and fresh-container migration/immutability smoke
+- [x] Enforce per-package line coverage: ledger 91.41%, allocation 92.00%, dashboard 95.95%, approval 91.18%, payment 85.81%
+- [x] JaCoCo report artifacts and OWASP CVSS 7+ fail-on-error CI configuration
+- [ ] Successful live OWASP dependency scan and hosted CI acceptance

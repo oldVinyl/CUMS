@@ -1,3 +1,4 @@
+import ResetPasswordPage from "./ResetPasswordPage";
 import LandingPage from "./LandingPage";
 import ResponsiveOverlay from "./ResponsiveOverlay";
 import ImportsPage from "./ImportsPage";
@@ -180,7 +181,7 @@ function App() {
     setMoreOpen(false); setProfileOpen(false);
   }, [location.pathname]);
   useEffect(() => {
-    if (initialPath !== "/sign-in")
+    if (initialPath !== "/sign-in" && initialPath !== "/reset-password")
       void currentProfile()
         .then(setProfile)
         .catch(() => {});
@@ -224,6 +225,7 @@ function App() {
   };
   const section =
     nav.find((item) => item.path === location.pathname)?.label ?? "Overview";
+  if (location.pathname === "/reset-password") return <><div className="auth-theme"><ThemeButton dark={dark} onToggle={toggleTheme} /></div><ResetPasswordPage /></>;
   if (location.pathname === "/sign-in")
     return <><div className="auth-theme"><ThemeButton dark={dark} onToggle={toggleTheme} /></div><AuthPage onAuthenticated={signedIn} /></>;
   return (

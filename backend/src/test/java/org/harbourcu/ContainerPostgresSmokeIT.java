@@ -23,7 +23,7 @@ class ContainerPostgresSmokeIT {
               .load();
       flyway.migrate();
       assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
-      assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("35");
+      assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("36");
       try (var connection =
               DriverManager.getConnection(
                   postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());

@@ -142,8 +142,8 @@ export default function NotificationAdministration() {
               </button>
             ) : item.status === "FAILED" ? (
               <p>
-                The account or invitation is no longer eligible. Review the account or send a new
-                invitation.
+                The account or link is no longer eligible. Review the account and request a new
+                invitation or recovery link.
               </p>
             ) : null}
           </article>

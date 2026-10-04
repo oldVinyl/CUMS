@@ -74,7 +74,7 @@ it("does not expose a retry action for expired invitations", async () => {
   );
   render(<NotificationAdministration />);
   await screen.findByText(
-    "The account or invitation is no longer eligible. Review the account or send a new invitation.",
+    "The account or link is no longer eligible. Review the account and request a new invitation or recovery link.",
   );
   expect(screen.queryByRole("button", { name: "Review retry" })).toBeNull();
 });

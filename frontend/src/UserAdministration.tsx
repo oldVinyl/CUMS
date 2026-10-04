@@ -1,3 +1,4 @@
+import AccountRecoveryAdministration from "./AccountRecoveryAdministration";
 import NotificationAdministration from "./NotificationAdministration";
 import Pagination from "./Pagination";
 import { useEffect, useState } from "react";
@@ -26,5 +27,6 @@ export default function UserAdministration({profile}:{profile:Profile}){
  {review?.id===p.id&&<div className="investment-edit"><h3>Confirm role decision</h3><p>Confirm the affected account, role and reason above. Permissions change immediately after final approval.</p><button className="primary-button" disabled={busy} onClick={()=>void action(api(`/roles/${p.id}/decide`,undefined,{decision:'APPROVE'}),'Role decision recorded')}>Confirm approval</button><label>Reason to reject<textarea value={rejectReason} onChange={e=>setRejectReason(e.target.value)}/></label><div className="investment-action-bar"><button className="secondary-button" disabled={busy||!rejectReason.trim()} onClick={()=>void action(api(`/roles/${p.id}/decide`,undefined,{decision:'REJECT',comment:rejectReason}),'Role request rejected')}>Reject</button><button className="secondary-button" onClick={()=>setReview(null)}>Close review</button></div></div>}</article>)}</section>}
  </>}
  {admin&&<NotificationAdministration/>}
+ {(admin||(assign&&checker))&&<AccountRecoveryAdministration profile={profile} accounts={users}/>}
  </>;
 }

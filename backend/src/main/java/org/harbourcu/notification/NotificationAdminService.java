@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class NotificationAdminService {
   public static final String ELIGIBLE =
-      "((n.kind<>'INVITATION' AND u.status='ACTIVE') OR (n.kind='INVITATION' AND u.status='DISABLED' AND u.password_hash='INVITATION_PENDING' AND EXISTS(SELECT 1 FROM account_invitations i WHERE i.user_id=u.id AND i.consumed_at IS NULL AND i.expires_at>now())))";
+      "((n.kind NOT IN ('INVITATION','PASSWORD_RESET') AND u.status='ACTIVE') OR (n.kind='PASSWORD_RESET' AND u.status='ACTIVE' AND EXISTS(SELECT 1 FROM account_reset_tokens t WHERE t.id=n.entity_id AND t.user_id=u.id AND t.consumed_at IS NULL AND t.expires_at>now() AND t.email_digest=sha256(convert_to(u.id::text || '|' || lower(trim(u.email)),'UTF8')))) OR (n.kind='INVITATION' AND u.status='DISABLED' AND u.password_hash='INVITATION_PENDING' AND EXISTS(SELECT 1 FROM account_invitations i WHERE i.user_id=u.id AND i.consumed_at IS NULL AND i.expires_at>now())))";
 
   public record Item(
       UUID id,
@@ -77,7 +77,7 @@ public class NotificationAdminService {
     var row = rows.getFirst();
     if (!"FAILED".equals(row.get("status")) || !Boolean.TRUE.equals(row.get("eligible")))
       throw new IllegalStateException(
-          "Only failed notifications for eligible accounts and valid invitations can be retried. Send a new invitation when its link has expired.");
+          "Only failed notifications for eligible accounts with valid links can be retried. Request a new invitation or recovery link when one has expired.");
     jdbc.update(
         "UPDATE notifications SET status='PENDING',attempts=0,next_attempt_at=now(),sent_at=NULL WHERE id=?",
         id);

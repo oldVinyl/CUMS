@@ -52,17 +52,15 @@ public class NotificationWorker {
                 + ".\n\nSign in: "
                 + origin
                 + (kind.equals("PAYMENT") ? "/payments" : "/approvals");
-        if (kind.equals("INVITATION")) {
+        if (kind.equals("INVITATION") || kind.equals("PASSWORD_RESET")) {
           try {
             var payload = json.readTree(n.get("payload").toString());
-            text =
-                "You have been invited to your credit union portal. Set your password within 72 hours:\n\n"
-                    + fields.decrypt(
-                        java.util.Base64.getDecoder()
-                            .decode(payload.path("encryptedLink").asText()))
-                    + "\n\nYou will choose a protected sign-in method on your first login.";
+            String link=fields.decrypt(java.util.Base64.getDecoder().decode(payload.path("encryptedLink").asText()));
+            text=kind.equals("INVITATION")
+                ? "You have been invited to your credit union portal. Set your password within 72 hours:\n\n"+link+"\n\nChoose a protected sign-in method on your first login."
+                : "A password recovery link was requested for your credit union account. This single-use link expires in 30 minutes:\n\n"+link+"\n\n"+(payload.path("mode").asText().equals("ALL_FACTORS")?"Recovery was independently approved. Your old sign-in factors were revoked. Set a new password and choose a new protected sign-in method.":"Your existing protected sign-in methods remain required after changing your password. If you did not request this, you can ignore the link.");
           } catch (java.io.IOException e) {
-            throw new IllegalStateException("Invitation payload unavailable.");
+            throw new IllegalStateException("Private recovery email payload unavailable.");
           }
         }
         notifier.send(

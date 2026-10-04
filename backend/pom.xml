@@ -122,6 +122,13 @@
 	<build>
 		<plugins>
             <plugin>
+                <groupId>org.jacoco</groupId><artifactId>jacoco-maven-plugin</artifactId><version>0.8.14</version>
+                <executions>
+                    <execution><id>coverage-agent</id><goals><goal>prepare-agent</goal></goals></execution>
+                    <execution><id>coverage-report</id><phase>verify</phase><goals><goal>report</goal></goals></execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId>
                 <configuration><systemPropertyVariables>
                     <spring.test.context.cache.maxSize>8</spring.test.context.cache.maxSize>
@@ -144,7 +151,26 @@
 		</plugins>
 	</build>
 
-    <profiles><profile><id>container-tests</id><build><plugins><plugin>
+    <profiles>
+    <profile><id>financial-coverage</id><build><plugins><plugin>
+        <groupId>org.jacoco</groupId><artifactId>jacoco-maven-plugin</artifactId>
+        <executions><execution><id>financial-coverage-gate</id><phase>verify</phase><goals><goal>check</goal></goals>
+            <configuration><rules><rule><element>PACKAGE</element><includes>
+                <include>org.harbourcu.ledger</include><include>org.harbourcu.allocation</include>
+                <include>org.harbourcu.dashboard</include><include>org.harbourcu.approval</include>
+                <include>org.harbourcu.payment</include>
+            </includes><limits><limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.85</minimum></limit></limits></rule></rules></configuration>
+        </execution></executions>
+    </plugin></plugins></build></profile>
+    <profile><id>security-audit</id><build><plugins><plugin>
+        <groupId>org.owasp</groupId><artifactId>dependency-check-maven</artifactId><version>13.0.0</version>
+        <configuration><failBuildOnCVSS>7</failBuildOnCVSS><failOnError>true</failOnError>
+            <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+            <formats><format>HTML</format><format>JSON</format></formats>
+        </configuration>
+        <executions><execution><goals><goal>check</goal></goals></execution></executions>
+    </plugin></plugins></build></profile>
+    <profile><id>container-tests</id><build><plugins><plugin>
         <groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><version>3.5.4</version>
         <executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions>
         <configuration><includes><include>**/ContainerPostgresSmokeIT.java</include></includes></configuration>

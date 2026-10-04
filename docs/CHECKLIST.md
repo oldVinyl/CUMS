@@ -18,14 +18,15 @@ Check only implemented and verified gates. This system is not yet production com
 - [ ] Real browser financial workflows and full axe/accessibility acceptance
 - [ ] Real Paystack sandbox, direct MoMo prompts and settlement matching
 - [ ] SMTP/MailHog delivery and operational retry acceptance
-- [ ] Historical backdate preview, period unlock and snapshot recomputation
+- [x] Historical contribution impact preview, future-only/repost, period unlock and snapshot recomputation
 - [x] Approved reasoned period unlock, immutable snapshot revisions, later-year recomputation and reviewed historical import integration
 - [x] Overview fiscal-year selector and component/missing-member snapshot reconciliation
 - [x] CSV/XLSX member/opening-balance/contribution dry runs, approval and batch compensation
 - [ ] Historical investment/allocation imports and explicit dependent-cycle correction/repost
 - [x] Filterable audit metadata screen and audited CSV export with authorization and injection tests
 - [x] Own-account security controls, protected verification, passkey revocation, recovery-code replacement and password changes
-- [ ] Full audit IP/before-after coverage and fully lost-factor recovery/account administration
+- [x] Fully lost-factor recovery and independent account-reset administration
+- [ ] Complete audit before/after coverage and personal-data log-scrubbing acceptance
 - [ ] Complete original Sheet B workbook acceptance
 - [ ] HEIC conversion, malware scanner and file security review
 - [ ] Production CSP/TLS/security review and deployment

@@ -12,7 +12,8 @@ This tracks the master prompt's security requirements. A checked implementation 
 - [x] Recovery-code replacement invalidates all old codes and shows replacements once; no browser storage of codes
 - [x] Origin/CSRF, anonymous-access and foreign-credential rejection tests for account-security routes
 - [x] Opaque hashed sessions, refresh rotation/replay revocation and account-wide logout
-- [ ] Recovery when every protected factor and recovery code is lost; independently authorized administrative reset and password-reset delivery
+- [x] Recovery when every protected factor and recovery code is lost, with independently authorized administrative reset
+- [ ] Live password-reset delivery acceptance
 - [ ] Distributed HTTP rate-limit acceptance and a complete anonymous/permission route sweep
 
 ## Financial authorization and integrity
@@ -62,3 +63,11 @@ Do not tag v1.0.0 or mark the master prompt complete while these gates remain op
 - [x] Historical contribution checksums, period/permission guards, independent impact review and transaction rollback tests
 - [x] Notification session/permission/CSRF/origin gates, private-payload exclusion and replay/expired-invitation rejection
 - [x] Fresh PostgreSQL 16 Testcontainers migration and immutable ledger acceptance
+
+## Account recovery acceptance — 2026-10-04
+
+- [x] Public account-neutral reset, registered-email binding, encrypted outbox and hashed expiring single-use links
+- [x] Password reset retains protected methods; full reset requires independent current-role approval and fresh enrollment
+- [x] Changed-security rejection, affected-account exclusion, concurrent completion/reset and transaction rollback acceptance
+- [x] Responsive reset/admin review with matching-password confirmation and secret-fragment removal
+- [ ] Live recovery-email delivery and owner identity-verification acceptance

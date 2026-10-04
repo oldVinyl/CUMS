@@ -97,7 +97,7 @@ My membership offers `/api/v1/portal/export.json`, an audited no-store attachmen
 
 ## Account-security verification and browser acceptance
 
-Settings now supports passkey revocation, one-time recovery-code replacement and password changes, with fresh password plus protected-factor verification. Password changes/passkey removal revoke all sessions. Never remove authentication factors using direct SQL during an incident; fully lost-factor administrative recovery remains a release gate.
+Settings supports passkey revocation, one-time recovery-code replacement and password changes, with fresh password plus protected-factor verification. Password changes/passkey removal revoke all sessions. Fully lost-factor recovery uses the independently approved Account recovery workflow in Accounts and roles. Never remove authentication factors using direct SQL during an incident. Live recovery-email delivery remains a release gate.
 
 Run the new isolated Playwright/axe suite:
 
@@ -125,3 +125,13 @@ Java formatting is available through `./mvnw spotless:apply` and `./mvnw spotles
 With Docker running, `./mvnw -Pcontainer-tests verify` in `backend` includes a fresh PostgreSQL 16 Testcontainers smoke test. Its database never uses the developer connection. Ordinary integration tests still require PostgreSQL and should use a disposable `DB_URL`. Test pools and context caching are bounded. CI includes the container profile and frontend dependency auditing.
 
 Configured authentication uses V35 shared PostgreSQL rate buckets. Instances must use the same throttle key/database. The in-process fallback serves only an unconfigured skeleton. Configured database outages reject authentication requests.
+
+## Recovery, financial browser acceptance and release gates
+
+V36 adds expiring single-use account recovery tokens. Enable SMTP only after configuring and testing delivery. **Forgot password?** retains protected methods; **Account recovery** in Accounts and roles requires independent verification and approval before revoking lost methods. Tokens are hashed, email links remain encrypted in the outbox, and links expire after 30 minutes. Neither an expired link nor a changed registered email can be recovered by retrying its notification. MailHog remains deferred.
+
+With the latest backend JAR built, run `pwsh ./scripts/financial-acceptance.ps1` from the repository root. It requires PostgreSQL through Compose and installed Chrome on Windows, or `CUMS_CHROME_PATH` pointing to an installed Playwright Chromium. Ports 8085 and 5185 must be free. It creates a fresh `cums_financial_<process-id>` database, synthetic accounts and independent checker, its own temporary receipt directory and new encryption keys. All financial actions use the application API. It checks historical contribution approval/repost, posted allocation rounding, real overview/portal responses, mobile receipt submission, verification/approval, exact-once simulated payment and member ownership. It removes its database/processes/files afterward and does not read private workbooks. Role assignment/revocation also verifies immediate API denial and refreshed route/menu restrictions. Maturity/rollover browser acceptance still needs completion.
+
+Run `./mvnw -Pcontainer-tests,financial-coverage clean verify` in `backend` with a disposable PostgreSQL `DB_URL`. JaCoCo writes HTML/XML/CSV to `target/site/jacoco` and enforces at least 85% line coverage separately for ledger, allocation, dashboard, approval and payment. CI uploads the report. See the [JaCoCo documentation](https://www.jacoco.org/jacoco/trunk/doc/changes.html) for the selected Java-compatible release.
+
+The `security-audit` Maven profile and separate CI job run OWASP Dependency-Check and fail on scan errors or CVSS 7+ findings. Configure a GitHub `NVD_API_KEY` secret and a local environment variable of that name for practical update times. No API key is passed as a command-line property. A missing key is not a scan exemption. Run `./mvnw -Psecurity-audit -DskipTests verify`; reports are under `target/dependency-check-report.*`. A successful live scan and hosted CI are release gates. See the [official configuration](https://dependency-check.github.io/DependencyCheck/dependency-check-maven/check-mojo.html).

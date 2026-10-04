@@ -88,7 +88,7 @@ class NotificationAdminIntegrationTest {
                 "SELECT status FROM notifications WHERE id=?", String.class, normal))
         .isEqualTo("FAILED");
     assertThatThrownBy(() -> service.retry(admin, invite))
-        .hasMessageContaining("valid invitations");
+        .hasMessageContaining("valid links");
     assertThat(
             service.list(admin, "FAILED", 0).items().stream()
                 .filter(n -> n.id().equals(invite))
