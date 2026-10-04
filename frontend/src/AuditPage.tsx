@@ -1,10 +1,11 @@
 import Pagination from "./Pagination";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Download, ShieldCheck } from "lucide-react";
 import type { Profile } from "./auth-api";
 import { usePromiseToast } from "./toast-context";
 
-type Event = { id: string; actorId: string | null; actorEmail: string | null; action: string; entityType: string; entityId: string | null; occurredAt: string; requestId: string | null; requestIp?: string | null };
+type FinancialChange = { operation: string; transactionId: string; before: Record<string, string | null> | null; after: Record<string, string | null> | null };
+type Event = { id: string; actorId: string | null; actorEmail: string | null; action: string; entityType: string; entityId: string | null; occurredAt: string; requestId: string | null; requestIp?: string | null; financialChange?: FinancialChange | null };
 type Filters = { from: string; to: string; action: string; entityType: string; actorId: string; entityId: string };
 function parameters(filters: Filters) {
   const query = new URLSearchParams();
@@ -17,6 +18,10 @@ async function check(response: Response) {
     throw new Error(error?.message ?? "The audit request could not be completed.");
   }
   return response;
+}
+function ChangeValues({ change }: { change: FinancialChange }) {
+  const keys = [...new Set([...Object.keys(change.before ?? {}), ...Object.keys(change.after ?? {})])].filter(key => change.before?.[key] !== change.after?.[key]);
+  return <details><summary>Financial changes ({keys.length})</summary><p>{change.operation === "INSERT" ? "Record created" : change.operation === "DELETE" ? "Record removed" : "Record updated"}. Transaction {change.transactionId}.</p><dl>{keys.map(key => <Fragment key={key}><dt>{key.replaceAll("_", " ")}</dt><dd><span>Before: {change.before?.[key] ?? "None"}</span><br /><span>After: {change.after?.[key] ?? "None"}</span></dd></Fragment>)}</dl></details>;
 }
 export default function AuditPage({ profile }: { profile: Profile }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -75,7 +80,7 @@ export default function AuditPage({ profile }: { profile: Profile }) {
         <button type="button" className="secondary-button" disabled={busy || loading || !!error} onClick={() => void download()}><Download size={16} /> Export applied filters</button>
       </form>
     </section>
-    <section className="surface investment-panel"><h2>Recorded events</h2><p>This view exposes event metadata. Sensitive change payloads are excluded.</p>
+    <section className="surface investment-panel"><h2>Recorded events</h2><p>Review event metadata and recorded financial changes. Personal details, free-text notes and private payloads are excluded.</p>
       {loading ? <p role="status">Loading audit records…</p> : error ? <div role="alert"><p>{error}</p><button className="secondary-button" onClick={() => setRetry(value => value + 1)}>Retry</button></div>
         : events.length === 0 ? <p>No events match these filters.</p> : <div className="audit-events">{events.map(event => <article className="payment-record" key={event.id}>
           <h3>{event.action.replaceAll("_", " ")}</h3><time dateTime={event.occurredAt}>{new Date(event.occurredAt).toLocaleString()}</time>
@@ -83,6 +88,7 @@ export default function AuditPage({ profile }: { profile: Profile }) {
             <dt>Entity</dt><dd>{event.entityType}<small>{event.entityId ?? "No specific record"}</small></dd>
             <dt>Event ID</dt><dd>{event.id}</dd>{event.requestId && <><dt>Request ID</dt><dd>{event.requestId}</dd></>}
             {event.requestIp && <><dt>Request IP</dt><dd>{event.requestIp}</dd></>}</dl>
+          {event.financialChange && <ChangeValues change={event.financialChange} />}
         </article>)}</div>}
       <Pagination page={page} hasNext={hasNext} loading={loading} onPageChange={setPage} count={events.length} pageSize={50} label="Audit pages" />
     </section>

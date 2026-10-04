@@ -34,3 +34,13 @@ it("applies filters explicitly and displays literal event text safely", async ()
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
   expect(fetch.mock.calls[1][0]).toContain("action=PAYMENT_POSTED");
 });
+
+it("shows exact financial before/after values without unchanged fields", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ events: [{ id: "change-event", actorId: null, actorEmail: null, action: "FINANCIAL_PAYMENT_UPDATE", entityType: "PAYMENT", entityId: "payment-id", occurredAt: "2026-01-01T12:00:00Z", requestId: null, financialChange: { operation: "UPDATE", transactionId: "123", before: { amount: "123.4567", status: "SUBMITTED" }, after: { amount: "123.4567", status: "POSTED" } } }], hasNext: false }))));
+  render(<ToastProvider><AuditPage profile={profile} /></ToastProvider>);
+  const summary = await screen.findByText("Financial changes (1)");
+  expect(summary.closest("details")).toBeTruthy();
+  expect(screen.getByText("Before: SUBMITTED")).toBeTruthy();
+  expect(screen.getByText("After: POSTED")).toBeTruthy();
+  expect(screen.queryByText("amount")).toBeNull();
+});

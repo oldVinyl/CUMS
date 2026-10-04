@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SessionService {
+    public static final String AUDIT_ACTOR_ATTRIBUTE = "cums.authenticatedActor";
     private static final Duration ACCESS_LIFETIME = Duration.ofMinutes(15);
     private static final Duration REFRESH_LIFETIME = Duration.ofDays(7);
     private static final Duration IDLE_TIMEOUT = Duration.ofMinutes(30);
@@ -105,6 +106,7 @@ public class SessionService {
 
     @Transactional
     public Optional<SessionIdentity> resolveAccess(String accessToken) {
+        if (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes attributes) attributes.getRequest().removeAttribute(AUDIT_ACTOR_ATTRIBUTE);
         byte[] hash = tokenDigest(accessToken);
         if (hash == null) {
             return Optional.empty();
@@ -123,6 +125,7 @@ public class SessionService {
         }
         SessionIdentity identity = rows.getFirst();
         jdbc.update("UPDATE auth_sessions SET last_seen_at = now() WHERE id = ?", identity.sessionId());
+        if (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes attributes) attributes.getRequest().setAttribute(AUDIT_ACTOR_ATTRIBUTE, identity.userId());
         return Optional.of(identity);
     }
 

@@ -279,7 +279,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Fully lost-factor recovery and independently authorized reset administration
 - [ ] Live password/reset email delivery acceptance (SMTP deferred)
 - [ ] Retention-based personal-data anonymization, including historical private copies
-- [ ] Complete financial before/after audit coverage, failed-login/log-scrubbing and distributed rate-limit acceptance
+- [x] Database financial before/after coverage, authenticated actor/request context, failed-password audit and shared rate-limit acceptance
+- [ ] Full personal-data log-scrubbing and route permission sweep acceptance
 - [x] Local HEIC-to-JPEG receipt conversion with bounded dimensions, worker timeout and strict-CSP production acceptance
 - [ ] Real private scanner acceptance
 - [ ] Actual bank/gateway settlement matching and direct mobile-money/provider acceptance
@@ -353,3 +354,14 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Clean 191-test backend regression plus 250 generated allocation checks and PostgreSQL 16 Testcontainers smoke: 36 migrations
 - [x] Per-package coverage gate passes: ledger 91.93%, allocation 92.00%, dashboard 95.95%, approval 91.18%, payment 85.95%
 - [x] Frontend production build/lint and repeated strict-CSP HEIC production acceptance pass
+
+## Financial audit changes — 2026-10-04
+
+- [x] V37 captures transactional before/after changes for ledger, investments, projected/actual allocations, payments, fiscal periods/snapshots, policies, reconciliation and approval decisions
+- [x] Explicit field allowlists omit free-text notes, bank/provider references, private payloads and member identity/contact details; decimal values remain strings
+- [x] Immutable separate change records, transaction correlation, timestamp-only suppression and rollback acceptance
+- [x] Authenticated actor context cannot come from headers; invalid sessions/background pool checkout clear it
+- [x] Authorized audit screen and formula-safe CSV expose recorded financial changes; original arbitrary audit payloads remain excluded
+- [x] Five integration tests, 73 frontend tests, build/lint and four focused mobile-light/desktop-dark axe checks pass
+- [x] Clean 196-test backend regression, 250 generated allocation checks, all 37 migrations in PostgreSQL 16 Testcontainers and all financial package coverage gates pass
+- [x] Real browser/API acceptance verifies earned-income compensation/repost (13.34/6.66), separate loss (-10), receipt posting before/after and exact independent-checker attribution

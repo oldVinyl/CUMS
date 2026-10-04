@@ -31,9 +31,11 @@ This tracks the master prompt's security requirements. A checked implementation 
 - [x] Private receipt storage, bounded size/magic-byte checks, metadata stripping and audited downloads
 - [x] Parameterized queries, safe structured errors, formula-safe exports and data-minimal audit events
 - [x] Private ClamAV INSTREAM hook scans original/normalized receipts and fails closed on malware, malformed responses or unavailable configured daemon; bounded protocol tests
-- [ ] HEIC conversion and real scanner/delegate acceptance
+- [x] Local bounded HEIC conversion and strict-CSP production acceptance
+- [ ] Live private scanner acceptance
 - [x] Request IP/trace enrichment for all database audit inserts, trusted production gateway forwarding and pooled-connection/background isolation tests
-- [ ] Complete audit IP/before-after coverage and explicit personal-data log-scrubbing acceptance
+- [x] Request IP/trace/actor enrichment and immutable financial before/after records with explicit private-field exclusion
+- [ ] Full personal-data log-scrubbing acceptance
 - [ ] Retention-based anonymization of inactive members and historical personal-data copies
 - [x] Encrypted database/upload backup scripts, exact-name retention, empty-target restore protection and passing isolated synthetic restore drill
 - [ ] Real off-site credentials, delivery, monitoring and owner recovery acceptance

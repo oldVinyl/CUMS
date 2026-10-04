@@ -253,11 +253,11 @@ try {
   const maturityPreview = await call(
     maker,
     "GET",
-    `/investments/${cycle.id}/maturity-preview?actualProceeds=200`,
+    `/investments/${cycle.id}/maturity-preview?actualProceeds=220`,
   );
-  assert.ok(new Decimal(maturityPreview.totalIncome).isZero());
+  assert.ok(new Decimal(maturityPreview.totalIncome).equals("20"));
   const maturity = await call(maker, "POST", `/investments/${cycle.id}/mature`, {
-    actualProceeds: "200",
+    actualProceeds: "220",
   });
   await call(
     maker,
@@ -271,7 +271,7 @@ try {
   });
   detail = await call(maker, "GET", `/investments/${cycle.id}`);
   assert.equal(detail.investment.status, "MATURED");
-  assert.ok(new Decimal(detail.investment.actualProceeds).equals("200"));
+  assert.ok(new Decimal(detail.investment.actualProceeds).equals("220"));
   const sourceId = cycle.id;
   cycle = await call(maker, "POST", `/investments/${sourceId}/rollover-draft`, {
     policy: "ROLL_PRINCIPAL_ONLY",
@@ -308,8 +308,12 @@ try {
   assert.ok(new Decimal(shares.get(memberIds[0]).costShare).equals("133.33"));
   assert.ok(new Decimal(shares.get(memberIds[1]).costShare).equals("66.67"));
   assert.ok(detail.history.length >= 1);
+  const revisedSource = await call(maker, "GET", `/investments/${sourceId}`);
+  const actualShares = new Map(revisedSource.maturityAllocations.map(row => [row.memberId, row]));
+  assert.ok(new Decimal(actualShares.get(memberIds[0]).actualIncomeShare).equals("13.34"));
+  assert.ok(new Decimal(actualShares.get(memberIds[1]).actualIncomeShare).equals("6.66"));
   const dashboard = await call(maker, "GET", `/dashboard?asAt=${today}`);
-  assert.ok(new Decimal(dashboard.totals.total.equity).equals("300"));
+  assert.ok(new Decimal(dashboard.totals.total.equity).equals("320"));
   console.log(
     "PASS posted investment, maker rejection, exact reverse/repost shares and ledger-derived equity",
   );
@@ -357,8 +361,16 @@ try {
   await call(maker, "POST", `/payments/${payment.id}/decide`, { decision: "APPROVE" }, 400);
   await call(checker, "POST", `/payments/${payment.id}/decide`, { decision: "APPROVE" });
   await call(checker, "POST", `/payments/${payment.id}/decide`, { decision: "APPROVE" }, 409);
+  const audit = await call(maker, "GET", `/audit?from=${today}&to=${today}&entityId=${payment.id}`);
+  const postedChange = audit.events.find(event => event.action === "FINANCIAL_PAYMENT_UPDATE" && event.financialChange?.after?.status === "POSTED");
+  assert.equal(postedChange.actorId, checkerProfile.userId);
+  assert.equal(postedChange.financialChange.before.status, "VERIFIED_PENDING_APPROVAL");
+  assert.equal(postedChange.financialChange.after.verified_amount, "25.00");
+  assert.ok(!JSON.stringify(postedChange.financialChange).includes("internal_reference"));
+  await call(member, "GET", `/audit?from=${today}&to=${today}`, undefined, 403);
+  console.log("PASS actual audited payment before/after values, verified checker attribution and member denial");
   let own = await call(member, "GET", `/portal?asAt=${today}`);
-  assert.ok(new Decimal(own.total.equity).equals("225"));
+  assert.ok(new Decimal(own.total.equity).equals("238.34"));
   await page.reload();
   await expect(page.getByText("posted", { exact: true })).toBeVisible();
   await page.close();
@@ -375,10 +387,29 @@ try {
   await call(member, "POST", `/payments/${online.id}/simulate`);
   await call(member, "POST", `/payments/${online.id}/simulate`);
   own = await call(member, "GET", `/portal?asAt=${today}`);
-  assert.ok(new Decimal(own.total.equity).equals("235"));
+  assert.ok(new Decimal(own.total.equity).equals("248.34"));
   console.log(
     "PASS mobile receipt upload, independent verification/approval, replay rejection and exact-once FakeProvider posting",
   );
+  const lossCycle = await call(maker, "POST", "/investments", {
+    tenor: "CUSTOM", customDays: 1, institution: "Synthetic loss fixture",
+    referenceNumber: "ACCEPTANCE-LOSS-001", purchaseDate: today, maturityDate: tomorrow,
+    cost: "50", maturityValue: "55",
+  });
+  const lossPost = await call(maker, "POST", `/investments/${lossCycle.id}/submit`);
+  await call(checker, "POST", `/investments/approvals/${lossPost.approvalRequestId}/decide`, { decision: "APPROVE" });
+  assert.match(lossCycle.id, /^[0-9a-f-]{36}$/);
+  execFileSync("docker", ["compose", "exec", "-T", "postgres", "psql", "-U", "cums", "-d", database, "-v", "ON_ERROR_STOP=1", "-c",
+    `UPDATE investments SET purchase_date='${yesterday}'::date,maturity_date='${today}'::date WHERE id='${lossCycle.id}'::uuid AND status='POSTED'`], { cwd: workspaceRoot, stdio: "pipe" });
+  const lossPreview = await call(maker, "GET", `/investments/${lossCycle.id}/maturity-preview?actualProceeds=40`);
+  assert.ok(new Decimal(lossPreview.totalIncome).equals("-10"));
+  const lossRequest = await call(maker, "POST", `/investments/${lossCycle.id}/mature`, { actualProceeds: "40" });
+  await call(checker, "POST", `/investments/approvals/${lossRequest.approvalRequestId}/decide`, { decision: "APPROVE" });
+  const lossDetail = await call(maker, "GET", `/investments/${lossCycle.id}`);
+  assert.equal(lossDetail.investment.status, "MATURED");
+  assert.ok(lossDetail.maturityAllocations.reduce((sum, row) => sum.plus(row.actualIncomeShare), new Decimal(0)).equals("-10"));
+  assert.ok(new Decimal((await call(maker, "GET", `/dashboard?asAt=${today}`)).totals.total.equity).equals("345"));
+  console.log("PASS profitable maturity/repost exact 13.34/6.66 income and separately approved investment loss (-10)");
   for (const [context, route, heading] of [
     [maker, "/", "Overview"],
     [member, "/portal", "My membership"],

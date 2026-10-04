@@ -27,7 +27,8 @@ Check only implemented and verified gates. This system is not yet production com
 - [x] Filterable audit metadata screen and audited CSV export with authorization and injection tests
 - [x] Own-account security controls, protected verification, passkey revocation, recovery-code replacement and password changes
 - [x] Fully lost-factor recovery and independent account-reset administration
-- [ ] Complete audit before/after coverage and personal-data log-scrubbing acceptance
+- [x] Transactional financial before/after audit, private-field exclusion and authenticated checker attribution
+- [ ] Full personal-data log-scrubbing acceptance
 - [ ] Complete original Sheet B workbook acceptance
 - [x] Local HEIC-to-JPEG conversion, bounded input/dimensions/time and production CSP browser acceptance
 - [ ] Real malware scanner and final file security acceptance

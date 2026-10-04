@@ -28,7 +28,7 @@ async function fixtures(page) {
   '/api/v1/notifications':{items:[],page:0,hasNext:false},
   '/api/v1/users':{users:[],page:0,hasNext:false}, '/api/v1/users/roles/pending':[],
   '/api/v1/imports':{batches:[],page:0,hasNext:false},
-  '/api/v1/audit':{events:[{id:'anonymous-audit-event',actorId:null,actorEmail:null,action:'FILE_DOWNLOADED',entityType:'ATTACHMENT',entityId:null,occurredAt:`${today}T12:00:00Z`,requestId:null,requestIp:'2001:db8::7'}],page:0,hasNext:false},
+  '/api/v1/audit':{events:[{id:'anonymous-audit-event',actorId:null,actorEmail:null,action:'FILE_DOWNLOADED',entityType:'ATTACHMENT',entityId:null,occurredAt:`${today}T12:00:00Z`,requestId:null,requestIp:'2001:db8::7',financialChange:{operation:'UPDATE',transactionId:'123',before:{status:'SUBMITTED',amount:'123.4567'},after:{status:'POSTED',amount:'123.4567'}}}],page:0,hasNext:false},
   '/api/v1/portal':{memberId:'anonymous-member',memberNumber:'FIX-001',fullName:'Anonymous fixture',asAt:today,balanceBf:balance,ytd:balance,total:balance,roePercent:'0',equityRatioPercent:'0',trend:[],allocations:[]},
   '/api/v1/portal/ledger':{entries:[],page:0,hasNext:false},
   '/api/v1/portal/profile':{version:0,email:null,phone:null,nextOfKinName:null,nextOfKinPhone:null,nextOfKinRelationship:null},
@@ -50,6 +50,7 @@ for(const [path,title] of [['/ledger','Ledger'],['/investments','Investments'],[
   await expect(page.getByRole('heading',{name:title,exact:true})).toBeVisible();
   await expect(page.getByText(/Loading (ledger|investments|payments|accounts|imports|audit records|membership|reconciliation|approvals)/)).toHaveCount(0);
   expect(unexpected).toEqual([]);
+  if(path==='/audit') await page.getByText('Financial changes (1)',{exact:true}).click();
   const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze();
   expect(result.violations.map(({id,nodes})=>({id,nodes:nodes.map(node=>node.target)}))).toEqual([]);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -61,3 +62,17 @@ for(const [path,title] of [['/ledger','Ledger'],['/investments','Investments'],[
   }
  });
 }
+
+
+test('historical year setup drawer and sheet are accessible', async ({page}) => {
+ const unexpected=await fixtures(page); await page.goto('/ledger');
+ await page.getByRole('button',{name:'Set up historical year',exact:true}).click();
+ const dialog=page.getByRole('dialog'); await expect(dialog).toBeVisible();
+ await dialog.getByLabel('Historical year').fill(String(Number(today.slice(0,4))-1));
+ await dialog.getByLabel('Source and setup reason').fill('Reviewed anonymous prior-year baseline');
+ const result=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze();
+ expect(result.violations.map(({id,nodes})=>({id,nodes:nodes.map(node=>node.target)}))).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ expect(unexpected).toEqual([]);
+ await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0);
+});

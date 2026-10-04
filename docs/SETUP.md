@@ -145,3 +145,7 @@ Run `npm run build` followed by `node scripts/heic-acceptance.mjs` in `frontend`
 ## Missing historical fiscal years
 
 Leadership with PERIOD_UNLOCK can request a missing year from 2000 through last year from Ledger. A source reason and independent checker approval are required. Approval creates exactly January 1 through December 31 as an open period, records the audit event and posts no balances. Existing periods retain their close/unlock workflow. Use this before importing reviewed prior-year balances into a fresh database.
+
+## Financial change audit
+
+V37 adds append-only financial change records at the database layer. They capture approved and direct application financial row writes in the same transaction, use explicit scalar field allowlists and preserve numeric precision as strings. Existing events are not backfilled. Authenticated actor context is bound at connection checkout and cleared for invalid-session/background work. Actorless provider/background events remain system events. Audit UI/CSV can read the safe changes with AUDIT_READ; arbitrary audit payloads stay private. The disposable financial harness additionally checks profitable maturity, exact earned-income repost, a separately approved loss and checker-attributed payment state changes.

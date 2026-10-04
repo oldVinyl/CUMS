@@ -117,3 +117,7 @@ Choose a JPEG, PNG, PDF or HEIC receipt up to 10 MB. HEIC photos are converted t
 ### Set up a missing historical year
 
 In Ledger, leadership can choose **Set up historical year**, select a year before the current year and record the source reason. An independent checker reviews the request in Approvals. Approval opens the missing calendar year without adding money. Import or contribute historical amounts through their separate reviewed workflows afterward. An existing closed year uses **Unlock year** instead.
+
+### Review financial changes
+
+In Audit log, expand **Financial changes** on a recorded financial event to compare its changed fields before and after. Amounts retain their original decimal precision. Creation starts from None; deletion ends at None. The transaction number groups changes committed together. Downloads include these safe changes, while free-text notes, bank references and private account/member payloads stay excluded. Changes recorded before migration V37 have event metadata only; the system does not invent historical audit values.
