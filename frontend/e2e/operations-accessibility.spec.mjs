@@ -28,7 +28,7 @@ async function fixtures(page) {
   '/api/v1/notifications':{items:[],page:0,hasNext:false},
   '/api/v1/users':{users:[],page:0,hasNext:false}, '/api/v1/users/roles/pending':[],
   '/api/v1/imports':{batches:[],page:0,hasNext:false},
-  '/api/v1/audit':{events:[{id:'anonymous-audit-event',actorId:null,actorEmail:null,action:'FILE_DOWNLOADED',entityType:'ATTACHMENT',entityId:null,occurredAt:`${today}T12:00:00Z`,requestId:null,requestIp:'2001:db8::7',financialChange:{operation:'UPDATE',transactionId:'123',before:{status:'SUBMITTED',amount:'123.4567'},after:{status:'POSTED',amount:'123.4567'}}}],page:0,hasNext:false},
+  '/api/v1/audit':{events:[{id:'anonymous-audit-event',actorId:null,actorEmail:null,action:'FINANCIAL_PAYMENT_UPDATE',entityType:'PAYMENT',entityId:null,occurredAt:`${today}T12:00:00Z`,requestId:null,requestIp:'2001:db8::7',financialChange:{operation:'UPDATE',transactionId:'123',before:{status:'SUBMITTED',amount:'123.4567'},after:{status:'POSTED',amount:'123.4567'}}}],page:0,hasNext:false},
   '/api/v1/portal':{memberId:'anonymous-member',memberNumber:'FIX-001',fullName:'Anonymous fixture',asAt:today,balanceBf:balance,ytd:balance,total:balance,roePercent:'0',equityRatioPercent:'0',trend:[],allocations:[]},
   '/api/v1/portal/ledger':{entries:[],page:0,hasNext:false},
   '/api/v1/portal/profile':{version:0,email:null,phone:null,nextOfKinName:null,nextOfKinPhone:null,nextOfKinRelationship:null},
@@ -58,6 +58,7 @@ for(const [path,title] of [['/ledger','Ledger'],['/investments','Investments'],[
   if(testInfo.project.name==='1440-light') {
    const directory=fileURLToPath(new URL('../../docs/screenshots/',import.meta.url));
    await mkdir(directory,{recursive:true});
+   await page.evaluate(()=>window.scrollTo(0,0));
    await page.screenshot({path:`${directory}/${path.slice(1)}.png`,fullPage:true});
   }
  });

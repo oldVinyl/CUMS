@@ -391,3 +391,5 @@ Additional master-brief gaps identified during final comparison:
 - [ ] Move member/account name and email searches from query strings into protected request bodies
 
 The master prompt is not complete. Historical investment/allocation imports, historical payment posting, moved-cycle reconstruction, retention/anonymization and final privacy/security acceptance remain implementation work. Live providers, SMTP, scanner, NVD analysis, hosted CI, reviewed private migration and owner production/restore acceptance remain delivery gates.
+
+- [x] Refresh ten synthetic role-guide screenshots, reset scroll before capture, visually inspect audit/ledger and pass all 11 desktop guide scenarios
