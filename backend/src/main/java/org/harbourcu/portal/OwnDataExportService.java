@@ -65,6 +65,7 @@ public class OwnDataExportService {
         section(root,"maturity_allocations","SELECT investment_id,revision,actual_income_share FROM investment_maturity_allocations WHERE member_id=? ORDER BY investment_id,revision",member);
         section(root,"fiscal_snapshots","SELECT fiscal_year,principal,income,equity,revision,created_at FROM fiscal_year_snapshots WHERE member_id=? ORDER BY fiscal_year",member);
         section(root,"snapshot_history","SELECT fiscal_year,principal,income,equity,revision,original_created_at,archived_at FROM fiscal_snapshot_history WHERE member_id=? ORDER BY fiscal_year,revision",member);
+        section(root,"receiptRevisions","SELECT r.id,r.payment_id,r.previous_proof_id,r.new_proof_id,r.amended_by,r.amended_at FROM payment_receipt_revisions r JOIN payments p ON p.id=r.payment_id WHERE p.member_id=? ORDER BY r.amended_at,r.id",member);
         section(root,"receipts","SELECT id,content_type,byte_size,created_at FROM attachments WHERE member_id=? ORDER BY created_at,id",member);
         section(root,"role_history","SELECT r.code,a.start_date,a.end_date,a.revoked_at FROM user_role_assignments a JOIN roles r ON r.id=a.role_id WHERE a.user_id=? ORDER BY a.created_at,a.id",actor);
         section(root,"passkeys","SELECT id,created_at,last_used_at,backup_eligible,backed_up,revoked_at FROM passkey_credentials WHERE user_id=? ORDER BY created_at",actor);

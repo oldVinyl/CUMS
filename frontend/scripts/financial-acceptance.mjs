@@ -138,6 +138,7 @@ try {
     optimizeDeps: { include: ["heic-to/csp"] },
     server: {
       host: "localhost",
+      watch: { ignored: ["**/artifacts/**"] },
       port: 5185,
       strictPort: true,
       proxy: { "/api": "http://localhost:8085" },
@@ -354,6 +355,20 @@ try {
   await form.getByRole("button", { name: "Submit for verification" }).click();
   const payment = await (await submitted).json();
   await expect(form).toHaveCount(0);
+  const originalReceipt = (await call(member, "GET", "/payments")).payments.find(row => row.id === payment.id).proofId;
+  await call(maker, "POST", `/payments/${payment.id}/review`, { action: "MORE_INFO", reason: "Upload a clearer synthetic receipt" });
+  await page.reload(); await page.getByRole("button", { name: "Replace receipt", exact: true }).click();
+  const amendment = page.getByRole("dialog");
+  await amendment.getByLabel(/Replacement receipt/).setInputFiles({ name: "replacement.png", mimeType: "image/png", buffer: readFileSync(new URL("../e2e/fixtures/synthetic-receipt.png", import.meta.url)) });
+  await amendment.getByRole("button", { name: "Replace and return for verification" }).click();
+  await expect(amendment).toHaveCount(0);
+  const receiptHistory = await call(member, "GET", `/payments/${payment.id}/receipt-revisions`);
+  assert.equal(receiptHistory.length, 1); assert.equal(receiptHistory[0].previousProofId, originalReceipt);
+  assert.notEqual(receiptHistory[0].newProofId, originalReceipt);
+  const retained = await member.request.get(`/api/v1/payments/proofs/${originalReceipt}`);
+  assert.equal(retained.status(), 200); assert.equal((await retained.body()).subarray(0, 3).toString("hex"), "ffd8ff");
+  await call(member, "POST", `/payments/${payment.id}/receipt`, { previousProofId: originalReceipt, newProofId: originalReceipt }, 400);
+  console.log("PASS actual mobile receipt replacement, retained original proof and owned revision history");
   await call(maker, "POST", `/payments/${payment.id}/verify`, {
     amount: "25",
     effectiveDate: today,
@@ -361,6 +376,7 @@ try {
   await call(maker, "POST", `/payments/${payment.id}/decide`, { decision: "APPROVE" }, 400);
   await call(checker, "POST", `/payments/${payment.id}/decide`, { decision: "APPROVE" });
   await call(checker, "POST", `/payments/${payment.id}/decide`, { decision: "APPROVE" }, 409);
+  await call(member, "POST", `/payments/${payment.id}/receipt`, { previousProofId: originalReceipt, newProofId: receiptHistory[0].newProofId }, 409);
   const audit = await call(maker, "GET", `/audit?from=${today}&to=${today}&entityId=${payment.id}`);
   const postedChange = audit.events.find(event => event.action === "FINANCIAL_PAYMENT_UPDATE" && event.financialChange?.after?.status === "POSTED");
   assert.equal(postedChange.actorId, checkerProfile.userId);
@@ -373,6 +389,12 @@ try {
   assert.ok(new Decimal(own.total.equity).equals("238.34"));
   await page.reload();
   await expect(page.getByText("posted", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Replace receipt", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Receipt history", exact: true }).click();
+  const postedHistory = page.getByRole("dialog");
+  await expect(postedHistory.getByRole("link", { name: "Download earlier receipt 1" })).toBeVisible();
+  await expect(postedHistory.getByLabel(/Replacement receipt/)).toHaveCount(0);
+  await page.keyboard.press("Escape"); await expect(postedHistory).toHaveCount(0);
   await page.close();
   const onlineKey = { "Idempotency-Key": randomUUID() };
   const online = await call(

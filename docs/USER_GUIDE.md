@@ -121,3 +121,9 @@ In Ledger, leadership can choose **Set up historical year**, select a year befor
 ### Review financial changes
 
 In Audit log, expand **Financial changes** on a recorded financial event to compare its changed fields before and after. Amounts retain their original decimal precision. Creation starts from None; deletion ends at None. The transaction number groups changes committed together. Downloads include these safe changes, while free-text notes, bank references and private account/member payloads stay excluded. Changes recorded before migration V37 have event metadata only; the system does not invent historical audit values.
+
+### Replace a receipt or review its history
+
+In Payments, choose **Replace receipt** while a manual payment is submitted or awaiting more information. Upload the clearer receipt and choose **Replace and return for verification**. The payment amount, purpose and paid date stay unchanged, the earlier file remains available and staff must verify again. A changed form or a payment that has reached verification cannot overwrite reviewed evidence. If saving fails after upload, retrying uses that same uploaded replacement.
+
+**Receipt history** opens a read-only drawer/sheet for your authorized payment even after posting. It includes the current receipt and retained earlier files. Approvers can review the history without gaining permission to replace proofs. Your own JSON export includes the revision metadata. Rejected payments are terminal; start a separate submission rather than changing rejected evidence.

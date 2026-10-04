@@ -29,7 +29,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Sensitive member-detail reads audited without storing private values in the event
 - [x] Audit report/statement generation and downloads without recording private report contents
 - [x] Permission-protected audit metadata screen with date/action/entity/actor filters, stable pagination, and audited formula-safe CSV export
-- [ ] Complete audit IP and before/after coverage, full audit payload review and failed-login event acceptance
+- [x] Request IP/trace/actor context, transactional financial before/after records and failed-password audit acceptance
+- [ ] Complete historical audit payload review and log-scrubbing acceptance
 - [x] Argon2id password hashing and basic common-password policy with tests
 - [x] Session, login-attempt, and TOTP recovery-code tables
 - [x] Opaque access/refresh/CSRF token service with hashed storage, rotation, replay revocation, and tests
@@ -142,7 +143,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Configurable 1–3 approvals, online limits and captured fee policy in the organization Settings block
 - [ ] Real Paystack sandbox acceptance, direct MoMo prompts, settlement matching and operational exception review
 - [x] Local HEIC conversion and bounded private malware scan hook with protocol tests
-- [ ] Historical payment posting, receipt amendments and real scanner acceptance
+- [x] Receipt replacements retain original proofs/history, return for review and reject stale/verified/posted changes
+- [ ] Historical payment posting and real scanner acceptance
 - [x] Permission-protected notification administration with filters/pagination, failed-message retry confirmation, private-payload exclusion and before/after audit
 - [x] Prevent expired/consumed invitation delivery and notifications for ineligible accounts
 - [ ] MailHog/SMTP delivery acceptance (still deferred)
@@ -178,7 +180,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 
 - [x] 60 isolated responsive checks for payments, portal, reconciliation, accounts, invitations and settings at 320/375/768/1024/1440 in both themes
 - [x] PWA manifest/icon and production-only public-static service worker; private API/documents excluded
-- [ ] Security and accessibility review, responsive E2E, PWA
+- [x] Responsive Playwright/axe regression for implemented flows and public-static-only PWA cache
+- [ ] Final full security review and remaining financial-action browser acceptance
 - [ ] Production deployment, backups and restore drill
 - [ ] User guide, runbook, privacy, checklist, full test gates
 - [x] User guide, runbook, privacy implementation notes and release checklist drafts
@@ -197,7 +200,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 
 - [ ] MailHog startup and live email delivery remain deferred at the owner's request; the persistent outbox and gated SMTP implementation are built.
 - [ ] Google sign-in stays gated until OAuth credentials are supplied.
-- [x] Complete own-passkey removal, last-factor protection and lost-device recovery using saved codes/remaining passkeys; fully lost-factor administrative recovery remains open.
+- [x] Own-passkey removal, last-factor protection, recovery codes/spare keys and independently authorized fully lost-factor recovery
 
 ## Workspace usability fixes — 2026-10-03
 
@@ -284,7 +287,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Local HEIC-to-JPEG receipt conversion with bounded dimensions, worker timeout and strict-CSP production acceptance
 - [ ] Real private scanner acceptance
 - [ ] Actual bank/gateway settlement matching and direct mobile-money/provider acceptance
-- [ ] Real financial browser E2E, original row-level workbook acceptance, required coverage/dependency gates and verified hosted CI
+- [x] Real synthetic financial browser workflows and required per-package coverage gates
+- [ ] Original row-level workbook acceptance, successful live dependency analysis and verified hosted CI
 - [ ] Review/post private migration with separate authorized checker; collect missing actual member dates/details
 - [ ] Owner production/off-site restore acceptance, then finalize release/tag. The master prompt is not declared complete.
 
@@ -305,7 +309,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Verify 178 backend tests, 250 generated allocation cases and separate Testcontainers PostgreSQL 16 smoke with all 35 migrations
 - [x] Verify 61 frontend tests, production build/lint and 22 focused responsive/axe scenarios
 - [x] Apply V35 to development and restart the updated backend; health UP
-- [ ] Recovery/reset administration, retention, historical imports/payment amendments, real financial browser/coverage/backend dependency gates and external acceptance remain open
+At this earlier pass recovery and financial browser/coverage gates remained open; later verified sections below record their completion. Retention, historical imports/payment posting, dependency analysis and external acceptance remain open.
 
 ## Password and fully lost-factor recovery — 2026-10-04
 
@@ -365,3 +369,25 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Five integration tests, 73 frontend tests, build/lint and four focused mobile-light/desktop-dark axe checks pass
 - [x] Clean 196-test backend regression, 250 generated allocation checks, all 37 migrations in PostgreSQL 16 Testcontainers and all financial package coverage gates pass
 - [x] Real browser/API acceptance verifies earned-income compensation/repost (13.34/6.66), separate loss (-10), receipt posting before/after and exact independent-checker attribution
+
+## Receipt amendments and final regression — 2026-10-04
+
+- [x] V38 preserves append-only receipt revisions, original private files and owned data-export history
+- [x] Member/verifier replacement before verification, independently owned uploads, stale-form rejection and archived-proof reuse prevention
+- [x] Serialize replacements against verification; concurrent verification cannot have its reviewed evidence overwritten
+- [x] Read-only history remains available to authorized members/checkers after posting; replacement uses the shared drawer/sheet and local HEIC conversion
+- [x] Retry retains the uploaded replacement instead of re-uploading; amounts, purpose and paid date remain unchanged
+- [x] Five backend integration tests, 76 frontend tests, production build/lint and mobile/desktop receipt axe acceptance
+- [x] Clean 201-test backend regression plus 250 generated allocation cases and fresh PostgreSQL 16 Testcontainers smoke with all 38 migrations
+- [x] Coverage gates: ledger 91.93%, allocation 92.00%, dashboard 95.95%, approval 91.18%, payment 88.09%
+- [x] Full 190-scenario Playwright/axe suite passes at 320/375/768/1024/1440 in both themes
+- [x] Real financial browser replacement retains a downloadable original, records owned history and rejects posted changes
+- [x] Fix compact member mobile navigation appearing on desktop; ignore generated browser artifacts in Vite watchers
+- [x] Restore development backend with V38; health UP, and restart the development frontend
+
+Additional master-brief gaps identified during final comparison:
+
+- [ ] Configurable S3-compatible private receipt storage adapter and its backup/restore integration (current receipt storage uses the private local volume)
+- [ ] Move member/account name and email searches from query strings into protected request bodies
+
+The master prompt is not complete. Historical investment/allocation imports, historical payment posting, moved-cycle reconstruction, retention/anonymization and final privacy/security acceptance remain implementation work. Live providers, SMTP, scanner, NVD analysis, hosted CI, reviewed private migration and owner production/restore acceptance remain delivery gates.

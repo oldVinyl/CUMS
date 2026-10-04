@@ -1,3 +1,4 @@
+import ReceiptAmendment from "./ReceiptAmendment";
 import ResponsiveOverlay from "./ResponsiveOverlay";
 import { prepareReceipt } from "./receipt-conversion";
 
@@ -53,6 +54,8 @@ export default function LivePayments({ profile }: { profile: Profile }) {
 
  const [page, setPage] = useState(0), [hasNext, setHasNext] = useState(false), [retry, setRetry] = useState(0), [loading, setLoading] = useState(true), [error, setError] = useState("");
 
+ const [receiptEditable, setReceiptEditable] = useState(false);
+ const [amending, setAmending] = useState<Payment | null>(null);
  const [open, setOpen] = useState(false), [busy, setBusy] = useState(false);
 
  const [memberId, setMemberId] = useState(""), [methodId, setMethodId] = useState(""), [amount, setAmount] = useState(""), [paidDate, setPaidDate] = useState(today), [purpose, setPurpose] = useState("ADDITION"), [file, setFile] = useState<File | null>(null);
@@ -215,6 +218,8 @@ export default function LivePayments({ profile }: { profile: Profile }) {
 
     <div className="investment-action-bar">{["POSTED","CONFIRMED"].includes(p.status) && <a className="secondary-button" href={`/api/v1/payments/${p.id}/confirmation.pdf`} download>Download confirmation PDF</a>}{p.provider && ["INITIATED","PENDING"].includes(p.status) && <>{onlineConfig?.development && p.provider === "FAKE" ? <button className="secondary-button" disabled={busy} onClick={()=>void mutate(api(`/${p.id}/simulate`,"POST"),"Test payment confirmed and posted")}>Simulate successful payment</button> : <><button className="secondary-button" disabled={busy} onClick={()=>void mutate(api(`/${p.id}/check`,"POST"),"Payment status checked")}>Check status</button>{p.checkoutUrl && <a className="secondary-button" href={p.checkoutUrl}>Resume checkout</a>}</>}</>}{p.proofId && <a className="secondary-button" href={`/api/v1/payments/proofs/${p.proofId}`} download>Download receipt</a>}
 
+     {p.proofId && <button className="secondary-button" disabled={busy} onClick={() => {setReceiptEditable(false);setAmending(p);}}>Receipt history</button>}
+     {p.proofId && !p.provider && ["SUBMITTED","UNDER_REVIEW"].includes(p.status) && (verifier || p.memberId === own) && <button className="secondary-button" disabled={busy} onClick={() => {setReceiptEditable(true);setAmending(p);}}>Replace receipt</button>}
      {((verifier && ["SUBMITTED","UNDER_REVIEW"].includes(p.status)) || (checker && p.status === "VERIFIED_PENDING_APPROVAL")) && <button className="secondary-button" disabled={busy} onClick={() => {setSelected(p);setActual(p.verifiedAmount ?? p.amount);setReason("");setConfirm(false);}}>Review payment</button>}
 
      {p.status === "VERIFIED_PENDING_APPROVAL" && p.makerId === profile.userId && <button className="secondary-button" disabled={busy} onClick={() => void mutate(api(`/${p.id}/cancel`,"POST"),"Verification cancelled; payment awaits review")}>Cancel verification</button>}</div>
@@ -240,7 +245,7 @@ export default function LivePayments({ profile }: { profile: Profile }) {
    <Pagination page={page} hasNext={hasNext} loading={loading} onPageChange={setPage} count={payments.length} pageSize={50} label="Payment pages" />
 
   </section>
-
+  {amending?.proofId && <ReceiptAmendment editable={receiptEditable} payment={{ ...amending, proofId: amending.proofId }} onClose={() => setAmending(null)} onSaved={refresh} />}
  </>;
 
 }

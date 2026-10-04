@@ -16,7 +16,8 @@ Check only implemented and verified gates. This system is not yet production com
 - [x] 40 Playwright/axe scenarios for public/sign-in/overview/settings/member creation in five sizes and both themes
 - [x] Expand to 140 Playwright/axe scenarios including ten operational screens and provide synthetic role-guide screenshots
 - [x] Real synthetic financial browser workflows: historical year/contributions, maturity/rollover, receipt/provider posting and role revocation
-- [ ] Final full accessibility/release acceptance
+- [x] Full 190-scenario responsive Playwright/axe regression in both themes
+- [ ] Final production security/release acceptance
 - [ ] Real Paystack sandbox, direct MoMo prompts and settlement matching
 - [ ] SMTP/MailHog delivery and operational retry acceptance
 - [x] Historical contribution impact preview, future-only/repost, period unlock and snapshot recomputation
@@ -40,3 +41,7 @@ Check only implemented and verified gates. This system is not yet production com
 - [ ] Retention/anonymization and owner policy review
 
 No production deployment or successful external service delivery is claimed.
+
+- [x] Reviewed receipt amendments, immutable proof history and owned export
+- [ ] Configurable S3-compatible receipt storage and recovery integration
+- [ ] Personal-search request-body privacy and remaining route/log review

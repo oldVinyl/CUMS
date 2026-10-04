@@ -426,7 +426,7 @@
 @media(max-width:480px) { .payment-record-heading strong { max-width: 100%; } }
 
 .setting-card .secondary-button { color: var(--ink); min-height: 44px; }
-.bottom-nav.compact { display: flex; }
+@media (max-width: 680px) { .bottom-nav.compact { display: flex; } }
 .bottom-nav.compact > a { flex: 1; }
 .audit-events dl { display: grid; grid-template-columns: minmax(70px, 100px) minmax(0, 1fr); gap: .5rem 1rem; margin-bottom: 0; }
 .audit-events dt { color: var(--muted); }
