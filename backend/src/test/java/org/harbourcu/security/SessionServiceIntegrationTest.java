@@ -70,6 +70,24 @@ class SessionServiceIntegrationTest {
         assertThat(sessions.resolveAccess(tokens.access())).isPresent();
     }
 
+    @Test @Transactional
+    void passiveProfileAndRefreshDoNotExtendConfiguredIdleWindow() {
+        UUID userId=user();
+        var first=sessions.create(userId);
+        jdbc.update("UPDATE organisation_settings SET session_idle_minutes=5 WHERE singleton");
+        jdbc.update("UPDATE auth_sessions SET last_seen_at=now()-interval '4 minutes' WHERE user_id=?",userId);
+        var before=jdbc.queryForObject("SELECT last_seen_at FROM auth_sessions WHERE user_id=?",java.sql.Timestamp.class,userId);
+        var request=new org.springframework.mock.web.MockHttpServletRequest("GET","/api/v1/auth/me");
+        org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(request));
+        try { assertThat(sessions.resolveAccess(first.access())).isPresent(); }
+        finally { org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes(); }
+        var next=sessions.rotate(first.refresh()).orElseThrow();
+        assertThat(jdbc.queryForObject("SELECT last_seen_at FROM auth_sessions WHERE user_id=?",java.sql.Timestamp.class,userId)).isEqualTo(before);
+        jdbc.update("UPDATE auth_sessions SET last_seen_at=now()-interval '6 minutes' WHERE user_id=?",userId);
+        assertThat(sessions.resolveAccess(next.access())).isEmpty();
+        assertThat(sessions.rotate(next.refresh())).isEmpty();
+    }
+
     private UUID user() {
         UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO users (id, email, password_hash) VALUES (?, ?, 'fixture-hash')",

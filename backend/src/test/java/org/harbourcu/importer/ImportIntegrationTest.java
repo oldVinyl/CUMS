@@ -87,6 +87,30 @@ class ImportIntegrationTest {
   assertThat(jdbc.queryForObject("SELECT email FROM members WHERE member_number=?",String.class,number)).isNull();
   assertThat(imports.dryRun(maker,"MEMBERS","fixture.csv",bytes(csv.replace(number,"OTHER-"+number).replace("SOURCE_BASELINE","INVENTED"))).valid()).isFalse();
  }
+ @Test void historicalInvestmentImportsPostOnlyReceivedIncomeAndReverseWithoutDeletingEvidence(){
+  UUID maker=user("TREASURER"),checker=user("PRESIDENT");String number=fundedMember();
+  byte[] file=investmentFile(number,"110.00");var report=imports.dryRun(maker,"INVESTMENTS","fixture.csv",file);
+  assertThat(report.valid()).isTrue();UUID batch=submit(maker,"INVESTMENTS",file);
+  assertThatThrownBy(()->imports.decide(maker,batch,request(batch),"APPROVE",null,approvals)).hasMessageContaining("own request");
+  imports.decide(checker,batch,request(batch),"APPROVE",null,approvals);
+  assertThat(jdbc.queryForObject("SELECT sum(amount) FROM ledger_entries WHERE batch_id=?",java.math.BigDecimal.class,batch)).isEqualByComparingTo("10");
+  UUID cycle=jdbc.queryForObject("SELECT investment_id FROM import_investment_results WHERE batch_id=?",UUID.class,batch);
+  assertThat(jdbc.queryForObject("SELECT status FROM investments WHERE id=?",String.class,cycle)).isEqualTo("MATURED");
+  UUID reverse=imports.reverse(maker,batch,"Synthetic duplicate investment",approvals);imports.decide(checker,batch,reverse,"APPROVE",null,approvals);
+  assertThat(jdbc.queryForObject("SELECT sum(amount) FROM ledger_entries WHERE batch_id=?",java.math.BigDecimal.class,batch)).isEqualByComparingTo("0");
+  assertThat(jdbc.queryForObject("SELECT count(*) FROM investment_revision_history WHERE investment_id=?",Long.class,cycle)).isEqualTo(1);
+ }
+ @Test void expectedInvestmentImportDoesNotPostIncomeAndRejectsInventedDatesAndShares(){
+  UUID maker=user("TREASURER"),checker=user("PRESIDENT");String number=fundedMember();byte[] file=investmentFile(number,"");
+  String csv=new String(file,StandardCharsets.UTF_8);
+  assertThat(imports.dryRun(maker,"INVESTMENTS","fixture.csv",bytes(csv.replace(",100.00,110.00,10.00,110.00",",99.00,110.00,10.00,110.00"))).valid()).isFalse();
+  assertThat(imports.dryRun(maker,"INVESTMENTS","fixture.csv",bytes(csv.replace(today.withDayOfYear(2).toString(),"2026"))).valid()).isFalse();
+  UUID batch=submit(maker,"INVESTMENTS",file);imports.decide(checker,batch,request(batch),"APPROVE",null,approvals);
+  assertThat(jdbc.queryForObject("SELECT count(*) FROM ledger_entries WHERE batch_id=?",Long.class,batch)).isZero();
+  assertThat(jdbc.queryForObject("SELECT status FROM investments WHERE id=(SELECT investment_id FROM import_investment_results WHERE batch_id=?)",String.class,batch)).isEqualTo("POSTED");
+ }
+ private String fundedMember(){String number=member();jdbc.update("INSERT INTO ledger_entries(member_id,type,component,amount,effective_date,fiscal_year,reference) SELECT id,'OPENING_BALANCE','PRINCIPAL',100,?,?,? FROM members WHERE member_number=?",today.withDayOfYear(1),today.getYear(),"OPEN-"+number,number);return number;}
+ private byte[] investmentFile(String member,String received){return bytes(String.join(",",HistoricalInvestmentImport.COLUMNS)+"\n"+member+",INV-"+UUID.randomUUID()+",Synthetic bank,"+today.withDayOfYear(2)+","+today.withDayOfYear(33)+",100.00,110.00,"+received+",100.00,100.00,110.00,10.00,110.00\n");}
  private UUID submit(UUID maker,String kind,byte[] file){var report=imports.dryRun(maker,kind,"fixture.csv",file);assertThat(report.valid()).isTrue();return imports.submit(maker,kind,"fixture.csv",file,report.fileHash(),"Reviewed source fixture",approvals);}
  private UUID request(UUID batch){return jdbc.queryForObject("SELECT approval_request_id FROM import_batches WHERE id=?",UUID.class,batch);}
  private byte[] ledger(String member,String ref,String amount,String total){return bytes(String.join(",",ImportService.LEDGER_COLUMNS)+"\n"+member+",ADDITION,PRINCIPAL,"+amount+","+today+","+ref+",\"Source, fixture\"\nTOTAL,,,"+total+",,,\n");}

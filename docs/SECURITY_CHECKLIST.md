@@ -109,3 +109,10 @@ These earlier checks do not certify the later retention/anonymization implementa
 - [ ] Regression/new-workflow route, log, transaction, replay, financial, retention and responsive acceptance after the implementation pass
 
 Owner-supplied external setup and release checks are centralized in OWNER_ACTIONS.md. Earlier test checkpoints do not certify new unrun workflows.
+
+## Authorized verification — 2026-10-05
+
+- [x] Local regression, financial coverage, replay/CSRF/permission, idle timeout, public branding, retention and responsive checks recorded in TEST_RESULTS.md
+- [x] Local/S3 encrypted restore and populated-target/wrong-key safeguards passed
+
+The broader exhaustive security/edge-case matrix above and production services are not inferred to pass from these local results.

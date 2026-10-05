@@ -14,7 +14,7 @@ async function fixtures(page) {
  const responses={
   '/api/v1/auth/me':{userId:'anonymous-operator',email:'operator@example.invalid',permissions,preferredSignInMethod:'TOTP'},
   '/api/v1/members':{items:[],page:0,size:25,hasNext:false},
-  '/api/v1/investments':[], '/api/v1/investments/approvals/pending':[],
+  '/api/v1/investment-corrections':[], '/api/v1/investments':[], '/api/v1/investments/search':{entries:[],hasNext:false}, '/api/v1/investments/approvals/pending':[],
   '/api/v1/settings/rollover':{defaultRolloverPolicy:'ROLL_PRINCIPAL_AND_INCOME'},
   '/api/v1/ledger':{entries:[],page:0,hasNext:false}, '/api/v1/ledger/approvals':[],
   '/api/v1/ledger/fiscal-years':[{year:Number(today.slice(0,4)),status:'OPEN'}],
@@ -35,11 +35,14 @@ async function fixtures(page) {
   '/api/v1/portal/profile':{version:0,email:null,phone:null,nextOfKinName:null,nextOfKinPhone:null,nextOfKinRelationship:null},
  };
  await page.route('**/api/v1/**',async route=>{
+  if (new URL(route.request().url()).pathname === '/api/v1/organization/branding') {
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({organisationName:'Harbour Credit Union',primaryColour:'#083a4f',currencyDisplay:'SYMBOL',logoDataUrl:'',passwordMinLength:12})}); return;
+  }
   const request=route.request(), path=new URL(request.url()).pathname;
   let body=responses[path],status=200;
   if(path==='/api/v1/members/search'&&request.method()==='POST') body=responses['/api/v1/members'];
   if(path==='/api/v1/users/search'&&request.method()==='POST') body=responses['/api/v1/users'];
-  if((request.method()!=='GET'&&!['/api/v1/members/search','/api/v1/users/search'].includes(path))||body===undefined){unexpected.push(`${request.method()} ${path}`);status=404;body={message:'Unmapped isolated fixture request'};}
+  if((request.method()!=='GET'&&!['/api/v1/members/search','/api/v1/users/search','/api/v1/investments/search'].includes(path))||body===undefined){unexpected.push(`${request.method()} ${path}`);status=404;body={message:'Unmapped isolated fixture request'};}
   await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
  });
  return unexpected;

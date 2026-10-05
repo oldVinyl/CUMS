@@ -39,6 +39,8 @@ class PaymentWorkflowIntegrationTest {
   @Autowired MockMvc mvc;
   final LocalDate today = LocalDate.now(ZoneId.of("Africa/Accra"));
   @Autowired com.fasterxml.jackson.databind.ObjectMapper json;
+  @Autowired HistoricalPaymentService historical;
+  @Autowired org.harbourcu.approval.ApprovalService approvals;
 
   @Test
   @Transactional
@@ -371,6 +373,40 @@ class PaymentWorkflowIntegrationTest {
                 .cookie(new Cookie("cu_access", stranger.access())))
         .andExpect(status().isForbidden());
     assertThatThrownBy(() -> policy.update(owner, old)).isInstanceOf(SecurityException.class);
+  }
+
+  @Test @Transactional
+  void historicalReceiptUsesOriginalDateIndependentReviewAndExactlyOneLinkedCredit() throws Exception {
+    UUID member=member(),owner=user("MEMBER",member),maker=user("TREASURER",null),checker=user("PRESIDENT",null),admin=user("ADMIN",null);
+    jdbc.update("UPDATE members SET join_date=? WHERE id=?",today.minusYears(1),member);
+    UUID method=payments.method(admin,null,"Synthetic historical bank","Synthetic instructions",true);
+    UUID id=payments.submit(owner,UUID.randomUUID(),new PaymentService.Submit(member,method,"10.00","SEED",today.minusDays(2),storage.upload(owner,member,image())));
+    var input=new HistoricalPaymentService.Verify("10.00","REPOST",null,"Synthetic historical bank receipt",null);
+    var preview=historical.preview(maker,id,input);
+    assertThat(balance(member)).isZero();
+    assertThatThrownBy(()->historical.preview(owner,id,input)).isInstanceOf(SecurityException.class);
+    assertThatThrownBy(()->historical.preview(maker,id,new HistoricalPaymentService.Verify("invalid","REPOST",null,input.reason(),null))).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(()->historical.preview(maker,UUID.randomUUID(),input)).hasMessageContaining("not found");
+    UUID request=historical.verify(maker,id,new HistoricalPaymentService.Verify("10.00","REPOST",null,input.reason(),preview.sourceFingerprint()),approvals);
+    var review=historical.review(checker,id);assertThat(review.input().effectiveDate()).isEqualTo(today.minusDays(2));assertThat(review.impact()).isNotNull();
+    assertThatThrownBy(()->historical.review(owner,id)).isInstanceOf(SecurityException.class);
+    assertThatThrownBy(()->payments.decide(maker,id,"APPROVE",null)).hasMessageContaining("own request");
+    payments.decide(checker,id,"APPROVE",null);
+    assertThat(balance(member)).isEqualByComparingTo("10");
+    assertThat(jdbc.queryForObject("SELECT effective_date FROM ledger_entries WHERE payment_id=?",LocalDate.class,id)).isEqualTo(today.minusDays(2));
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM ledger_entries WHERE payment_id=?",Long.class,id)).isEqualTo(1);
+    assertThatThrownBy(()->historical.verify(maker,id,input,approvals)).hasMessageContaining("unverified manual receipt");
+    assertThatThrownBy(()->historical.review(checker,id)).hasMessageContaining("not awaiting approval");
+  }
+
+  @Test @Transactional
+  void historicalPostingRejectsTodayAndNormalPendingReviewHasNoHistoricalImpact() throws Exception {
+    UUID member=member(),owner=user("MEMBER",member),maker=user("TREASURER",null),checker=user("PRESIDENT",null),admin=user("ADMIN",null);
+    UUID method=payments.method(admin,null,"Synthetic current bank","Synthetic instructions",true);
+    UUID id=payments.submit(owner,UUID.randomUUID(),new PaymentService.Submit(member,method,"10.00","SEED",today,storage.upload(owner,member,image())));
+    assertThatThrownBy(()->historical.preview(maker,id,new HistoricalPaymentService.Verify("10.00","REPOST",null,"Synthetic receipt",null))).hasMessageContaining("today");
+    payments.verify(maker,id,new PaymentService.Verify("10.00",today));
+    assertThat(historical.review(checker,id).impact()).isNull();
   }
 
   private BigDecimal balance(UUID id) {

@@ -53,6 +53,9 @@ test("member receipt replacement sheet/drawer retains evidence and is accessible
     ],
   };
   await page.route("**/api/v1/**", async (route) => {
+  if (new URL(route.request().url()).pathname === '/api/v1/organization/branding') {
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({organisationName:'Harbour Credit Union',primaryColour:'#083a4f',currencyDisplay:'SYMBOL',logoDataUrl:'',passwordMinLength:12})}); return;
+  }
     const request = route.request(),
       path = new URL(request.url()).pathname;
     let body = responses[path],

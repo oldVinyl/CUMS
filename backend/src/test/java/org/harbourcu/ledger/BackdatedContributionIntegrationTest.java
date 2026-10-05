@@ -25,6 +25,7 @@ class BackdatedContributionIntegrationTest {
   @Autowired ApprovalService approvals;
   @Autowired JdbcTemplate jdbc;
   @Autowired LedgerWorkflowService workflow;
+  @Autowired org.harbourcu.investment.HistoricalIncomeCorrection corrections;
 
   record Fixture(
       UUID maker,
@@ -264,6 +265,60 @@ class BackdatedContributionIntegrationTest {
             () -> approvals.decide(request, f.checker(), ApprovalService.Decision.APPROVE, null))
         .isInstanceOf(SecurityException.class);
     assertThat(balance(f.a())).isEqualByComparingTo("213.34");
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.CsvSource({"240.00,120.00", "200.00,100.00", "180.00,90.00"})
+  void receivedProceedsCorrectionsPreserveOriginalEntriesAndReconcileExactly(String proceeds, String equity) {
+    var f = fixture();
+    var draft = new BackdatedContributionService.IncomeCorrection(f.cycle(), proceeds, "Synthetic corrected bank proceeds", null);
+    var preview = corrections.preview(f.maker(), draft);
+    assertThat(count("ledger_entries")).isEqualTo(4);
+    UUID request = corrections.submit(f.maker(), new BackdatedContributionService.IncomeCorrection(
+        f.cycle(), proceeds, draft.reason(), preview.sourceFingerprint()), approvals);
+    assertThatThrownBy(() -> approvals.decide(request, f.maker(), ApprovalService.Decision.APPROVE, null))
+        .hasMessageContaining("own request");
+    approvals.decide(request, f.checker(), ApprovalService.Decision.APPROVE, null);
+    assertThat(balance(f.a())).isEqualByComparingTo(equity);
+    assertThat(balance(f.b())).isEqualByComparingTo(equity);
+    assertThat(jdbc.queryForObject("SELECT actual_proceeds FROM investments WHERE id=?", BigDecimal.class, f.cycle()))
+        .isEqualByComparingTo(proceeds);
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM ledger_entries WHERE investment_id=? AND amount=10", Long.class, f.cycle()))
+        .isEqualTo(2);
+  }
+
+  @Test void originalDateReversalKeepsSourceAndRecomputesMaturedShares() {
+    var f = fixture();
+    UUID entry = jdbc.queryForObject("SELECT id FROM ledger_entries WHERE member_id=? AND type='OPENING_BALANCE'", UUID.class, f.a());
+    var preview = service.previewReversal(f.maker(), entry, null);
+    UUID request = service.submitReversal(f.maker(), new BackdatedContributionService.HistoricalReversal(
+        entry, "Synthetic mistaken opening principal", preview.sourceFingerprint()), approvals);
+    approvals.decide(request, f.checker(), ApprovalService.Decision.APPROVE, null);
+    assertThat(balance(f.a())).isEqualByComparingTo("0");
+    assertThat(balance(f.b())).isEqualByComparingTo("120");
+    assertThat(jdbc.queryForObject("SELECT amount FROM ledger_entries WHERE id=?",BigDecimal.class,entry)).isEqualByComparingTo("100");
+    assertThat(jdbc.queryForObject("SELECT amount FROM ledger_entries WHERE reversal_of=?",BigDecimal.class,entry)).isEqualByComparingTo("-100");
+    assertThat(jdbc.queryForObject("SELECT effective_date FROM ledger_entries WHERE reversal_of=?",LocalDate.class,entry)).isEqualTo(f.original());
+  }
+
+  @Test void archivedReceivedProceedsCorrectionOffsetsAtRecordedReversalDate() {
+    var f=fixture();
+    var json=new com.fasterxml.jackson.databind.ObjectMapper();
+    var reversal=json.createObjectNode().put("investmentId",f.cycle().toString()).put("revision",1)
+        .put("reason","Synthetic archived economic segment").put("effectiveDate",LocalDate.now().toString())
+        .put("maturityDate",LocalDate.now().plusDays(91).toString());
+    UUID reverse=approvals.submit("INVESTMENT_REVERSE",reversal,f.maker(),1);
+    approvals.decide(reverse,f.checker(),ApprovalService.Decision.APPROVE,null);
+    var input=new BackdatedContributionService.IncomeCorrection(f.cycle(),"240.00","Synthetic archived proceeds",null,1);
+    var preview=corrections.preview(f.maker(),input);
+    UUID request=corrections.submit(f.maker(),new BackdatedContributionService.IncomeCorrection(
+        f.cycle(),input.actualProceeds(),input.reason(),preview.sourceFingerprint(),1),approvals);
+    approvals.decide(request,f.checker(),ApprovalService.Decision.APPROVE,null);
+    assertThat(balance(f.a())).isEqualByComparingTo("100");
+    assertThat(balance(f.b())).isEqualByComparingTo("100");
+    assertThat(jdbc.queryForObject("SELECT sum(amount) FROM ledger_entries WHERE member_id=? AND effective_date<=?",BigDecimal.class,f.a(),f.maturity())).isEqualByComparingTo("120");
+    assertThat(jdbc.queryForObject("SELECT count(*) FROM archived_cycle_corrections WHERE investment_id=?",Long.class,f.cycle())).isEqualTo(1);
+    assertThat(jdbc.queryForObject("SELECT (snapshot->'investment'->>'actual_proceeds')::numeric FROM investment_revision_history WHERE investment_id=? AND revision=1",BigDecimal.class,f.cycle())).isEqualByComparingTo("220");
   }
 
   BackdatedContributionService.Input input(

@@ -71,8 +71,10 @@ These checks record implementation and build/startup verification. They do not c
 - [x] Paginated/searchable/sortable investment directory beyond the previous 100-cycle cap
 - [x] Production scanner provisioning and configuration guards
 - [x] Owner tasks consolidated in OWNER_ACTIONS.md
-- [ ] Isolated regression and new-workflow acceptance after this implementation pass
+- [x] Isolated regression and focused new-workflow checks; actual results and additional unexercised scope in TEST_RESULTS.md
 
 Remaining owner inputs and deployment acceptance: follow [OWNER_ACTIONS.md](OWNER_ACTIONS.md). Build success does not mark the pending suite or owner gates as passed.
 
 Final build checkpoint: backend/frontend builds and production Compose configuration succeed; the development server is healthy with V43. Unsigned new administration routes require sign-in. The next verification work is documented in TEST_PLAN.md; no suite result is invented.
+
+Latest verification: local backend/frontend/browser/financial/restore checks passed on 2026-10-05. See TEST_RESULTS.md; owner release gates remain separate.

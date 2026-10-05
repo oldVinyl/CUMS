@@ -1,6 +1,6 @@
 # Progress
 
-Check implemented items after their recorded verification. This pass follows the owner’s explicit request to skip tests: newly checked implementation items are build-verified, not regression-tested. Release acceptance remains separate.
+Check implemented items after their recorded verification. The owner subsequently authorized tests: the local regression and focused workflow results are recorded in TEST_RESULTS.md. Release acceptance remains separate.
 
 ## Phase 0 — Setup
 
@@ -495,3 +495,17 @@ Build/startup verification is recorded after packaging. No test suite was run du
 - [x] Development startup reports health UP with V43; local /api/docs serves OpenAPI 3.0.3 and retention/income-correction/organization routes return 401 unsigned
 - [x] Add explicit TEST_PLAN.md for the isolated regression and new financial/privacy/UI checks that follow implementation
 - [x] Preserve pre-existing frontend working edits; stage only the new functional changes in mixed files
+
+
+## Authorized local verification — 2026-10-05
+
+- [x] Isolated full backend regression; focused historical receipt checks and both PostgreSQL/S3 container checks
+- [x] Financial line coverage gate passes without lowering thresholds
+- [x] 81 frontend unit tests, lint and production build
+- [x] 210 responsive/accessibility scenarios across five widths and both themes, including organization policies and retention preview
+- [x] Real synthetic HTTP/browser financial lifecycle and permission revocation
+- [x] Encrypted local/S3 restore drills, exact totals, privacy-aware receipt inventory and target/key safeguards
+- [x] Development backend restored and health UP with V43
+- [x] Record exact counts, fixture fixes, nonblocking warnings and unexercised verification scope in TEST_RESULTS.md
+
+No known main-build implementation blocker was found. OWNER_ACTIONS.md remains the credential/client/production handoff. The broader edge-case matrix in TEST_PLAN.md is not silently certified by these passing local gates.

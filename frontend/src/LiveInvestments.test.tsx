@@ -2,13 +2,17 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   cleanup,
   fireEvent,
-  render,
+  render as renderComponent,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import type { ReactElement } from "react";
 import LiveInvestments from "./LiveInvestments";
 import { ToastProvider } from "./toast";
+
+const render = (ui: ReactElement) => renderComponent(<MemoryRouter>{ui}</MemoryRouter>);
 
 beforeEach(() => vi.stubGlobal("matchMedia", () => ({ matches: false,
   addListener: () => {}, removeListener: () => {} })));
@@ -33,7 +37,7 @@ it("renders the Sheet A fixture totals in the allocation table", async () => {
         fullName: `Fixture ${index + 1}`, participation: String(participation), ratioPercent: "0.00",
         costShare: "0.00", maturityValueShare: "0.00", incomeShare: "0.00", closingBalance: "0.00",
       })),
-    } : [cycle],
+    } : { entries: [cycle], hasNext: false },
   })));
   render(<ToastProvider><LiveInvestments profile={{ userId: "auditor-1",
     email: "auditor@example.test", preferredSignInMethod: "TOTP",
@@ -87,7 +91,7 @@ it("shows a live allocation preview with a visible cost difference", async () =>
                 },
               ],
             }
-          : [cycle],
+          : { entries: [cycle], hasNext: false },
     }),
   );
   vi.stubGlobal("fetch", fetchMock);
@@ -130,7 +134,7 @@ it("creates a principal-only draft from a matured investment", async () => {
     ok: true, status: path.endsWith("/rollover-draft") ? 201 : 200,
     json: async () => path.endsWith("/rollover-draft") ? { id: "next" }
       : path.endsWith("/settings/rollover") ? { defaultRolloverPolicy: "ROLL_PRINCIPAL_ONLY" }
-      : path.endsWith("/source") || path.endsWith("/next") ? detail : [cycle],
+      : path.endsWith("/source") || path.endsWith("/next") ? detail : { entries: [cycle], hasNext: false },
   }));
   vi.stubGlobal("fetch", fetchMock);
   render(<ToastProvider><LiveInvestments profile={{ userId: "treasurer-1",

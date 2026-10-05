@@ -1,6 +1,6 @@
 # Post-build verification plan
 
-This follows main-build implementation. It is not a claim that the new workflows already passed. Use only synthetic accounts/data, temporary private uploads and an isolated database. Never point integration tests at the owner's development ledger or private migration target; never load the private workbooks into CI or browser fixtures.
+This follows main-build implementation. Local regression and focused new-workflow checks now pass; see TEST_RESULTS.md for exact evidence. The broad targets below include combinations not exhaustively exercised and must not be read as owner-only tasks. Use only synthetic accounts/data, temporary private uploads and an isolated database. Never point integration tests at the owner's development ledger or private migration target; never load the private workbooks into CI or browser fixtures.
 
 ## Environment
 

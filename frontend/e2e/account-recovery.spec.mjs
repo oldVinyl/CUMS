@@ -15,6 +15,9 @@ test("public password recovery clears the secret fragment and has accessible mat
   let submitted;
   const unexpected = [];
   await page.route("**/api/v1/**", async (route) => {
+  if (new URL(route.request().url()).pathname === '/api/v1/organization/branding') {
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({organisationName:'Harbour Credit Union',primaryColour:'#083a4f',currencyDisplay:'SYMBOL',logoDataUrl:'',passwordMinLength:12})}); return;
+  }
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/v1/auth/password-reset/complete") {
       submitted = route.request().postDataJSON();
@@ -76,6 +79,9 @@ test("independent account recovery review requires confirmation in the responsiv
     "/api/v1/users/roles/pending": [],
   };
   await page.route("**/api/v1/**", async (route) => {
+  if (new URL(route.request().url()).pathname === '/api/v1/organization/branding') {
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({organisationName:'Harbour Credit Union',primaryColour:'#083a4f',currencyDisplay:'SYMBOL',logoDataUrl:'',passwordMinLength:12})}); return;
+  }
     const path = new URL(route.request().url()).pathname;
     let body = responses[path];
     if (path === "/api/v1/users/search" && route.request().method() === "POST") body = responses["/api/v1/users"];

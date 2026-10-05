@@ -18,11 +18,17 @@ class ProductionSafetyTest {
             .withProperty("APP_COOKIE_SECURE", "true")
             .withProperty("APP_ALLOWED_ORIGIN", "https://union.example.com")
             .withProperty("APP_PASSKEY_RP_ID", "union.example.com")
+            .withProperty("CLAMAV_HOST", "scanner")
             .withProperty("PAYMENT_PROVIDER", "paystack");
     }
 
     @Test void acceptsSecureSettingsWithDeferredMail() {
         assertDoesNotThrow(() -> ProductionSafety.validate(safe()));
+    }
+
+    @Test void rejectsMissingReceiptScanner() {
+        assertThrows(IllegalStateException.class, () -> ProductionSafety.validate(safe().withProperty("CLAMAV_HOST", "")));
+        assertThrows(IllegalStateException.class, () -> ProductionSafety.validate(safe().withProperty("CLAMAV_HOST", "   ")));
     }
 
     @Test void rejectsDevelopmentSamplesAndBootstrap() {

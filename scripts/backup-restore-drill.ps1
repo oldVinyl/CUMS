@@ -41,9 +41,10 @@ try {
     Invoke-Docker exec $database createdb -U postgres drill_restored
     Invoke-Docker exec $database psql -U postgres -d drill_source -v ON_ERROR_STOP=1 -c 'CREATE TABLE drill_ledger (id integer PRIMARY KEY, amount numeric(19,4)); INSERT INTO drill_ledger VALUES(1,1234.5678),(2,-34.5678);' | Out-Null
     Invoke-Docker run --rm -v "${keys}:/keys" -v "${source}:/uploads" cums-backup:local bash -c 'umask 077; age-keygen -o /keys/identity 2>/dev/null; printf "synthetic-receipt\n" > /uploads/11111111-1111-1111-1111-111111111111' | Out-Null
+    $digest = (& docker run --rm -v "${source}:/uploads:ro" cums-backup:local bash -c 'sha256sum /uploads/11111111-1111-1111-1111-111111111111').Split(' ')[0]
+    Invoke-Docker exec $database psql -U postgres -d drill_source -v ON_ERROR_STOP=1 -c "CREATE TABLE member_anonymizations(member_id uuid PRIMARY KEY); CREATE TABLE attachments(storage_key uuid,sha256 text,byte_size integer,member_id uuid); INSERT INTO attachments VALUES('$receiptKey','$digest',18,'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),('22222222-2222-2222-2222-222222222222','$digest',18,'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'); INSERT INTO member_anonymizations VALUES('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');" | Out-Null
+    Invoke-Docker run --rm -v "${source}:/uploads" cums-backup:local bash -c 'cp /uploads/11111111-1111-1111-1111-111111111111 /uploads/22222222-2222-2222-2222-222222222222; cp /uploads/11111111-1111-1111-1111-111111111111 /uploads/33333333-3333-3333-3333-333333333333'
     if ($S3) {
-        $digest = (& docker run --rm -v "${source}:/uploads:ro" cums-backup:local bash -c 'sha256sum /uploads/11111111-1111-1111-1111-111111111111').Split(' ')[0]
-        Invoke-Docker exec $database psql -U postgres -d drill_source -v ON_ERROR_STOP=1 -c "CREATE TABLE attachments(storage_key uuid,sha256 text,byte_size integer); INSERT INTO attachments VALUES('$receiptKey','$digest',18);" | Out-Null
         Invoke-Docker run --rm --network $network @s3Options -v "${source}:/uploads:ro" cums-backup:local aws s3api put-object --bucket synthetic-source --key "receipts/$receiptKey" --body "/uploads/$receiptKey" | Out-Null
     }
     $recipient = (& docker run --rm -v "${keys}:/keys:ro" cums-backup:local age-keygen -y /keys/identity).Trim()
@@ -63,7 +64,7 @@ try {
         & docker @common -e APP_RECEIPT_S3_BUCKET=synthetic-restored -e PGDATABASE=drill_occupied_bucket -e RESTORE_EMPTY_TARGET=true -v "${keys}:/keys:ro" cums-backup:local bash /opt/cums/restore.sh $archive /keys/identity *> $null
         if ($LASTEXITCODE -eq 0) {throw 'S3 restore failed to reject occupied prefix.'}
     }
-    Invoke-Docker run --rm -v "${target}:/uploads:ro" cums-backup:local bash -c 'test "$(cat /uploads/11111111-1111-1111-1111-111111111111)" = synthetic-receipt'
+    Invoke-Docker run --rm -v "${target}:/uploads:ro" cums-backup:local bash -c 'test "$(cat /uploads/11111111-1111-1111-1111-111111111111)" = synthetic-receipt && test ! -e /uploads/22222222-2222-2222-2222-222222222222 && test ! -e /uploads/33333333-3333-3333-3333-333333333333'
     & docker @common -e APP_RECEIPT_S3_BUCKET=synthetic-restored -e PGDATABASE=drill_restored -e RESTORE_EMPTY_TARGET=true -v "${target}:/uploads" -v "${keys}:/keys:ro" cums-backup:local bash /opt/cums/restore.sh $archive /keys/identity *> $null
     if ($LASTEXITCODE -eq 0) { throw 'Restore failed to reject populated target.' }
     # A wrong private key must reject decryption before any database restore.

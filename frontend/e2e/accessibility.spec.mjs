@@ -6,6 +6,9 @@ const row = { memberId: null, memberNumber: null, fullName: "Total", balanceBf: 
 async function fixtures(page, initiallySignedIn) {
  let signedIn=initiallySignedIn; const unexpected=[];
  await page.route("**/api/v1/**", async route => {
+  if (new URL(route.request().url()).pathname === '/api/v1/organization/branding') {
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({organisationName:'Harbour Credit Union',primaryColour:'#083a4f',currencyDisplay:'SYMBOL',logoDataUrl:'',passwordMinLength:12})}); return;
+  }
   const request=route.request(); const path=new URL(request.url()).pathname;
   let body, status=200;
   if(path==="/api/v1/auth/me") { body=signedIn ? {userId:"anonymous-browser-account",email:"fixture@invalid.example",permissions:["OWN_DATA_READ","DASHBOARD_READ_ALL","MEMBER_READ","MEMBER_WRITE"],preferredSignInMethod:"TOTP"} : {code:"AUTH_REQUIRED"}; status=signedIn?200:401; }
