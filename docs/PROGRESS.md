@@ -174,7 +174,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Current-day ledger/holdings/cash comparison with exact differences and immutable snapshots
 - [x] Separate finalization/rejection/cancellation with source freshness and transaction rollback tests
 - [x] Live reconciliation screen and paginated decision history
-- [ ] Historical reconstruction and gateway/bank settlement matching
+- [ ] Historical reconstruction
+- [x] Reviewed gateway/bank settlement matching with amounts, dates, fee/net differences, corrections and independent approval
 
 ## Phase 8 — Delivery
 
@@ -394,7 +395,7 @@ The master prompt is not complete. Historical investment/allocation imports, his
 
 - [x] Refresh ten synthetic role-guide screenshots, reset scroll before capture, visually inspect audit/ledger and pass all 11 desktop guide scenarios
 
-## Protected search and private storage � 2026-10-05
+## Protected search and private storage — 2026-10-05
 
 - [x] Member directory/pickers and account administration use POST search bodies; URLs retain only safe pagination values
 - [x] Reject legacy identifying query searches with generic responses; preserve session, current permission, CSRF, same-origin and no-store checks
@@ -416,3 +417,22 @@ The master prompt is not complete. Historical investment/allocation imports, his
 Remaining internal work is still historical investment/allocation imports, historical payment posting, moved-cycle reconstruction, retention/anonymization, settlement matching and complete privacy/security acceptance. Provider credentials, SMTP (owner-deferred), live scanner/NVD/hosted CI, independently reviewed private migration and owner production/off-site restore acceptance remain external delivery gates. No real member balances were posted in this pass.
 
 - [x] Development backend restored with the verified private-storage/search build; health UP
+
+## Bank settlement matching — 2026-10-05
+
+- [x] V39 retains append-only settlement review history with encrypted bank-evidence notes and separate safe financial audit metadata
+- [x] List confirmed, ledger-linked gateway payments with gross/provider fee/expected net and current bank amount/date
+- [x] Independent approval, current maker permission, SHA-256 source binding, duplicate pending-request and unchanged-value rejection
+- [x] Correct prior settlements through new reviewed records; do not post another contribution or rewrite the original evidence
+- [x] Enforce confirmation-through-today dates and nonnegative two-decimal bank amounts; retain explained discrepancies
+- [x] Permission/session/CSRF/origin denial, replay rejection, stale-review rollback, maker-revocation rejection and concurrent submission acceptance
+- [x] Reconciliation fingerprints include bank settlement values; gateway posting shares the financial lock before row/year locks
+- [x] Drawer/bottom-sheet creation and review, promise feedback, empty/error states, current-role controls and server permission checks
+- [x] Four settlement integration tests plus existing reconciliation/online tests pass; 79 frontend tests and build/lint pass
+- [x] Twenty-four focused mobile-light/desktop-dark Playwright/axe checks pass, including settlement creation and checker review
+- [x] Clean 215 backend tests, 250 generated allocation cases, two container tests, all 39 migrations and per-package financial coverage gates pass
+- [x] Real mobile settlement submission and independent browser approval in the disposable financial lifecycle; exact bank net/date, replay denial and unchanged member equity verified
+
+The remaining internal gaps are historical investment/allocation imports, historical payment posting, moved-cycle reconstruction, retention/anonymization and complete privacy/security acceptance. Live providers, owner-deferred SMTP, scanner/NVD/hosted CI, reviewed private migration and owner production/off-site recovery acceptance remain delivery gates. The master prompt is not yet complete.
+
+- [x] Restore the verified V39 development backend; health UP

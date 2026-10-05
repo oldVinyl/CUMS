@@ -127,3 +127,11 @@ In Audit log, expand **Financial changes** on a recorded financial event to comp
 In Payments, choose **Replace receipt** while a manual payment is submitted or awaiting more information. Upload the clearer receipt and choose **Replace and return for verification**. The payment amount, purpose and paid date stay unchanged, the earlier file remains available and staff must verify again. A changed form or a payment that has reached verification cannot overwrite reviewed evidence. If saving fails after upload, retrying uses that same uploaded replacement.
 
 **Receipt history** opens a read-only drawer/sheet for your authorized payment even after posting. It includes the current receipt and retained earlier files. Approvers can review the history without gaining permission to replace proofs. Your own JSON export includes the revision metadata. Rejected payments are terminal; start a separate submission rather than changing rejected evidence.
+
+## Match gateway payments with bank settlements
+
+Open **Finance → Reconciliation**. The settlement section lists gateway-confirmed payments with their gross amount, provider fee and expected bank receipt. **Match bank settlement** opens the shared desktop drawer or mobile bottom sheet. Enter the bank's actual settled amount/date and evidence notes; explain a difference and avoid including personal account details.
+
+A separate eligible approver opens **Review settlement match** and checks the bank evidence before confirming or rejecting with a reason. The maker cannot approve their own request. Pending requests can be cancelled by their maker. Changed payment/settlement data requires a fresh review. After approval, **Correct settlement match** creates another reviewed record; earlier evidence stays in the history.
+
+Matching records a bank receipt, without crediting the member twice or altering their contribution. The expected net always subtracts the provider fee from gross, whether fees are borne by the union or the member. Differences remain visible for reconciliation. This is reviewed manual matching; obtain actual bank/provider statements separately. It does not connect to bank accounts or make payouts.

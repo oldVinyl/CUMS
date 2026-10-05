@@ -23,6 +23,7 @@ async function fixtures(page) {
   '/api/v1/payments/own-member':{memberId:'anonymous-member'},
   '/api/v1/payments/online/config':{provider:'FAKE',enabled:true,development:true},
   '/api/v1/reconciliations/preview':{equity:'0',principal:'0',income:'0',integrityDifference:'0',invested:'0',expectedCash:'0',sourceFingerprint:'anonymous'},
+  '/api/v1/reconciliations/settlements':{payments:[],matches:[],page:0,hasNext:false},
   '/api/v1/reconciliations':{records:[],page:0,hasNext:false},
   '/api/v1/account-recovery':[],
   '/api/v1/notifications':{items:[],page:0,hasNext:false},

@@ -40,7 +40,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  public void check(UUID actor,UUID id){var p=jdbc.queryForMap("SELECT * FROM payments WHERE id=?",id);ownership.ownOrStaff(actor,(UUID)p.get("member_id"),false);confirm((String)p.get("provider_reference"),false);}
  public void confirm(String reference,boolean webhookConfirmed){
   var verified=provider.verify(reference);
-  tx.executeWithoutResult(s->{var list=jdbc.queryForList("SELECT * FROM payments WHERE provider_reference=? AND provider=? FOR UPDATE",reference,provider.name());if(list.isEmpty())throw new IllegalArgumentException("Payment not found.");var p=list.getFirst();
+  tx.executeWithoutResult(s->{jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");var list=jdbc.queryForList("SELECT * FROM payments WHERE provider_reference=? AND provider=? FOR UPDATE",reference,provider.name());if(list.isEmpty())throw new IllegalArgumentException("Payment not found.");var p=list.getFirst();
    if(List.of("CONFIRMED","FAILED","EXPIRED","ABANDONED").contains(p.get("status")))return;
    if(!reference.equals(verified.reference())||!p.get("member_id").equals(verified.memberId())||((BigDecimal)p.get("amount")).compareTo(verified.amount())!=0||!"GHS".equals(verified.currency()))throw new IllegalStateException("Provider confirmation does not match the payment. No money was posted.");
    if(!verified.status().equals("CONFIRMED")){if(List.of("FAILED","ABANDONED").contains(verified.status()))jdbc.update("UPDATE payments SET status=? WHERE id=?",verified.status(),p.get("id"));return;}

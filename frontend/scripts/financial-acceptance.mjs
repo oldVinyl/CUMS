@@ -413,6 +413,32 @@ try {
   console.log(
     "PASS mobile receipt upload, independent verification/approval, replay rejection and exact-once FakeProvider posting",
   );
+  const settlementView = await call(maker, "GET", "/reconciliations/settlements");
+  const bankPayment = settlementView.payments.find(row => row.id === online.id);
+  assert.ok(bankPayment); assert.equal(bankPayment.settledAmount, null);
+  await call(member, "GET", "/reconciliations/settlements", undefined, 403);
+  const settlementPage = await maker.newPage();
+  await settlementPage.setViewportSize({width:375,height:850});
+  await settlementPage.goto(`${origin}/reconciliation`);
+  await settlementPage.getByRole("button", {name:"Match bank settlement",exact:true}).click();
+  const bankForm = settlementPage.getByRole("dialog");
+  await bankForm.getByLabel("Bank settlement amount (GHS)").fill(new Decimal(bankPayment.expectedNet).toFixed(2));
+  await bankForm.getByLabel("Settlement date", {exact:true}).fill(today);
+  await bankForm.getByLabel("Bank evidence and explanation").fill("Synthetic confirmed bank payout evidence");
+  const bankSubmission = settlementPage.waitForResponse(response=>response.request().method()==="POST"&&new URL(response.url()).pathname===`/api/v1/reconciliations/settlements/payments/${online.id}`);
+  await bankForm.getByRole("button",{name:"Submit settlement match"}).click();
+  const bankMatch = await (await bankSubmission).json(); await expect(bankForm).toHaveCount(0);
+  await call(maker,"POST",`/reconciliations/settlements/${bankMatch.id}/decide`,{decision:"APPROVE"},400);
+  const settlementCheck = await checker.newPage(); await settlementCheck.goto(`${origin}/reconciliation`);
+  await settlementCheck.getByRole("button",{name:"Review settlement match"}).click();
+  await settlementCheck.getByRole("button",{name:"Confirm settlement match"}).click();
+  await expect(settlementCheck.getByRole("dialog")).toHaveCount(0);
+  const matched = (await call(checker,"GET","/reconciliations/settlements")).payments.find(row=>row.id===online.id);
+  assert.ok(new Decimal(matched.settledAmount).equals(bankPayment.expectedNet)); assert.equal(matched.settledDate,today);
+  own=await call(member,"GET",`/portal?asAt=${today}`);assert.ok(new Decimal(own.total.equity).equals("248.34"));
+  await call(checker,"POST",`/reconciliations/settlements/${bankMatch.id}/decide`,{decision:"APPROVE"},409);
+  await settlementPage.close(); await settlementCheck.close();
+  console.log("PASS real mobile bank settlement match, independent browser approval, member denial and unchanged ledger equity");
   const lossCycle = await call(maker, "POST", "/investments", {
     tenor: "CUSTOM", customDays: 1, institution: "Synthetic loss fixture",
     referenceNumber: "ACCEPTANCE-LOSS-001", purchaseDate: today, maturityDate: tomorrow,

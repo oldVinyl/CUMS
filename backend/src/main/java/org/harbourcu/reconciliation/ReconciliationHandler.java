@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
   String current=jdbc.queryForObject("""
    SELECT md5(coalesce((SELECT string_agg(id::text,',' ORDER BY id) FROM ledger_entries WHERE effective_date<=?), '') || '|' ||
     coalesce((SELECT string_agg(id::text || ':' || revision::text || ':' || status || ':' || cost::text,',' ORDER BY id) FROM investments WHERE status<>'DRAFT'),'') || '|' ||
-    coalesce((SELECT string_agg(id::text || ':' || status || ':' || amount::text || ':' || fee_amount::text,',' ORDER BY id) FROM payments WHERE provider IS NOT NULL),''))
+    coalesce((SELECT string_agg(id::text || ':' || status || ':' || amount::text || ':' || fee_amount::text || ':' || coalesce(settled_amount::text,'') || ':' || coalesce(settled_date::text,''),',' ORDER BY id) FROM payments WHERE provider IS NOT NULL),''))
    """,String.class,ReconciliationService.today());
   if(!current.equals(payload.path("sourceFingerprint").asText()))throw new IllegalStateException("Reconciliation sources changed after submission. Cancel and review a new reconciliation.");
   if(!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM reconciliations WHERE id=? AND approval_request_id=?)",Boolean.class,UUID.fromString(payload.path("reconciliationId").asText()),req)))throw new IllegalStateException("Reconciliation not found.");

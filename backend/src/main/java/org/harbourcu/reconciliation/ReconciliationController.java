@@ -12,8 +12,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController @RequestMapping("/api/v1/reconciliations") @ConditionalOnProperty(name="APP_ENCRYPTION_KEY")
 public class ReconciliationController {
  public record Decision(String decision,String comment){}
- private final ReconciliationService service;private final SessionService sessions;private final String origin;
- public ReconciliationController(ReconciliationService service,SessionService sessions,@Value("${APP_ALLOWED_ORIGIN:http://localhost:5173}") String origin){this.service=service;this.sessions=sessions;this.origin=origin;}
+ private final SettlementService settlements;private final ReconciliationService service;private final SessionService sessions;private final String origin;
+ public ReconciliationController(SettlementService settlements,ReconciliationService service,SessionService sessions,@Value("${APP_ALLOWED_ORIGIN:http://localhost:5173}") String origin){this.settlements=settlements;this.service=service;this.sessions=sessions;this.origin=origin;}
+ @GetMapping("/settlements") public ResponseEntity<?> settlements(@RequestParam(defaultValue="0")int page,HttpServletRequest r){return call(r,false,a->ResponseEntity.ok(settlements.list(a,page)));}
+ @PostMapping("/settlements/payments/{id}") public ResponseEntity<?> match(@PathVariable UUID id,@RequestBody SettlementService.Input b,HttpServletRequest r){return call(r,true,a->ResponseEntity.ok(Map.of("id",settlements.submit(a,id,b))));}
+ @PostMapping("/settlements/{id}/decide") public ResponseEntity<?> matchDecision(@PathVariable UUID id,@RequestBody Decision b,HttpServletRequest r){return call(r,true,a->{settlements.decide(a,id,b.decision(),b.comment());return ResponseEntity.noContent().build();});}
+ @PostMapping("/settlements/{id}/cancel") public ResponseEntity<?> matchCancel(@PathVariable UUID id,HttpServletRequest r){return call(r,true,a->{settlements.cancel(a,id);return ResponseEntity.noContent().build();});}
  @GetMapping("/preview") public ResponseEntity<?> preview(HttpServletRequest r){return call(r,false,a->ResponseEntity.ok(service.preview(a)));}
  @GetMapping public ResponseEntity<?> list(@RequestParam(defaultValue="0")int page,HttpServletRequest r){return call(r,false,a->ResponseEntity.ok(service.list(a,page)));}
  @PostMapping public ResponseEntity<?> submit(@RequestBody ReconciliationService.Input b,HttpServletRequest r){return call(r,true,a->ResponseEntity.ok(Map.of("id",service.submit(a,b))));}

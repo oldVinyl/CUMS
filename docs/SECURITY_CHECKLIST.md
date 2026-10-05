@@ -74,7 +74,7 @@ Do not tag v1.0.0 or mark the master prompt complete while these gates remain op
 - [x] Responsive reset/admin review with matching-password confirmation and secret-fragment removal
 - [ ] Live recovery-email delivery and owner identity-verification acceptance
 
-## Search and private receipt acceptance � 2026-10-05
+## Search and private receipt acceptance — 2026-10-05
 
 - [x] Identifying member/account searches use protected POST bodies, CSRF/origin/permission guards and no-store; legacy query searches are rejected without reflection
 - [x] Synthetic search sentinel absent from captured application logs; unsigned and ordinary-member denial across 21 union read routes
@@ -85,3 +85,13 @@ Do not tag v1.0.0 or mark the master prompt complete while these gates remain op
 - [ ] Real bucket policy/TLS/KMS/credentials and owner off-site recovery acceptance
 
 These checks do not complete the remaining mutation permission sweep, historical audit/free-text privacy review or retention/anonymization requirements.
+
+## Bank settlement acceptance — 2026-10-05
+
+- [x] Restricted union reads, server session/CSRF/origin checks and current maker/checker permissions
+- [x] Maker cannot approve own settlement; changed sources/revoked maker roll back decisions; concurrent requests produce one pending review
+- [x] Immutable encrypted evidence history with new independently approved correction records and safe financial audit fields
+- [x] Replay/unchanged-value rejection and confirmation-through-today date bounds
+- [x] Ledger equity unchanged by settlement; real mobile submission and independent browser approval verified
+- [x] PostgreSQL 16 verifies V39 and financial immutability; 215 backend tests, 79 frontend tests and financial coverage gates pass
+- [ ] Actual bank/provider evidence and live settlement acceptance with the owner

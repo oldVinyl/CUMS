@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.*;
   String hash=jdbc.queryForObject("""
    SELECT md5(coalesce((SELECT string_agg(id::text,',' ORDER BY id) FROM ledger_entries WHERE effective_date<=?), '') || '|' ||
     coalesce((SELECT string_agg(id::text || ':' || revision::text || ':' || status || ':' || cost::text,',' ORDER BY id) FROM investments WHERE status<>'DRAFT'),'') || '|' ||
-    coalesce((SELECT string_agg(id::text || ':' || status || ':' || amount::text || ':' || fee_amount::text,',' ORDER BY id) FROM payments WHERE provider IS NOT NULL),''))
+    coalesce((SELECT string_agg(id::text || ':' || status || ':' || amount::text || ':' || fee_amount::text || ':' || coalesce(settled_amount::text,'') || ':' || coalesce(settled_date::text,''),',' ORDER BY id) FROM payments WHERE provider IS NOT NULL),''))
    """,String.class,today());
   return new Figures(equity.toPlainString(),p.toPlainString(),i.toPlainString(),equity.subtract(p).subtract(i).toPlainString(),invested.toPlainString(),equity.subtract(invested).toPlainString(),hash);
  }
