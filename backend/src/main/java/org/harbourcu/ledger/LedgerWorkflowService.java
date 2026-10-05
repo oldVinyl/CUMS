@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LedgerWorkflowService {
     public record Entry(UUID id, UUID memberId, String memberNumber, String fullName, String type, String component,
                         String amount, LocalDate effectiveDate, String reference, String narration, UUID reversalOf,
-                        boolean reversed, boolean canReverse) {}
+                        boolean reversed, boolean canReverse,boolean canHistoricalReverse) {}
     public record Page(List<Entry> entries, int page, boolean hasNext) {}
     public record Pending(UUID id, UUID makerId, String actionType, JsonNode payload, String memberNumber,
                           String fullName, String originalAmount, int requiredApprovals, int approvals) {}
@@ -38,9 +38,11 @@ public class LedgerWorkflowService {
             throw new IllegalArgumentException("Choose a valid ledger range and page");
         }
         boolean canReverse = permissions.hasPermission(actor, "LEDGER_REVERSE");
+        boolean canHistorical=canReverse && permissions.hasPermission(actor,"LEDGER_BACKDATE") && permissions.hasPermission(actor,"CYCLE_REPOST") && permissions.hasPermission(actor,"INVESTMENT_WRITE");
         List<Entry> entries = jdbc.query("""
             SELECT l.*, m.member_number, m.full_name,
-                EXISTS (SELECT 1 FROM ledger_entries r WHERE r.reversal_of = l.id) AS reversed
+                EXISTS (SELECT 1 FROM ledger_entries r WHERE r.reversal_of = l.id) AS reversed,
+                EXISTS(SELECT 1 FROM payments p WHERE p.id=l.payment_id AND p.provider IS NOT NULL) AS gateway
             FROM ledger_entries l JOIN members m ON m.id = l.member_id
             WHERE l.effective_date BETWEEN ? AND ? AND (?::uuid IS NULL OR l.member_id = ?::uuid)
             ORDER BY l.effective_date DESC, l.recorded_at DESC, l.id DESC LIMIT 51 OFFSET ?
@@ -50,7 +52,7 @@ public class LedgerWorkflowService {
                 row.getString("narration"), row.getObject("reversal_of", UUID.class), row.getBoolean("reversed"),
                 canReverse && !row.getBoolean("reversed") && row.getDate("effective_date").toLocalDate().equals(today())
                     && List.of("SEED", "ADDITION").contains(row.getString("type")) && row.getObject("payment_id") == null
-                    && row.getObject("investment_id") == null), from, to, member, member, page * 50);
+                    && row.getObject("investment_id") == null,canHistorical && !row.getBoolean("reversed") && !row.getBoolean("gateway") && row.getObject("investment_id")==null && List.of("SEED","ADDITION","OPENING_BALANCE").contains(row.getString("type"))), from, to, member, member, page * 50);
         return new Page(entries.size() > 50 ? entries.subList(0, 50) : entries, page, entries.size() > 50);
     }
 
@@ -85,7 +87,7 @@ public class LedgerWorkflowService {
             FROM approval_requests r
             LEFT JOIN ledger_entries l ON l.id::text = r.payload ->> 'entryId'
             LEFT JOIN members m ON m.id::text = r.payload ->> 'memberId' OR m.id = l.member_id
-            WHERE r.status = 'PENDING' AND r.action_type IN ('LEDGER_POST', 'LEDGER_BACKDATED_POST', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK', 'PERIOD_CREATE')
+            WHERE r.status = 'PENDING' AND r.action_type IN ('LEDGER_POST', 'LEDGER_BACKDATED_POST', 'LEDGER_HISTORICAL_REVERSE', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK', 'PERIOD_CREATE')
                 AND (? OR r.made_by = ?) ORDER BY r.created_at LIMIT 100
             """, (row, ignored) -> new Pending(row.getObject("id", UUID.class), row.getObject("made_by", UUID.class),
                 row.getString("action_type"), tree(row.getString("payload")), row.getString("member_number"),
@@ -137,7 +139,7 @@ public class LedgerWorkflowService {
         require(actor, "LEDGER_READ"); requireRequest(id); approvals.cancel(id, actor);
     }
     private void requireRequest(UUID id) {
-        if (!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM approval_requests WHERE id = ? AND action_type IN ('LEDGER_POST', 'LEDGER_BACKDATED_POST', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK', 'PERIOD_CREATE'))", Boolean.class, id))) {
+        if (!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM approval_requests WHERE id = ? AND action_type IN ('LEDGER_POST', 'LEDGER_BACKDATED_POST', 'LEDGER_HISTORICAL_REVERSE', 'LEDGER_REVERSE', 'FISCAL_YEAR_CLOSE', 'PERIOD_UNLOCK', 'PERIOD_CREATE'))", Boolean.class, id))) {
             throw new IllegalArgumentException("Ledger approval not found");
         }
     }

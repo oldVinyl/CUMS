@@ -13,10 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
  public record Method(UUID id,String name,String instructions,boolean active){}
  public record Submit(UUID memberId,UUID methodId,String amount,String purpose,LocalDate paidDate,UUID proofId){}
  public record Verify(String amount,LocalDate effectiveDate){}
- public record Payment(UUID id,UUID memberId,String memberNumber,String fullName,String amount,String verifiedAmount,String purpose,String method,String reference,String status,LocalDate paidDate,LocalDate effectiveDate,UUID proofId,String reason,UUID approvalRequestId,UUID makerId,int approvals,int requiredApprovals,boolean duplicate,String provider,String checkoutUrl,String feeAmount){}
+ public record Payment(UUID id,UUID memberId,String memberNumber,String fullName,String amount,String verifiedAmount,String purpose,String method,String reference,String status,LocalDate paidDate,LocalDate effectiveDate,UUID proofId,String reason,UUID approvalRequestId,UUID makerId,int approvals,int requiredApprovals,boolean duplicate,String provider,String checkoutUrl,String feeAmount,boolean compensated){}
  public record Page(List<Payment> payments,int page,boolean hasNext){}
- private final JdbcTemplate jdbc; private final PermissionService permissions; private final ProofStorage proofs; private final ApprovalService approvals; private final ObjectMapper json;
- public PaymentService(JdbcTemplate jdbc,PermissionService permissions,ProofStorage proofs,ApprovalService approvals,ObjectMapper json){this.jdbc=jdbc;this.permissions=permissions;this.proofs=proofs;this.approvals=approvals;this.json=json;}
+ private final HistoricalPaymentService historical; private final JdbcTemplate jdbc; private final PermissionService permissions; private final ProofStorage proofs; private final ApprovalService approvals; private final ObjectMapper json;
+ public PaymentService(JdbcTemplate jdbc,PermissionService permissions,ProofStorage proofs,ApprovalService approvals,ObjectMapper json,HistoricalPaymentService historical){this.historical=historical;this.jdbc=jdbc;this.permissions=permissions;this.proofs=proofs;this.approvals=approvals;this.json=json;}
  public List<Method> methods(UUID actor){requireReader(actor);return jdbc.query("SELECT * FROM payment_methods WHERE active OR ? ORDER BY name",(r,n)->new Method(r.getObject("id",UUID.class),r.getString("name"),r.getString("instructions"),r.getBoolean("active")),permissions.hasPermission(actor,"SETTINGS_WRITE"));}
  @Transactional public UUID method(UUID actor,UUID id,String name,String instructions,boolean active){
   require(actor,"SETTINGS_WRITE"); if(name==null||name.isBlank()||name.length()>120||instructions==null||instructions.isBlank()||instructions.length()>3000)throw new IllegalArgumentException("Name and payment instructions are required.");
@@ -64,14 +64,16 @@ import org.springframework.transaction.annotation.Transactional;
    SELECT p.*,m.member_number,m.full_name,r.made_by,r.required_approvals,
     (SELECT count(*) FROM approval_decisions d WHERE d.request_id=r.id AND d.decision='APPROVE') AS approvals,
     EXISTS(SELECT 1 FROM payments other JOIN attachments oa ON oa.id=other.proof_id JOIN attachments pa ON pa.id=p.proof_id
-      WHERE other.id<>p.id AND (oa.sha256=pa.sha256 OR (other.member_id=p.member_id AND other.amount=p.amount AND other.paid_date=p.paid_date))) AS duplicate
+      WHERE other.id<>p.id AND (oa.sha256=pa.sha256 OR (other.member_id=p.member_id AND other.amount=p.amount AND other.paid_date=p.paid_date))) AS duplicate,
+    EXISTS(SELECT 1 FROM ledger_entries correction WHERE correction.reversal_of=p.ledger_entry_id) AS compensated
    FROM payments p JOIN members m ON m.id=p.member_id LEFT JOIN approval_requests r ON r.id=p.approval_request_id
    WHERE (? OR p.member_id=?) ORDER BY p.created_at DESC,p.id DESC LIMIT 51 OFFSET ?
-   """,(r,n)->new Payment(r.getObject("id",UUID.class),r.getObject("member_id",UUID.class),r.getString("member_number"),r.getString("full_name"),r.getBigDecimal("amount").toPlainString(),r.getString("verified_amount"),r.getString("purpose"),r.getString("method"),r.getString("internal_reference"),r.getString("status"),r.getDate("paid_date")==null?null:r.getDate("paid_date").toLocalDate(),r.getDate("effective_date")==null?null:r.getDate("effective_date").toLocalDate(),r.getObject("proof_id",UUID.class),r.getString("rejection_reason"),r.getObject("approval_request_id",UUID.class),r.getObject("made_by",UUID.class),r.getInt("approvals"),r.getInt("required_approvals"),r.getBoolean("duplicate"),r.getString("provider"),r.getString("checkout_url"),r.getBigDecimal("fee_amount").toPlainString()),staff,own,page*50);
+   """,(r,n)->new Payment(r.getObject("id",UUID.class),r.getObject("member_id",UUID.class),r.getString("member_number"),r.getString("full_name"),r.getBigDecimal("amount").toPlainString(),r.getString("verified_amount"),r.getString("purpose"),r.getString("method"),r.getString("internal_reference"),r.getString("status"),r.getDate("paid_date")==null?null:r.getDate("paid_date").toLocalDate(),r.getDate("effective_date")==null?null:r.getDate("effective_date").toLocalDate(),r.getObject("proof_id",UUID.class),r.getString("rejection_reason"),r.getObject("approval_request_id",UUID.class),r.getObject("made_by",UUID.class),r.getInt("approvals"),r.getInt("required_approvals"),r.getBoolean("duplicate"),r.getString("provider"),r.getString("checkout_url"),r.getBigDecimal("fee_amount").toPlainString(),r.getBoolean("compensated")),staff,own,page*50);
   return new Page(rows.size()>50?rows.subList(0,50):rows,page,rows.size()>50);
  }
+ @Transactional public UUID verifyHistorical(UUID actor,UUID id,HistoricalPaymentService.Verify body){return historical.verify(actor,id,body,approvals);}
  @Transactional public UUID verify(UUID actor,UUID id,Verify b){
-  require(actor,"PAYMENT_VERIFY");var p=locked(id);if(!List.of("SUBMITTED","UNDER_REVIEW").contains(p.get("status")))throw new IllegalStateException("Payment is no longer awaiting verification.");
+  require(actor,"PAYMENT_VERIFY");jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");var p=locked(id);if(!List.of("SUBMITTED","UNDER_REVIEW").contains(p.get("status")))throw new IllegalStateException("Payment is no longer awaiting verification.");
   BigDecimal amount=money(b.amount());if(!today().equals(b.effectiveDate()))throw new IllegalArgumentException("Use today's posting date. Historical corrections require the period-impact workflow.");
   jdbc.update("UPDATE payments SET verified_amount=?,effective_date=?,verified_by=?,status='VERIFIED_PENDING_APPROVAL',rejection_reason=NULL WHERE id=?",amount,b.effectiveDate(),actor,id);
   UUID request=approvals.submit("PAYMENT_POST",json.createObjectNode().put("paymentId",id.toString()),actor,1);
@@ -79,17 +81,17 @@ import org.springframework.transaction.annotation.Transactional;
   event(actor,id,"VERIFIED",json.createObjectNode().put("submittedAmount",p.get("amount").toString()).put("verifiedAmount",amount.toPlainString()).put("paidDate",p.get("paid_date").toString()).put("effectiveDate",b.effectiveDate().toString()));audit(actor,id,"PAYMENT_VERIFIED"); return request;
  }
  @Transactional public void review(UUID actor,UUID id,String action,String reason){
-  require(actor,"PAYMENT_VERIFY");var p=locked(id);if(!List.of("SUBMITTED","UNDER_REVIEW").contains(p.get("status")))throw new IllegalStateException("Payment is no longer awaiting review.");
+  require(actor,"PAYMENT_VERIFY");jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");var p=locked(id);if(!List.of("SUBMITTED","UNDER_REVIEW").contains(p.get("status")))throw new IllegalStateException("Payment is no longer awaiting review.");
   if(reason==null||reason.isBlank()||reason.length()>1000)throw new IllegalArgumentException("Explain what needs correcting (up to 1,000 characters).");
   if(!List.of("REJECT","MORE_INFO").contains(action))throw new IllegalArgumentException("Choose reject or request more information.");
   jdbc.update("UPDATE payments SET status=?,rejection_reason=? WHERE id=?",action.equals("REJECT")?"REJECTED":"UNDER_REVIEW",reason.trim(),id);event(actor,id,action,json.createObjectNode().put("reason",reason.trim()));audit(actor,id,"PAYMENT_REVIEWED");
  }
  @Transactional public void decide(UUID actor,UUID id,String decision,String comment){
-  require(actor,"APPROVE");var p=locked(id);UUID req=(UUID)p.get("approval_request_id");if(req==null||!p.get("status").equals("VERIFIED_PENDING_APPROVAL"))throw new IllegalStateException("Payment is not awaiting approval.");
+  require(actor,"APPROVE");jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");var p=locked(id);UUID req=(UUID)p.get("approval_request_id");if(req==null||!p.get("status").equals("VERIFIED_PENDING_APPROVAL"))throw new IllegalStateException("Payment is not awaiting approval.");
   approvals.decide(req,actor,ApprovalService.Decision.valueOf(decision),comment);
   if(decision.equals("REJECT")){jdbc.update("UPDATE payments SET status='REJECTED',rejection_reason=? WHERE id=?",comment,id);event(actor,id,"REJECTED",json.createObjectNode().put("reason",comment));}
  }
- @Transactional public void cancel(UUID actor,UUID id){var p=locked(id);UUID req=(UUID)p.get("approval_request_id");if(req==null||!p.get("status").equals("VERIFIED_PENDING_APPROVAL"))throw new IllegalStateException("Payment is not awaiting approval.");approvals.cancel(req,actor);jdbc.update("UPDATE payments SET status='SUBMITTED',approval_request_id=NULL,verified_by=NULL,verified_amount=NULL,effective_date=NULL WHERE id=?",id);event(actor,id,"VERIFICATION_CANCELLED",json.createObjectNode());}
+ @Transactional public void cancel(UUID actor,UUID id){jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");var p=locked(id);UUID req=(UUID)p.get("approval_request_id");if(req==null||!p.get("status").equals("VERIFIED_PENDING_APPROVAL"))throw new IllegalStateException("Payment is not awaiting approval.");approvals.cancel(req,actor);jdbc.update("UPDATE payments SET status='SUBMITTED',approval_request_id=NULL,verified_by=NULL,verified_amount=NULL,effective_date=NULL WHERE id=?",id);event(actor,id,"VERIFICATION_CANCELLED",json.createObjectNode());}
  private Map<String,Object> locked(UUID id){var rows=jdbc.queryForList("SELECT * FROM payments WHERE id=? FOR UPDATE",id);if(rows.isEmpty())throw new IllegalArgumentException("Payment not found.");return rows.getFirst();}
  private void event(UUID actor,UUID id,String action,com.fasterxml.jackson.databind.JsonNode details){jdbc.update("INSERT INTO payment_events(payment_id,actor_id,action,details) VALUES(?,?,?,?::jsonb)",id,actor,action,details.toString());}
  private void audit(UUID actor,UUID id,String action){jdbc.update("INSERT INTO audit_log(actor_id,action,entity_type,entity_id) VALUES(?,?,'PAYMENT',?)",actor,action,id);}

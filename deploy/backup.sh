@@ -18,7 +18,7 @@ pg_dump --format=custom --no-owner --no-acl --file="$stage/database.dump"
 printf 'cums-backup-v1\n' > "$stage/FORMAT"
 # Receipt snapshots use anonymous UUID keys and validate bytes against the database.
 case "${APP_RECEIPT_STORAGE:-local}" in
-  local) receipt_root=/ ;;
+  local) python3 /opt/cums/receipt_archive.py snapshot_local "$stage/uploads"; receipt_root="$stage" ;;
   s3) python3 /opt/cums/receipt_archive.py snapshot "$stage/uploads"; receipt_root="$stage" ;;
   *) echo "Invalid receipt storage driver." >&2; exit 1 ;;
 esac

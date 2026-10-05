@@ -21,20 +21,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class ImportService {
     public static final List<String> MEMBER_COLUMNS=List.of("member_number","full_name","email","phone","id_type","id_number","date_of_birth","address","next_of_kin_name","next_of_kin_phone","next_of_kin_relationship","join_date");
     public static final List<String> LEDGER_COLUMNS=List.of("member_number","type","component","amount","effective_date","reference","narration");
-    public record RowReport(int row,String memberNumber,String name,String amount,String effectiveDate,List<String> errors) {}
+    public record RowReport(int row,String memberNumber,String name,String amount,String effectiveDate,List<String> errors,Map<String,String> details) {
+        public RowReport(int row,String memberNumber,String name,String amount,String effectiveDate,List<String> errors){this(row,memberNumber,name,amount,effectiveDate,errors,Map.of());}
+    }
     public record Report(String kind,String fileHash,int rowCount,String total,boolean valid,List<String> warnings,List<RowReport> rows) {}
     public record Batch(UUID id,String kind,int rowCount,String total,String status,UUID makerId,String reason,String createdAt,
                         UUID requestId,UUID reversalRequestId,int approvals,int requiredApprovals,
                         UUID reversalMakerId,String reversalStatus,int reversalApprovals,int reversalRequiredApprovals,String reversalReason) {}
     public record Page(List<Batch> batches,boolean hasNext,int page) {}
+    private final HistoricalInvestmentImport investments;
     private final JdbcTemplate jdbc;private final PermissionService permissions;private final ImportFileParser parser;
     private final FieldEncryption fields;private final ObjectMapper json;private final MemberService members;
     private final FiscalYearLock years;private final FiscalSnapshotService snapshots;
     // ApprovalService is passed at the controller boundary to keep the handler/service dependency acyclic.
-    public ImportService(JdbcTemplate jdbc,PermissionService permissions,ImportFileParser parser,FieldEncryption fields,ObjectMapper json,MemberService members,FiscalYearLock years,FiscalSnapshotService snapshots){
-        this.jdbc=jdbc;this.permissions=permissions;this.parser=parser;this.fields=fields;this.json=json;this.members=members;this.years=years;this.snapshots=snapshots;
+    public ImportService(JdbcTemplate jdbc,PermissionService permissions,ImportFileParser parser,FieldEncryption fields,ObjectMapper json,MemberService members,FiscalYearLock years,FiscalSnapshotService snapshots,HistoricalInvestmentImport investments){
+        this.investments=investments;this.jdbc=jdbc;this.permissions=permissions;this.parser=parser;this.fields=fields;this.json=json;this.members=members;this.years=years;this.snapshots=snapshots;
     }
-    public List<String> columns(String kind){return switch(kind){case "MEMBERS"->java.util.stream.Stream.concat(MEMBER_COLUMNS.stream(),java.util.stream.Stream.of("join_date_basis")).toList();case "LEDGER"->LEDGER_COLUMNS;default->throw new IllegalArgumentException("Choose MEMBERS or LEDGER.");};}
+    public List<String> columns(String kind){return switch(kind){case "MEMBERS"->java.util.stream.Stream.concat(MEMBER_COLUMNS.stream(),java.util.stream.Stream.of("join_date_basis")).toList();case "LEDGER"->LEDGER_COLUMNS;case "INVESTMENTS"->HistoricalInvestmentImport.COLUMNS;default->throw new IllegalArgumentException("Choose MEMBERS, LEDGER or INVESTMENTS.");};}
     private List<Map<String,String>> parse(String kind,String filename,byte[] bytes){
         List<Map<String,String>> rows;
         try{rows=parser.parse(filename,bytes,columns(kind));}
@@ -54,7 +57,7 @@ public class ImportService {
         if(!report.valid())throw new IllegalArgumentException("Resolve every validation error before submitting.");
         UUID id=UUID.randomUUID();
         jdbc.update("INSERT INTO import_batches(id,kind,file_hash,row_count,total,made_by,reason) VALUES(?,?,?,?,?,?,?)",id,kind,report.fileHash(),report.rowCount(),new BigDecimal(report.total()),actor,reason);
-        int number=0;for(var row:data){if("TOTAL".equals(row.get("member_number")))continue;
+        int number=0;for(var row:data){if("TOTAL".equals(row.get("member_number"))&&!"INVESTMENTS".equals(kind))continue;
             jdbc.update("INSERT INTO import_rows(batch_id,row_number,encrypted_data) VALUES(?,?,?)",id,++number,fields.encrypt(encode(row)));
         }
         UUID request=approvals.submit("IMPORT_POST",json.createObjectNode().put("batchId",id.toString()),actor,1);
@@ -71,6 +74,7 @@ public class ImportService {
         return new Page(rows.stream().limit(25).toList(),rows.size()>25,page);
     }
     public Report review(UUID actor,UUID id){requireReader(actor);var batch=batch(id);var data=data(id);
+        if("INVESTMENTS".equals(batch.get("kind"))) {audit(actor,id,"IMPORT_REVIEWED");return "PENDING".equals(batch.get("status"))?investments.analyze((String)batch.get("file_hash"),data):investments.evidence((String)batch.get("file_hash"),data);}
         // Review shows the originally submitted public impact, not a fresh validity claim for posted/reversed rows.
         List<RowReport> rows=new ArrayList<>();int n=0;
         for(var r:data)rows.add(new RowReport(++n,r.get("member_number"),r.get("full_name"),r.get("amount"),r.getOrDefault("effective_date",r.get("join_date")),List.of()));
@@ -85,6 +89,11 @@ public class ImportService {
         var rows=data(id);
         if("LEDGER".equals(kind))for(int year:rows.stream().map(r->LocalDate.parse(r.get("effective_date")).getYear()).distinct().sorted().toList())years.requireOpen(year);
         validatePost(maker,id);
+        if("INVESTMENTS".equals(kind)) {
+            investments.post(request,maker,checker,id,rows);
+            snapshots.recomputeFrom(LocalDate.parse(rows.getFirst().get("purchase_date")).getYear(),checker,request,false);
+            jdbc.update("UPDATE import_batches SET status='POSTED',posted_at=now() WHERE id=?",id);audit(checker,id,"IMPORT_POSTED");return;
+        }
         int n=0;for(var r:rows){n++;if("MEMBERS".equals(kind)){
             UUID member=members.create(maker,new MemberService.CreateMember(empty(r.get("member_number")),r.get("full_name"),empty(r.get("email")),empty(r.get("phone")),empty(r.get("id_type")),empty(r.get("id_number")),date(r.get("date_of_birth")),empty(r.get("address")),empty(r.get("next_of_kin_name")),empty(r.get("next_of_kin_phone")),empty(r.get("next_of_kin_relationship")),date(r.get("join_date"))));
             jdbc.update("UPDATE members SET join_date_basis=? WHERE id=?",r.getOrDefault("join_date_basis","CONFIRMED").isBlank()?"CONFIRMED":r.get("join_date_basis"),member);
@@ -100,7 +109,7 @@ public class ImportService {
         snapshots.recomputeFrom(firstYear,checker,request,false);
         jdbc.update("UPDATE import_batches SET status='POSTED',posted_at=now() WHERE id=?",id);audit(checker,id,"IMPORT_POSTED");
     }
-    @Transactional public UUID reverse(UUID actor,UUID id,String reason,ApprovalService approvals){var b=lockedBatch(id);requireReverse(actor,(String)b.get("kind"));reason=reason(reason);
+    @Transactional public UUID reverse(UUID actor,UUID id,String reason,ApprovalService approvals){jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");var b=lockedBatch(id);requireReverse(actor,(String)b.get("kind"));reason=reason(reason);
         if(!"POSTED".equals(b.get("status")))throw new IllegalStateException("Only posted batches can be reversed.");
         if(b.get("reversal_request_id")!=null&&Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM approval_requests WHERE id=? AND status='PENDING')",Boolean.class,b.get("reversal_request_id"))))throw new IllegalStateException("This batch already has a pending reversal.");
         UUID request=approvals.submit("IMPORT_REVERSE",json.createObjectNode().put("batchId",id.toString()).put("reason",reason),actor,1);
@@ -108,6 +117,7 @@ public class ImportService {
     }
     public void validateReverse(UUID actor,UUID id){var b=batch(id);String kind=(String)b.get("kind");requireReverse(actor,kind);
         if(!"POSTED".equals(b.get("status")))throw new IllegalStateException("The batch is no longer posted.");
+        if("INVESTMENTS".equals(kind)){investments.validateReverse(id);return;}
         if("MEMBERS".equals(kind)){
             if(Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS(SELECT 1 FROM import_member_results r WHERE r.batch_id=? AND
@@ -126,6 +136,11 @@ public class ImportService {
     }
     public void reversePost(UUID request,UUID checker,UUID id,String reason){jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");var b=lockedBatch(id);
         UUID maker=jdbc.queryForObject("SELECT made_by FROM approval_requests WHERE id=?",UUID.class,request);validateReverse(maker,id);
+        if("INVESTMENTS".equals(b.get("kind"))){
+            investments.reverse(request,maker,checker,id,reason);
+            snapshots.recomputeFrom(today().getYear(),checker,request,false);
+            jdbc.update("UPDATE import_batches SET status='REVERSED',reversed_at=now() WHERE id=?",id);audit(checker,id,"IMPORT_REVERSED");return;
+        }
         if("MEMBERS".equals(b.get("kind"))){for(UUID member:jdbc.queryForList("SELECT member_id FROM import_member_results WHERE batch_id=? ORDER BY member_id",UUID.class,id)){
             long version=jdbc.queryForObject("SELECT version FROM members WHERE id=?",Long.class,member);members.changeStatus(maker,member,version,"INACTIVE");
         }}else{years.requireOpen(today().getYear());
@@ -136,17 +151,18 @@ public class ImportService {
         }
         jdbc.update("UPDATE import_batches SET status='REVERSED',reversed_at=now() WHERE id=?",id);audit(checker,id,"IMPORT_REVERSED");
     }
-    @Transactional public void decide(UUID actor,UUID id,UUID request,String decision,String comment,ApprovalService approvals){requireReader(actor);var b=lockedBatch(id);linked(b,request);
+    @Transactional public void decide(UUID actor,UUID id,UUID request,String decision,String comment,ApprovalService approvals){requireReader(actor);jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");var b=lockedBatch(id);linked(b,request);
         if(!"APPROVE".equals(decision)&&!"REJECT".equals(decision))throw new IllegalArgumentException("Choose APPROVE or REJECT.");
         if(comment!=null&&comment.length()>1000)throw new IllegalArgumentException("Decision comments are limited to 1,000 characters.");
         approvals.decide(request,actor,ApprovalService.Decision.valueOf(decision),comment);
         if(request.equals(b.get("approval_request_id"))&&"REJECTED".equals(jdbc.queryForObject("SELECT status FROM approval_requests WHERE id=?",String.class,request)))jdbc.update("UPDATE import_batches SET status='REJECTED' WHERE id=?",id);
     }
-    @Transactional public void cancel(UUID actor,UUID id,UUID request,ApprovalService approvals){var b=lockedBatch(id);linked(b,request);approvals.cancel(request,actor);
+    @Transactional public void cancel(UUID actor,UUID id,UUID request,ApprovalService approvals){jdbc.execute("SELECT pg_advisory_xact_lock(78124510)");var b=lockedBatch(id);linked(b,request);approvals.cancel(request,actor);
         if(request.equals(b.get("approval_request_id")))jdbc.update("UPDATE import_batches SET status='CANCELLED' WHERE id=?",id);
     }
     private void linked(Map<String,Object> b,UUID request){if(request==null||(!request.equals(b.get("approval_request_id"))&&!request.equals(b.get("reversal_request_id"))))throw new IllegalArgumentException("This request does not belong to the batch.");}
     private Report analyze(String kind,String hash,List<Map<String,String>> input){
+        if("INVESTMENTS".equals(kind))return investments.analyze(hash,input);
         var reports=new ArrayList<RowReport>();var warnings=new ArrayList<String>();var numbers=new HashSet<String>();var refs=new HashSet<String>();
         BigDecimal total=BigDecimal.ZERO,declared=null;boolean totalsError=false;int n=0;
         for(var row:input){if("TOTAL".equals(row.get("member_number"))&&"LEDGER".equals(kind)){
@@ -205,9 +221,10 @@ public class ImportService {
     private LocalDate today(){return LocalDate.now(ZoneId.of("Africa/Accra"));}
     private String empty(String v){return v==null||v.isEmpty()?null:v;}
     private String reason(String v){if(v==null||v.isBlank()||v.trim().length()>1000)throw new IllegalArgumentException("A reason of up to 1,000 characters is required.");return v.trim();}
-    private void requireMaker(UUID actor,String kind){columns(kind);if(!permissions.hasPermission(actor,"MEMBER_IMPORT")||!permissions.hasPermission(actor,"MEMBERS".equals(kind)?"MEMBER_WRITE":"LEDGER_POST"))throw new SecurityException("Import permission required");
+    private void requireMaker(UUID actor,String kind){columns(kind);if(!permissions.hasPermission(actor,"MEMBER_IMPORT")||!permissions.hasPermission(actor,"MEMBERS".equals(kind)?"MEMBER_WRITE":"INVESTMENTS".equals(kind)?"INVESTMENT_WRITE":"LEDGER_POST"))throw new SecurityException("Import permission required");
+        if("INVESTMENTS".equals(kind)&&(!permissions.hasPermission(actor,"LEDGER_BACKDATE")||!permissions.hasPermission(actor,"CYCLE_REPOST")))throw new SecurityException("Historical investment import permission required");
         if("LEDGER".equals(kind)&&!permissions.hasPermission(actor,"LEDGER_BACKDATE"))throw new SecurityException("Historical ledger import permission required");}
-    private void requireReverse(UUID actor,String kind){if(!permissions.hasPermission(actor,"MEMBER_IMPORT")||!permissions.hasPermission(actor,"MEMBERS".equals(kind)?"MEMBER_WRITE":"LEDGER_REVERSE"))throw new SecurityException("Batch reversal permission required");}
+    private void requireReverse(UUID actor,String kind){if(!permissions.hasPermission(actor,"MEMBER_IMPORT")||!permissions.hasPermission(actor,"MEMBERS".equals(kind)?"MEMBER_WRITE":"INVESTMENTS".equals(kind)?"CYCLE_REPOST":"LEDGER_REVERSE"))throw new SecurityException("Batch reversal permission required");}
     private void requireReader(UUID actor){if(!permissions.hasPermission(actor,"MEMBER_IMPORT")&&!permissions.hasPermission(actor,"APPROVE")&&!permissions.hasPermission(actor,"AUDIT_READ"))throw new SecurityException("Import access required");}
     private Map<String,Object> batch(UUID id){var rows=jdbc.queryForList("SELECT * FROM import_batches WHERE id=?",id);if(rows.isEmpty())throw new IllegalArgumentException("Import batch not found.");return rows.getFirst();}
     private Map<String,Object> lockedBatch(UUID id){var rows=jdbc.queryForList("SELECT * FROM import_batches WHERE id=? FOR UPDATE",id);if(rows.isEmpty())throw new IllegalArgumentException("Import batch not found.");return rows.getFirst();}

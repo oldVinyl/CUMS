@@ -66,6 +66,7 @@ public class ProofStorage {
   var rows=jdbc.queryForList("SELECT member_id,storage_key,content_type,sha256,byte_size FROM attachments WHERE id=?",id);
   if(rows.isEmpty()) throw new IllegalArgumentException("Receipt not found."); var row=rows.getFirst();
   ownOrStaff(actor,(UUID)row.get("member_id"),false);
+  if(Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM member_anonymizations WHERE member_id=?)",Boolean.class,row.get("member_id"))))throw new IllegalStateException("Receipt removed under the approved retention policy.");
   jdbc.update("INSERT INTO audit_log(actor_id,action,entity_type,entity_id) VALUES(?,'FILE_DOWNLOADED','ATTACHMENT',?)",actor,id);
   try{
    byte[] bytes=store.read((UUID)row.get("storage_key"));
@@ -76,6 +77,7 @@ public class ProofStorage {
   catch(IOException|NoSuchAlgorithmException e){throw new IllegalStateException("Receipt is temporarily unavailable.");}
  }
  public void ownOrStaff(UUID actor,UUID member,boolean writing){
+  if(writing && !Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM members WHERE id=? AND status='ACTIVE' AND anonymized_at IS NULL)",Boolean.class,member)))throw new IllegalArgumentException("Choose an active membership.");
   if(permissions.hasPermission(actor,"PAYMENT_VERIFY") || (!writing && permissions.hasPermission(actor,"APPROVE"))) return;
   if(!permissions.hasPermission(actor,"OWN_DATA_READ") || !Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM users WHERE id=? AND member_id=? AND status='ACTIVE')",Boolean.class,actor,member))) throw new SecurityException("Access denied");
  }

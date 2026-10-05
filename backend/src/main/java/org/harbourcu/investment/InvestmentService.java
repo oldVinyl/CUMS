@@ -144,6 +144,34 @@ public class InvestmentService {
             investments.getFirst().cost().subtract(pool), income, pool.add(income));
     }
 
+    @Transactional
+    public Detail archived(UUID actor,UUID investment,int revision) {
+        require(actor,"INVESTMENT_READ");
+        var summaries=jdbc.query("SELECT i.* FROM investment_revision_history h CROSS JOIN LATERAL jsonb_populate_record(NULL::investments,h.snapshot->'investment') i WHERE h.investment_id=? AND h.revision=?",(r,n)->summary(r),investment,revision);
+        if(summaries.isEmpty())throw new IllegalArgumentException("Archived revision not found.");
+        var allocations=jdbc.query("SELECT a.*,m.member_number,m.full_name FROM investment_revision_history h CROSS JOIN LATERAL jsonb_populate_recordset(NULL::investment_allocations,coalesce(h.snapshot->'allocations','[]'::jsonb)) a JOIN members m ON m.id=a.member_id WHERE h.investment_id=? AND h.revision=? ORDER BY m.member_number,m.id",(r,n)->new Allocation(r.getObject("member_id",UUID.class),r.getString("member_number"),r.getString("full_name"),r.getBigDecimal("participation"),BigDecimal.valueOf(r.getInt("ratio_basis_points"),2),r.getBigDecimal("cost_share"),r.getBigDecimal("maturity_value_share"),r.getBigDecimal("income_share"),r.getBigDecimal("closing_balance")),investment,revision);
+        var actual=jdbc.query("SELECT a.* FROM investment_revision_history h CROSS JOIN LATERAL jsonb_populate_recordset(NULL::investment_maturity_allocations,CASE WHEN jsonb_typeof(h.snapshot->'maturityAllocations')='array' THEN h.snapshot->'maturityAllocations' ELSE '[]'::jsonb END) a WHERE h.investment_id=? AND h.revision=? ORDER BY a.member_id",(r,n)->new MaturityAllocation(r.getObject("member_id",UUID.class),r.getBigDecimal("actual_maturity_share"),r.getBigDecimal("actual_income_share")),investment,revision);
+        BigDecimal pool=allocations.stream().map(Allocation::participation).reduce(BigDecimal.ZERO,BigDecimal::add);
+        var summary=summaries.getFirst();BigDecimal income=summary.maturityValue().subtract(summary.cost());
+        jdbc.update("INSERT INTO audit_log(actor_id,action,entity_type,entity_id,details) VALUES(?,'INVESTMENT_ARCHIVE_VIEWED','INVESTMENT',?,jsonb_build_object('revision',?))",actor,investment,revision);
+        return new Detail(summary,allocations,actual,List.of(),pool,summary.cost().subtract(pool),income,pool.add(income));
+    }
+
+    public record ArchivedCorrection(UUID id,String recordedAt,LocalDate endedOn,@JsonSerialize(using=ToStringSerializer.class) BigDecimal actualProceeds,List<Allocation> allocations,List<MaturityAllocation> maturityAllocations) {}
+    @Transactional
+    public List<ArchivedCorrection> archivedCorrections(UUID actor,UUID investment,int revision) {
+        require(actor,"INVESTMENT_READ");
+        var rows=jdbc.queryForList("SELECT id,recorded_at,ended_on,actual_proceeds FROM archived_cycle_corrections WHERE investment_id=? AND revision=? ORDER BY recorded_at DESC,id DESC LIMIT 50",investment,revision);
+        List<ArchivedCorrection> result=new ArrayList<>();
+        for(var row:rows){UUID id=(UUID)row.get("id");
+            var allocations=jdbc.query("SELECT a.*,m.member_number,m.full_name FROM archived_cycle_corrections c CROSS JOIN LATERAL jsonb_populate_recordset(NULL::investment_allocations,c.allocations) a JOIN members m ON m.id=a.member_id WHERE c.id=? ORDER BY m.member_number,m.id",(r,n)->new Allocation(r.getObject("member_id",UUID.class),r.getString("member_number"),r.getString("full_name"),r.getBigDecimal("participation"),BigDecimal.valueOf(r.getInt("ratio_basis_points"),2),r.getBigDecimal("cost_share"),r.getBigDecimal("maturity_value_share"),r.getBigDecimal("income_share"),r.getBigDecimal("closing_balance")),id);
+            var actual=jdbc.query("SELECT a.* FROM archived_cycle_corrections c CROSS JOIN LATERAL jsonb_populate_recordset(NULL::investment_maturity_allocations,c.maturity_allocations) a WHERE c.id=? ORDER BY a.member_id",(r,n)->new MaturityAllocation(r.getObject("member_id",UUID.class),r.getBigDecimal("actual_maturity_share"),r.getBigDecimal("actual_income_share")),id);
+            result.add(new ArchivedCorrection(id,row.get("recorded_at").toString(),((java.sql.Date)row.get("ended_on")).toLocalDate(),(BigDecimal)row.get("actual_proceeds"),allocations,actual));
+        }
+        jdbc.update("INSERT INTO audit_log(actor_id,action,entity_type,entity_id,details) VALUES(?,'ARCHIVED_CORRECTIONS_VIEWED','INVESTMENT',?,jsonb_build_object('revision',?))",actor,investment,revision);
+        return List.copyOf(result);
+    }
+
     public MaturityPreview previewMaturity(UUID actor, UUID investmentId, String proceedsText) {
         require(actor, "INVESTMENT_READ");
         BigDecimal proceeds = money(proceedsText, false);

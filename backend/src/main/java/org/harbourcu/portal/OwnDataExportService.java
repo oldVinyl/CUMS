@@ -62,6 +62,21 @@ public class OwnDataExportService {
               jsonb_array_elements(coalesce(nullif(h.snapshot->'allocations','null'::jsonb),'[]'::jsonb)) a
             WHERE a->>'member_id'=?::text ORDER BY h.investment_id,h.revision
             """,member);
+        section(root,"archived_cycle_corrections","""
+            SELECT c.id correction_id,c.investment_id,c.revision,c.ended_on,c.recorded_at,
+              a->>'participation' participation,a->>'ratio_basis_points' ratio_basis_points,
+              a->>'cost_share' cost_share,a->>'maturity_value_share' maturity_value_share,
+              a->>'income_share' income_share,a->>'closing_balance' closing_balance
+            FROM archived_cycle_corrections c CROSS JOIN LATERAL jsonb_array_elements(c.allocations) a
+            WHERE a->>'member_id'=?::text ORDER BY c.recorded_at,c.id
+            """,member);
+        section(root,"archived_received_shares","""
+            SELECT c.id correction_id,c.investment_id,c.revision,
+              a->>'actual_maturity_share' actual_maturity_share,a->>'actual_income_share' actual_income_share
+            FROM archived_cycle_corrections c CROSS JOIN LATERAL jsonb_array_elements(c.maturity_allocations) a
+            WHERE a->>'member_id'=?::text ORDER BY c.recorded_at,c.id
+            """,member);
+        section(root,"archived_income_adjustments","SELECT correction_id,earned_entry_id,compensation_entry_id FROM archived_income_adjustments WHERE member_id=? ORDER BY correction_id",member);
         section(root,"maturity_allocations","SELECT investment_id,revision,actual_income_share FROM investment_maturity_allocations WHERE member_id=? ORDER BY investment_id,revision",member);
         section(root,"fiscal_snapshots","SELECT fiscal_year,principal,income,equity,revision,created_at FROM fiscal_year_snapshots WHERE member_id=? ORDER BY fiscal_year",member);
         section(root,"snapshot_history","SELECT fiscal_year,principal,income,equity,revision,original_created_at,archived_at FROM fiscal_snapshot_history WHERE member_id=? ORDER BY fiscal_year,revision",member);

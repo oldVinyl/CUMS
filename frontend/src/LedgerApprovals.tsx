@@ -132,13 +132,15 @@ export default function LedgerApprovals({
                 ? "Historical contribution"
                 : item.actionType === "LEDGER_POST"
                   ? `${item.payload.type === "SEED" ? "Seed" : "Additional"} contribution`
-                  : item.actionType === "LEDGER_REVERSE"
-                    ? "Contribution reversal"
-                    : item.actionType === "PERIOD_UNLOCK"
-                      ? `Unlock fiscal year ${item.payload.year}`
-                      : item.actionType === "PERIOD_CREATE"
-                        ? `Set up historical fiscal year ${item.payload.year}`
-                        : `Close fiscal year ${item.payload.year}`}
+                  : item.actionType === "LEDGER_HISTORICAL_REVERSE"
+                    ? "Original-date ledger correction"
+                    : item.actionType === "LEDGER_REVERSE"
+                      ? "Contribution reversal"
+                      : item.actionType === "PERIOD_UNLOCK"
+                        ? `Unlock fiscal year ${item.payload.year}`
+                        : item.actionType === "PERIOD_CREATE"
+                          ? `Set up historical fiscal year ${item.payload.year}`
+                          : `Close fiscal year ${item.payload.year}`}
             </h3>
             {item.fullName && (
               <p>
@@ -163,11 +165,11 @@ export default function LedgerApprovals({
                 <p>Reason: {item.payload.reason}</p>
               </>
             )}
-            {item.actionType === "LEDGER_REVERSE" && (
+            {["LEDGER_REVERSE", "LEDGER_HISTORICAL_REVERSE"].includes(item.actionType) && (
               <>
                 <p>
-                  Principal compensation:{" "}
-                  <strong>−{formatMoney(item.originalAmount ?? "0")}</strong>
+                  Exact opposite entry for original amount:{" "}
+                  <strong>{formatMoney(item.originalAmount ?? "0")}</strong>
                 </p>
                 <p>Reason: {item.payload.reason}</p>
                 <small>Original entry: {item.payload.entryId}</small>
@@ -240,9 +242,14 @@ export default function LedgerApprovals({
                   void act(item, review.decision);
                 }}
               >
-                {item.actionType === "LEDGER_BACKDATED_POST" && review.decision === "APPROVE" && (
-                  <HistoricalRequestImpact requestId={item.id} onReady={setImpactReady} />
-                )}
+                {["LEDGER_BACKDATED_POST", "LEDGER_HISTORICAL_REVERSE"].includes(item.actionType) &&
+                  review.decision === "APPROVE" && (
+                    <HistoricalRequestImpact
+                      reversal={item.actionType === "LEDGER_HISTORICAL_REVERSE"}
+                      requestId={item.id}
+                      onReady={setImpactReady}
+                    />
+                  )}
                 <h3>
                   {review.decision === "APPROVE" ? "Confirm approval" : "Reject this request"}
                 </h3>
@@ -266,7 +273,9 @@ export default function LedgerApprovals({
                     className="primary-button"
                     disabled={
                       busy ||
-                      (item.actionType === "LEDGER_BACKDATED_POST" &&
+                      (["LEDGER_BACKDATED_POST", "LEDGER_HISTORICAL_REVERSE"].includes(
+                        item.actionType,
+                      ) &&
                         review.decision === "APPROVE" &&
                         !impactReady)
                     }

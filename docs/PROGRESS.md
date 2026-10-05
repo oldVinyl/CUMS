@@ -1,6 +1,6 @@
 # Progress
 
-Check an item only after implementation and tests pass. Each item is small enough to show partial phase progress accurately.
+Check implemented items after their recorded verification. This pass follows the owner’s explicit request to skip tests: newly checked implementation items are build-verified, not regression-tested. Release acceptance remains separate.
 
 ## Phase 0 — Setup
 
@@ -21,7 +21,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Signed-in navigation follows current profile permissions; sign-in lands on the Overview route, with own membership figures for ordinary members
 - [x] Hide restricted menu links before profile load; guard signed-in direct routes and refresh permissions on focus/once per minute; dev retains all known permissions
 - [x] Flyway V1–V21 core financial, role, approval, fiscal snapshot, authentication, member identity, Google link, passkey, investment allocation, maturity, rollover, settings, and admin investment-read migrations tested against PostgreSQL 16
-- [ ] Add remaining workflow tables and migration tests
+- [x] Remaining implemented workflow tables through V42: reviewed investment imports, retention controls and archived economic corrections (new migrations verified by application startup; tests skipped at owner request)
 - [x] Structured API validation and access errors with trace IDs
 - [x] Append-only ledger and audit triggers with database tests
 - [x] AES-256-GCM private-field encryption, versioned keys, and blind indexes with tests
@@ -79,7 +79,9 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Member balances computed from ledger entries through an as-at date
 - [x] Approved year-end close with balance-forward snapshots and fiscal-year locking
 - [x] Historical contribution impact preview with independently approved future-only posting or chronological cycle reverse/repost, checksum-bound source and snapshot recomputation
-- [ ] Historical payment amendments and previously moved/archived cycle evidence reconstruction
+- [x] Historical receipt posting uses original paid dates, impact previews, future-only/repost choices, unique receipt-to-ledger links and separate checker review
+- [x] Reconstruct archived cycle dates, allocations and actual proceeds from immutable revision snapshots for authorized inspection
+- [x] Chronological correction across moved/reversed purchase-date revisions using original economic segments, linked income adjustments and offsets at approved compensation dates
 - [x] Independently approved, reasoned period unlock with current permission rechecks, duplicate-request prevention, maker cancellation and rejection
 - [x] Append-only snapshot revision history; recompute the corrected year and every later snapshot on unlock, approved import and reclose
 - [x] Permit reviewed historical ledger imports into open or approved-unlocked years, while blocking changes to posted or archived investment ratios
@@ -107,7 +109,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Current-day investment lifecycle, rollover, settlement and independently approved compensating reversal
 - [x] Approved current-day investment reversal with exact gain/loss compensation, immutable revision history, dependency checks, return to draft and fresh posting approval
 - [x] Approved fiscal-period unlock and immutable snapshot recomputation
-- [ ] Historical investment correction dates and dependent-cycle repost
+- [x] Correct historical received investment proceeds at original economic dates, compensate prior income, chronologically repost affected current cycles and recompute snapshots (build-verified; tests skipped)
 - [x] Sheet A xlsx/PDF downloads with grouped headings, reconciled supplied fixture totals, permissions, audit and visual checks
 
 ## Phase 4 — Dashboards and exports
@@ -144,7 +146,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [ ] Real Paystack sandbox acceptance, direct MoMo prompts, settlement matching and operational exception review
 - [x] Local HEIC conversion and bounded private malware scan hook with protocol tests
 - [x] Receipt replacements retain original proofs/history, return for review and reject stale/verified/posted changes
-- [ ] Historical payment posting and real scanner acceptance
+- [x] Historical manual-payment posting with reviewed original-date/future-only impact
+- [ ] Real private scanner acceptance
 - [x] Permission-protected notification administration with filters/pagination, failed-message retry confirmation, private-payload exclusion and before/after audit
 - [x] Prevent expired/consumed invitation delivery and notifications for ineligible accounts
 - [ ] MailHog/SMTP delivery acceptance (still deferred)
@@ -170,11 +173,11 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Independently approve entire batches atomically; stale data, permissions, closed periods and duplicate references are rechecked
 - [x] Reviewed exact ledger batch compensation and unused-member deactivation, retaining original source and financial records
 - [x] Live import validation/review/history screens, pagination, CSRF/origin/permission and rollback tests
-- [ ] Historical investment/allocation imports and explicit correction of dependent investment cycles
+- [x] Historical investment/allocation imports, exact supplied-share validation and separate reviewed correction of dependent investment cycles
 - [x] Current-day ledger/holdings/cash comparison with exact differences and immutable snapshots
 - [x] Separate finalization/rejection/cancellation with source freshness and transaction rollback tests
 - [x] Live reconciliation screen and paginated decision history
-- [ ] Historical reconstruction
+- [x] Historical reconstruction from immutable revision evidence and approved economic corrections
 - [x] Reviewed gateway/bank settlement matching with amounts, dates, fee/net differences, corrections and independent approval
 
 ## Phase 8 — Delivery
@@ -184,7 +187,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Responsive Playwright/axe regression for implemented flows and public-static-only PWA cache
 - [ ] Final full security review and remaining financial-action browser acceptance
 - [ ] Production deployment, backups and restore drill
-- [ ] User guide, runbook, privacy, checklist, full test gates
+- [x] User guide, runbook, privacy notes and release checklist maintained
+- [ ] Final release acceptance; tests for new workflows were waived for this implementation pass
 - [x] User guide, runbook, privacy implementation notes and release checklist drafts
 
 ## Latest verified pass — 2026-10-03
@@ -195,7 +199,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Recheck all 70 operational layouts after theme/type/settings/pagination changes and add ten import review checks; 80 checks total
 - [x] Thirty further checks for fiscal overview/reconciliation, ledger correction/snapshot forms and member data export at 320/375/768/1024/1440 in both themes
 - [x] Apply V30 snapshot-history migration to the local development backend and verify application health
-- [ ] Imports, historical corrections, audit/recovery administration and production delivery gates remain open. No phase is declared complete while its gates remain.
+- [x] Import, historical-correction, audit and recovery implementation completed in subsequent checkpoints
+- [ ] Production delivery and external acceptance remain open; implementation completion does not certify a production release.
 
 ## Deferred follow-ups
 
@@ -254,7 +259,8 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Add SECURITY_CHECKLIST.md and account-security/setup instructions
 - [x] Complete recovery when all protected factors/codes are lost and independently authorized administrative reset
 - [ ] Live password-reset email delivery acceptance
-- [ ] Complete real financial browser E2E/coverage/dependency gates, remaining historical workflows, retention anonymization and production backup/deployment acceptance
+- [x] Historical workflows and retention anonymization implemented in the functionality completion pass
+- [ ] Live dependency/hosted CI and production backup/deployment acceptance; new test execution explicitly waived for this pass
 
 ## Production delivery and security pass — 2026-10-03
 
@@ -279,15 +285,16 @@ Check an item only after implementation and tests pass. Each item is small enoug
 ## Remaining master-prompt completion gates
 
 - [x] Historical contribution impact preview with future-only and dependent-cycle reverse/repost options for current cycle purchase dates
-- [ ] Historical payment amendments, previously moved-cycle evidence reconstruction and investment/allocation imports
+- [x] Historical receipt posting/replacement, moved-cycle reconstruction and investment/allocation imports
 - [x] Fully lost-factor recovery and independently authorized reset administration
 - [ ] Live password/reset email delivery acceptance (SMTP deferred)
-- [ ] Retention-based personal-data anonymization, including historical private copies
+- [x] Independently approved configurable retention/anonymization, encrypted import-copy cleanup, linked factor removal, free-text redactions and receipt deletion retries (build-verified; tests skipped)
 - [x] Database financial before/after coverage, authenticated actor/request context, failed-password audit and shared rate-limit acceptance
 - [ ] Full personal-data log-scrubbing and route permission sweep acceptance
 - [x] Local HEIC-to-JPEG receipt conversion with bounded dimensions, worker timeout and strict-CSP production acceptance
 - [ ] Real private scanner acceptance
-- [ ] Actual bank/gateway settlement matching and direct mobile-money/provider acceptance
+- [x] Actual bank/gateway settlement matching and independent correction history
+- [ ] Live mobile-money/provider acceptance with owner-supplied credentials
 - [x] Real synthetic financial browser workflows and required per-package coverage gates
 - [ ] Original row-level workbook acceptance, successful live dependency analysis and verified hosted CI
 - [ ] Review/post private migration with separate authorized checker; collect missing actual member dates/details
@@ -310,7 +317,7 @@ Check an item only after implementation and tests pass. Each item is small enoug
 - [x] Verify 178 backend tests, 250 generated allocation cases and separate Testcontainers PostgreSQL 16 smoke with all 35 migrations
 - [x] Verify 61 frontend tests, production build/lint and 22 focused responsive/axe scenarios
 - [x] Apply V35 to development and restart the updated backend; health UP
-At this earlier pass recovery and financial browser/coverage gates remained open; later verified sections below record their completion. Retention, historical imports/payment posting, dependency analysis and external acceptance remain open.
+At this earlier pass recovery and financial browser/coverage gates remained open; later verified sections below record their completion. Later functionality checkpoints complete retention and historical imports/payment posting; dependency analysis and external acceptance remain open.
 
 ## Password and fully lost-factor recovery — 2026-10-04
 
@@ -391,7 +398,7 @@ Additional master-brief gaps identified during final comparison:
 - [x] Configurable private S3-compatible receipt storage adapter and encrypted backup/restore integration; real-bucket IAM/TLS/off-site owner acceptance remains open
 - [x] Move member/account name and email searches from query strings into protected request bodies
 
-The master prompt is not complete. Historical investment/allocation imports, historical payment posting, moved-cycle reconstruction, retention/anonymization and final privacy/security acceptance remain implementation work. Live providers, SMTP, scanner, NVD analysis, hosted CI, reviewed private migration and owner production/restore acceptance remain delivery gates.
+Historical checkpoint: the listed implementation gaps were subsequently closed in the Functionality completion pass below. Final privacy/security acceptance remains a release requirement. Live providers, SMTP, scanner, NVD analysis, hosted CI, reviewed private migration and owner production/restore acceptance remain delivery gates.
 
 - [x] Refresh ten synthetic role-guide screenshots, reset scroll before capture, visually inspect audit/ledger and pass all 11 desktop guide scenarios
 
@@ -414,7 +421,7 @@ The master prompt is not complete. Historical investment/allocation imports, his
 - [x] S3 protocol container acceptance: exact bytes, conditional collision rejection, anonymous denial and missing-object errors; encrypted separate-bucket recovery and occupied-prefix rejection
 - [x] Final clean 211 backend tests plus 250 generated allocation cases, two container tests (PostgreSQL/S3), all 38 migrations and financial coverage gates pass
 
-Remaining internal work is still historical investment/allocation imports, historical payment posting, moved-cycle reconstruction, retention/anonymization, settlement matching and complete privacy/security acceptance. Provider credentials, SMTP (owner-deferred), live scanner/NVD/hosted CI, independently reviewed private migration and owner production/off-site restore acceptance remain external delivery gates. No real member balances were posted in this pass.
+Historical checkpoint: later sections close the listed historical workflows, retention and settlement implementation. Complete privacy/security acceptance remains a release requirement. Provider credentials, SMTP (owner-deferred), live scanner/NVD/hosted CI, independently reviewed private migration and owner production/off-site restore acceptance remain external delivery gates. No real member balances were posted in this pass.
 
 - [x] Development backend restored with the verified private-storage/search build; health UP
 
@@ -433,6 +440,36 @@ Remaining internal work is still historical investment/allocation imports, histo
 - [x] Clean 215 backend tests, 250 generated allocation cases, two container tests, all 39 migrations and per-package financial coverage gates pass
 - [x] Real mobile settlement submission and independent browser approval in the disposable financial lifecycle; exact bank net/date, replay denial and unchanged member equity verified
 
-The remaining internal gaps are historical investment/allocation imports, historical payment posting, moved-cycle reconstruction, retention/anonymization and complete privacy/security acceptance. Live providers, owner-deferred SMTP, scanner/NVD/hosted CI, reviewed private migration and owner production/off-site recovery acceptance remain delivery gates. The master prompt is not yet complete.
+Historical checkpoint: the Functionality completion pass below closes the historical-workflow and retention implementation gaps. Complete privacy/security acceptance remains a release requirement. Live providers, owner-deferred SMTP, scanner/NVD/hosted CI, reviewed private migration and owner production/off-site recovery acceptance remain delivery gates. The master prompt is not yet complete.
 
 - [x] Restore the verified V39 development backend; health UP
+
+
+## Functionality completion pass — 2026-10-05
+
+The owner explicitly requested implementation instead of another test pass. No automated tests were run for this section; build/startup checks are recorded separately.
+
+- [x] Historical manual-payment preview and verification derive the original date, member and purpose from the submitted receipt; bind the reviewed financial source and retain exact-once payment ledger linkage
+- [x] Checker reviews the original-date/future-only choice and allocations before approval; stale financial sources require cancellation and a fresh preview
+- [x] Payment review uses the shared desktop drawer/mobile sheet, multiline promise feedback and permission-aware historical controls
+- [x] V40 and CSV/XLSX templates import one historical investment with its member allocations as an encrypted, independently approved, reversible batch
+- [x] Validate participating members, source dates, available historical equity, open periods, duplicate references, exact optional share columns and a supplied TOTAL row
+- [x] Distinguish expected future value from received proceeds; warn against counting received income again when it is already in an opening balance
+- [x] Reverse an unchanged imported cycle with current-day exact earned-income compensation, preserved revision evidence and dependency/fund checks
+- [x] Authorized archived-revision drawer/sheet reconstructs original cycle dates, exact projected allocations and actual received shares
+- [x] Original-date received-proceeds correction previews and independently reposts later current cycles, preserves edits/exclusions/rollover caps, compensates original earned-income entries and versions fiscal snapshots
+- [x] V41 adds seven-year default personal-data retention, confirmed departure dates, permanent-removal previews, independent approval, tombstones and irreversible account/membership reactivation guards
+- [x] Remove private member fields, linked authentication factors/tokens/outbox copies and associated encrypted import identities; redact identifying evidence while preserving financial amounts, dates and UUID links
+- [x] Narrow digest-bound database redaction authorization permits only reviewed private-field changes; financial ledger values, history and ordinary append-only protections remain
+- [x] Block receipt downloads immediately after approved retention and retry physical local/S3 deletion; current backups omit tombstoned files, including queued deletions
+- [x] Group retention policy with organization policies; show legacy missing departure dates, due memberships, pending independent decisions and storage deletion backlog
+- [x] Static review of the new route permissions, session/CSRF/origin boundaries, source binding and generic error/log handling
+- [x] V42 retains append-only economic correction evidence and links earned-income adjustments to their exact compensating entries
+- [x] Recompute moved and reversed cycle segments, preserving original revisions and their independently approved compensation dates
+- [x] Reviewed original-date reversal of manual contributions and principal/income opening balances, with dependent-cycle previews and negative-equity protection
+- [x] Member JSON export includes only their own archived corrections and adjustment links; compensated receipt credits are explained on screen and confirmation PDFs
+- [x] Backend package and frontend production build succeed with tests skipped; development backend applies V42 and reports health UP
+
+Implementation status: the outstanding historical workflows and retention function identified in this checklist are implemented. Moved-cycle corrections now reconstruct independently approved economic segments rather than inventing missing dates. New financial/destructive workflows are build-verified, not newly test-verified: the owner explicitly waived tests on this pass. Production delivery remains separate from local feature completion.
+
+External delivery requirements: owner-deferred SMTP/MailHog; Google/payment credentials; live private ClamAV and NVD/hosted CI acceptance; independent review of real balances and missing source dates; production hosting, private bucket/IAM, keys and owner off-site restore acceptance. Existing original workbooks and earlier encrypted backups are managed by the owner’s documented retention process; local application anonymization cannot erase other copies.

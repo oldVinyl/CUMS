@@ -4,6 +4,7 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import uuid
@@ -32,7 +33,9 @@ def run(args):
     return result.stdout
 
 def references():
-    raw = run(["psql", "-At", "-v", "ON_ERROR_STOP=1", "-c", "SELECT storage_key::text||'|'||sha256||'|'||byte_size FROM attachments ORDER BY storage_key"])
+    retention = run(["psql", "-At", "-v", "ON_ERROR_STOP=1", "-c", "SELECT to_regclass('public.member_anonymizations') IS NOT NULL"]).strip() == b"t"
+    clause = " WHERE member_id NOT IN (SELECT member_id FROM member_anonymizations)" if retention else ""
+    raw = run(["psql", "-At", "-v", "ON_ERROR_STOP=1", "-c", "SELECT storage_key::text||'|'||sha256||'|'||byte_size FROM attachments" + clause + " ORDER BY storage_key"])
     rows = []
     for line in raw.decode("ascii").splitlines():
         key, digest, size = line.split("|")
@@ -61,6 +64,13 @@ def snapshot(directory):
         run(["aws", "s3api", "get-object", "--bucket", bucket, "--key", prefix + key, str(path)])
         verify(path, digest, size)
 
+def snapshot_local(directory):
+    directory.mkdir()
+    for key, digest, size in references():
+        source = pathlib.Path("/uploads") / key
+        verify(source, digest, size)
+        shutil.copyfile(source, directory / key)
+
 def restore(directory):
     bucket, prefix = config()
     empty()
@@ -84,7 +94,7 @@ if __name__ == "__main__":
     try:
         if len(sys.argv) == 2 and sys.argv[1] == "empty":
             empty()
-        elif len(sys.argv) == 3 and sys.argv[1] in ("snapshot", "restore"):
+        elif len(sys.argv) == 3 and sys.argv[1] in ("snapshot", "snapshot_local", "restore"):
             globals()[sys.argv[1]](pathlib.Path(sys.argv[2]))
         else:
             raise ValueError("Invalid receipt snapshot command.")

@@ -1,3 +1,4 @@
+import HistoricalLedgerReversal from "./HistoricalLedgerReversal";
 import ResponsiveOverlay from "./ResponsiveOverlay";
 import ContributionForm from "./ContributionForm";
 import Pagination from "./Pagination";
@@ -25,6 +26,7 @@ type Entry = {
   reversalOf: string | null;
   reversed: boolean;
   canReverse: boolean;
+  canHistoricalReverse?: boolean;
 };
 type Year = { year: number; status: string };
 export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: string }) {
@@ -41,6 +43,12 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
   const [failed, setFailed] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [historicReverse, setHistoricReverse] = useState<{
+    id: string;
+    amount: string;
+    effectiveDate: string;
+    memberNumber: string;
+  } | null>(null);
   const [reverse, setReverse] = useState<Entry | null>(null);
   const [reason, setReason] = useState("");
   const [years, setYears] = useState<Year[]>([]);
@@ -229,6 +237,15 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
                 <small>Reference: {entry.reference}</small>
                 {entry.narration && <p>{entry.narration}</p>}
                 {entry.reversalOf && <small>Compensates entry {entry.reversalOf}</small>}
+                {entry.canHistoricalReverse && (
+                  <button
+                    className="secondary-button"
+                    disabled={busy}
+                    onClick={() => setHistoricReverse(entry)}
+                  >
+                    Correct on original date
+                  </button>
+                )}
                 {entry.canReverse && (
                   <button
                     className="text-button"
@@ -255,42 +272,44 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
           </>
         )}
         {reverse && (
-          <form
-            className="investment-edit"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void mutation(
-                ledgerRequest(`/${reverse.id}/reverse`, "POST", { reason }),
-                "Reversal approval requested",
-              );
-            }}
-          >
-            <h3>
-              Reverse {formatMoney(reverse.amount)} for {reverse.fullName}?
-            </h3>
-            <p>
-              The original entry remains visible. Approval adds its exact negative amount; committed
-              investment funds cannot be reversed.
-            </p>
-            <label>
-              Reason
-              <textarea
-                required
-                maxLength={1000}
-                rows={3}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-              />
-            </label>
-            <div className="investment-action-bar">
-              <button className="primary-button" disabled={busy}>
-                Request reversal approval
-              </button>
-              <button type="button" className="text-button" onClick={() => setReverse(null)}>
-                Cancel
-              </button>
-            </div>
-          </form>
+          <ResponsiveOverlay open title="Reverse contribution" onClose={() => setReverse(null)}>
+            <form
+              className="investment-edit"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void mutation(
+                  ledgerRequest(`/${reverse.id}/reverse`, "POST", { reason }),
+                  "Reversal approval requested",
+                );
+              }}
+            >
+              <h3>
+                Reverse {formatMoney(reverse.amount)} for {reverse.fullName}?
+              </h3>
+              <p>
+                The original entry remains visible. Approval adds its exact negative amount;
+                committed investment funds cannot be reversed.
+              </p>
+              <label>
+                Reason
+                <textarea
+                  required
+                  maxLength={1000}
+                  rows={3}
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                />
+              </label>
+              <div className="investment-action-bar">
+                <button className="primary-button" disabled={busy}>
+                  Request reversal approval
+                </button>
+                <button type="button" className="text-button" onClick={() => setReverse(null)}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </ResponsiveOverlay>
         )}
       </section>
       {canClose && (
@@ -471,6 +490,13 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
         </ResponsiveOverlay>
       )}
       <LedgerApprovals key={retry} profile={profile} onChanged={changed} />
+      {historicReverse && (
+        <HistoricalLedgerReversal
+          entry={historicReverse}
+          onClose={() => setHistoricReverse(null)}
+          onSaved={changed}
+        />
+      )}
     </>
   );
 }

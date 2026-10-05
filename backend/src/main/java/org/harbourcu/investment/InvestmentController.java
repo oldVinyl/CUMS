@@ -74,6 +74,21 @@ public class InvestmentController {
         }
     }
 
+    @GetMapping("/{id}/revisions/{revision}")
+    public ResponseEntity<?> archived(@PathVariable UUID id,@PathVariable int revision,@CookieValue(name="cu_access",required=false)String access,HttpServletRequest request) {
+        var identity=sessions.resolveAccess(access).orElse(null);
+        if(identity==null)return error(HttpStatus.UNAUTHORIZED,"AUTH_REQUIRED",request,"Please sign in to continue.");
+        try{return ResponseEntity.ok().header("Cache-Control","no-store").body(investments.archived(identity.userId(),id,revision));}
+        catch(SecurityException e){return denied(request);}
+        catch(IllegalArgumentException e){return error(HttpStatus.NOT_FOUND,"NOT_FOUND",request,"Archived investment revision not found.");}
+    }
+
+    @GetMapping("/{id}/revisions/{revision}/corrections")
+    public ResponseEntity<?> archivedCorrections(@PathVariable UUID id,@PathVariable int revision,@CookieValue(name="cu_access",required=false)String access,HttpServletRequest request) {
+        var identity=sessions.resolveAccess(access).orElse(null);if(identity==null)return error(HttpStatus.UNAUTHORIZED,"AUTH_REQUIRED",request,"Please sign in to continue.");
+        try{return ResponseEntity.ok().header("Cache-Control","no-store").body(investments.archivedCorrections(identity.userId(),id,revision));}catch(SecurityException e){return denied(request);}
+    }
+
     @GetMapping("/approvals/pending")
     public ResponseEntity<?> pending(@CookieValue(name = "cu_access", required = false) String access,
                                      HttpServletRequest request) {

@@ -1,6 +1,6 @@
 # Production deployment and recovery
 
-These files implement the local deployment and encrypted recovery tooling. They do not establish production acceptance: finish CHECKLIST before handling funds. Google/Paystack/SMTP acceptance, historical financial workflows and retention administration remain open.
+These files implement the local deployment and encrypted recovery tooling. They do not establish production acceptance: finish CHECKLIST before handling funds. Google/Paystack/SMTP acceptance and owner production setup remain open. Historical financial workflows and retention administration are implemented; the new completion-pass workflows have build/startup verification only because the owner waived test execution.
 
 ## Prepare an isolated host
 

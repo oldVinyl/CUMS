@@ -78,7 +78,7 @@ Run the dry run, resolve every row error and compare the calculated total with y
 
 An authorized PRESIDENT can request a closed year's unlock from Ledger, with a reason. A different eligible approver must review it; the maker cannot approve it. Rejection or cancellation leaves the period closed. Unlock preserves earlier snapshots and recomputes that year's balance forward and all later recorded snapshots. Submit the reviewed correction through Imports, obtain independent approval, verify the updated balances, then request year-end close again.
 
-An import date that would change an existing or archived investment cycle's ratios is blocked. Use the explicit Historical contributions workflow for a reviewed contribution impact; previously moved-cycle reconstruction and historical investment/allocation imports remain pending. Do not alter dates to bypass the warning.
+An import date that would change an existing or archived investment cycle's ratios is blocked. Use the explicit Historical contributions workflow for a reviewed contribution impact; moved-cycle correction is handled by that reviewed workflow, and historical investment/allocation imports use their own template. Do not alter dates to bypass the warning.
 
 Overview's Fiscal year selector changes the shared as-at date. Balance-forward verification identifies missing or mismatched prior-year snapshots and open correction periods. The Ledger balance-forward panel shows each member's snapshot, revision and ledger comparison. Overview figures always derive from the immutable ledger.
 
@@ -86,7 +86,7 @@ Overview's Fiscal year selector changes the shared as-at date. Balance-forward v
 
 In My membership, use Download my data for a JSON file containing your profile, financial records, own allocation revisions, snapshot history and account metadata. Decimal amounts remain exact strings. It contains personal information; keep it securely. Receipt metadata is included; download the actual files separately from Payments. Passwords, authenticator secrets and session tokens are excluded.
 
-Historical contribution impact preview and both cycle-handling options are available, as is independently reviewed account recovery. Historical investment/allocation imports, payment amendments and production delivery gates remain incomplete. See PROGRESS and CHECKLIST.
+Historical contribution impact preview and both cycle-handling options are available, as is independently reviewed account recovery. Historical investment/allocation imports, reviewed receipt amendments and archived-cycle correction are available. Production delivery gates remain open. See PROGRESS and CHECKLIST.
 
 ## Account security and lost devices
 
@@ -106,7 +106,7 @@ In Ledger, open **Add contribution**, select **Use a historical date**, enter th
 - **Future cycles only** keeps existing allocations unchanged. Supply the next cycle start after all affected purchases. The original date remains recorded. If the next start is in the future, wait until it arrives.
 - **Reverse and repost** requires backdating, investment-writing and cycle-repost permissions, with affected years independently unlocked. Approval archives old allocations, compensates/replaces income at original maturity dates, recalculates later cycles and recomputes snapshots. Explicit participation edits and exclusions remain respected.
 
-A different eligible approver reviews the bound impact. Changed financial source requires cancellation and a fresh preview/request. Pending dependencies and previously moved historical purchase dates need individual review first.
+A different eligible approver reviews the bound impact. Changed financial source requires cancellation and a fresh preview/request. Resolve pending dependencies first. Moved/reversed cycles retain their original evidence; income changes are recorded at the original maturity date and offset at the approved compensation date. Missing compensation evidence blocks recomputation until it is resolved.
 
 Administrators can inspect **Email delivery** in Accounts and roles. Filter queued, failed and sent messages, and confirm an eligible failure retry. This queues delivery; SMTP must be enabled. Sent messages cannot be retried. Expired or consumed invitation links require a new invitation. Message payloads and private links are excluded from the administration screen.
 
@@ -135,3 +135,23 @@ Open **Finance → Reconciliation**. The settlement section lists gateway-confir
 A separate eligible approver opens **Review settlement match** and checks the bank evidence before confirming or rejecting with a reason. The maker cannot approve their own request. Pending requests can be cancelled by their maker. Changed payment/settlement data requires a fresh review. After approval, **Correct settlement match** creates another reviewed record; earlier evidence stays in the history.
 
 Matching records a bank receipt, without crediting the member twice or altering their contribution. The expected net always subtracts the provider fee from gross, whether fees are borne by the union or the member. Differences remain visible for reconciliation. This is reviewed manual matching; obtain actual bank/provider statements separately. It does not connect to bank accounts or make payouts.
+
+
+## Historical payments and investment records
+
+In Payments, review an old receipt and enter the actual received amount. Staff with historical posting permission can preview its original paid date, choose future-only treatment or affected-cycle reposting, explain the evidence, and request separate approval. The checker sees the impact before posting. Cancel and review again if the financial source changes.
+
+In Imports, select Historical investment and allocations and download its CSV template. Use one cycle per file, oldest first, with participating member numbers and repeated institution, reference, dates and totals. Omit zero participants. Optional supplied share columns and a final TOTAL row must match the exact preview. Blank actual proceeds means expected income; entering received proceeds posts earned income at maturity. Never import that same earned income twice through an opening balance and a cycle. If dates were not recorded, obtain confirmed dates or explicitly documented assumptions before submitting.
+
+In Investments, select a matured cycle and use Historical earned-income corrections to revise received proceeds. Preview every changed member and dependent cycle, then obtain independent approval. Original economic dates are preserved; required fiscal periods must be open or independently unlocked. Approved revision history now opens the original allocation evidence in a drawer/sheet.
+
+Organization policies include personal-data retention. Confirm missing legacy departure dates, preview eligible inactive memberships and obtain independent permanent-removal approval. This cannot be undone. The screen reports receipt files still awaiting physical deletion; downloads are already blocked. The owner separately manages original files and older backups.
+
+
+### Correct an original ledger amount
+
+In Ledger, an eligible original manual contribution or opening balance offers **Correct on original date**. Preview and explain the exact opposite entry, including every dependent investment impact, then request independent approval. The original entry remains in the ledger. Submit any corrected replacement separately using a reviewed contribution or import; do not treat this as a refund of a provider payment. Closed affected periods must be independently unlocked.
+
+### Correct moved or reversed investment income
+
+Open an archived revision in Investments. Its original dates and allocations remain read-only. Eligible received-income revisions offer a correction form: enter the corrected received proceeds and preview. The approved economic correction is recorded separately from the original revision, with linked earned-income adjustments at maturity and exact offsets at its compensation date. Later affected cycles and snapshots are recomputed. The archive shows the approved correction history and your data export includes your own shares and adjustment links.

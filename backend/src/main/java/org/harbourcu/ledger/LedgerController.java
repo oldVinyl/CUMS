@@ -53,6 +53,9 @@ public class LedgerController {
             @CookieValue(name = "cu_access", required = false) String access, @RequestHeader(name = "X-CSRF-Token", required = false) String csrf, HttpServletRequest request) {
         return call(access, csrf, true, request, actor -> ResponseEntity.ok(new Submitted(ledger.reverse(actor, id, body.reason()))));
     }
+    @PostMapping("/{id}/historical-reversal/preview") public ResponseEntity<?> reversalPreview(@PathVariable UUID id,@CookieValue(name="cu_access",required=false)String access,@RequestHeader(name="X-CSRF-Token",required=false)String csrf,HttpServletRequest request){return call(access,csrf,true,request,actor->ResponseEntity.ok(historical.previewReversal(actor,id,null)));}
+    @PostMapping("/historical-reversals") public ResponseEntity<?> historicalReversal(@RequestBody BackdatedContributionService.HistoricalReversal body,@CookieValue(name="cu_access",required=false)String access,@RequestHeader(name="X-CSRF-Token",required=false)String csrf,HttpServletRequest request){return call(access,csrf,true,request,actor->ResponseEntity.ok(new Submitted(historical.submitReversal(actor,body,approvals))));}
+    @GetMapping("/approvals/{id}/reversal-impact") public ResponseEntity<?> reversalImpact(@PathVariable UUID id,@CookieValue(name="cu_access",required=false)String access,HttpServletRequest request){return call(access,null,false,request,actor->ResponseEntity.ok(historical.reviewReversal(actor,id)));}
     @PostMapping("/contributions/preview") public ResponseEntity<?> preview(@RequestBody BackdatedContributionService.Input body,
             @CookieValue(name="cu_access",required=false) String access,@RequestHeader(name="X-CSRF-Token",required=false) String csrf,HttpServletRequest request){
         return call(access,csrf,true,request,actor->ResponseEntity.ok(historical.preview(actor,body)));

@@ -16,6 +16,7 @@ export type Impact = {
     status: string;
     purchaseDate: string;
     maturityDate: string;
+    compensationDate?: string | null;
     shares: {
       memberId: string;
       memberNumber: string;
@@ -41,12 +42,18 @@ export function ContributionImpact({ impact }: { impact: Impact }) {
         <p>No posted cycles are affected.</p>
       ) : (
         impact.affectedCycles.map((c) => (
-          <details key={c.id} className="ledger-entry">
+          <details key={`${c.id}:${c.revision}`} className="ledger-entry">
             <summary>
               {c.purchaseDate} to {c.maturityDate} · {c.status.replaceAll("_", " ")} · revision{" "}
               {c.revision}
             </summary>
             <p className="payment-instructions">Cycle {c.id}</p>
+            {c.compensationDate && (
+              <p>
+                Archived cycle ended {c.compensationDate}. Any earned-income adjustment is offset
+                again on that date, preserving the later compensation timeline.
+              </p>
+            )}
             {c.shares.map((s) => (
               <article key={s.memberId} className="payment-record">
                 <h4>Member {s.memberNumber}</h4>
@@ -74,7 +81,9 @@ export function ContributionImpact({ impact }: { impact: Impact }) {
 export function HistoricalRequestImpact({
   requestId,
   onReady,
+  reversal = false,
 }: {
+  reversal?: boolean;
   requestId: string;
   onReady: (ready: boolean) => void;
 }) {
@@ -85,7 +94,12 @@ export function HistoricalRequestImpact({
     onReady(false);
     setImpact(null);
     setError("");
-    ledgerRequest<Impact>(`/approvals/${requestId}/impact`, "GET", undefined, controller.signal)
+    ledgerRequest<Impact>(
+      `/approvals/${requestId}/${reversal ? "reversal-impact" : "impact"}`,
+      "GET",
+      undefined,
+      controller.signal,
+    )
       .then((value) => {
         if (!controller.signal.aborted) {
           setImpact(value);
@@ -96,7 +110,7 @@ export function HistoricalRequestImpact({
         if (!controller.signal.aborted) setError(failure.message);
       });
     return () => controller.abort();
-  }, [requestId, onReady]);
+  }, [requestId, onReady, reversal]);
   return error ? (
     <p role="alert">{error}</p>
   ) : impact ? (
