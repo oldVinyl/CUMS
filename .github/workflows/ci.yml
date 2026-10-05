@@ -26,6 +26,10 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - name: Build private storage acceptance fixture
+        run: |
+          docker build -t cums-backup:local -f deploy/Dockerfile.backup deploy
+          docker build -t cums-storage-test:local -f deploy/Dockerfile.storage-test deploy
       - name: Backend tests
         working-directory: backend
         run: bash ./mvnw --batch-mode -Pcontainer-tests,financial-coverage verify
@@ -105,12 +109,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build maintenance image
-        run: docker build -t cums-backup:local -f deploy/Dockerfile.backup deploy
+        run: |
+          docker build -t cums-backup:local -f deploy/Dockerfile.backup deploy
+          docker build -t cums-storage-test:local -f deploy/Dockerfile.storage-test deploy
       - name: Synthetic encrypted recovery drill
         shell: pwsh
-        run: ./scripts/backup-restore-drill.ps1
+        run: |
+          ./scripts/backup-restore-drill.ps1
+          ./scripts/backup-restore-drill.ps1 -S3
       - name: Backup retention checks
-        run: python3 -m unittest discover -s deploy -p test_retention.py
+        run: python3 -m unittest discover -s deploy -p 'test_*.py'
   financial-browser:
     runs-on: ubuntu-latest
     steps:

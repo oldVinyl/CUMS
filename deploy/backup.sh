@@ -16,8 +16,14 @@ archive="/backups/cums-$stamp.tar.age"
 [[ ! -e "$archive" ]] || { echo 'Backup name already exists.' >&2; exit 1; }
 pg_dump --format=custom --no-owner --no-acl --file="$stage/database.dump"
 printf 'cums-backup-v1\n' > "$stage/FORMAT"
+# Receipt snapshots use anonymous UUID keys and validate bytes against the database.
+case "${APP_RECEIPT_STORAGE:-local}" in
+  local) receipt_root=/ ;;
+  s3) python3 /opt/cums/receipt_archive.py snapshot "$stage/uploads"; receipt_root="$stage" ;;
+  *) echo "Invalid receipt storage driver." >&2; exit 1 ;;
+esac
 # Only encrypted bytes reach persistent storage.
-tar -C "$stage" -cf - FORMAT database.dump -C / uploads | age -r "$AGE_RECIPIENT" > "$archive.partial"
+tar -C "$stage" -cf - FORMAT database.dump -C "$receipt_root" uploads | age -r "$AGE_RECIPIENT" > "$archive.partial"
 mv -- "$archive.partial" "$archive"
 if [[ "${BACKUP_LOCAL_ONLY:-false}" != true ]]; then
   aws s3 cp "$archive" "s3://$BACKUP_BUCKET/$prefix/daily/$(basename "$archive")" --only-show-errors

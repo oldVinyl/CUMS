@@ -35,6 +35,7 @@
         <version>${testcontainers.version}</version><type>pom</type><scope>import</scope>
     </dependency></dependencies></dependencyManagement>
 	<dependencies>
+        <dependency><groupId>software.amazon.awssdk</groupId><artifactId>s3</artifactId><version>2.55.11</version></dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
@@ -173,6 +174,6 @@
     <profile><id>container-tests</id><build><plugins><plugin>
         <groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><version>3.5.4</version>
         <executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions>
-        <configuration><includes><include>**/ContainerPostgresSmokeIT.java</include></includes></configuration>
+        <configuration><includes><include>**/ContainerPostgresSmokeIT.java</include><include>**/S3ReceiptObjectStoreIT.java</include></includes></configuration>
     </plugin></plugins></build></profile></profiles>
 </project>

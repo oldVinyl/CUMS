@@ -66,3 +66,25 @@ Provision the original application encryption keys, check database totals/counts
 ## Monitoring and updates
 
 Monitor HTTPS `/actuator/health` from outside the host, disk space, PostgreSQL health, outbox/webhook failures, backup freshness and container restarts. Do not expose other Actuator endpoints. Review Dependabot changes, run CI and the restore drill before upgrades. No real domain, external bucket, live-provider credentials or production hosting was configured by local development work.
+
+## Private S3-compatible receipt storage
+
+Set `APP_RECEIPT_STORAGE=s3`, a provisioned `APP_RECEIPT_S3_BUCKET`, a dedicated `APP_RECEIPT_S3_PREFIX` (default `receipts`), region, and optional HTTPS endpoint/path-style setting. The backend uses the AWS SDK credential chain. Keep all credentials server-side; instance/task roles are preferred where available. Production Compose requests AES256 server-side encryption. A provider without this capability requires an explicitly reviewed alternative; do not disable encryption in production. HTTP and `NONE` encryption are reserved for synthetic isolated tests.
+
+Objects use UUID keys only. The application never creates public ACLs, public links or browser presigned URLs. All downloads continue through session, current permission/ownership and audit checks, then verify recorded SHA-256 and byte size. Conditional creates reject collisions; upload failures and downloads return generic messages. Provision a private bucket with public access blocked, TLS and a least-privilege application identity limited to GetObject/PutObject/DeleteObject under its dedicated prefix. Do not give clients direct bucket credentials or grant other writers to that prefix.
+
+The maintenance identity additionally needs ListBucket restricted to the receipt prefix and receipt GetObject for backups, PutObject for isolated restores. Receipt endpoint/region variables are independent of the off-site encrypted backup endpoint. Configure compatible credentials for both services or supply an operator-specific maintenance credential chain. Do not accidentally reuse a public asset bucket.
+
+With the backend quiesced, S3 backup enumerates attachment metadata, fetches every referenced receipt/revision into tmpfs, verifies its size/digest and includes the same anonymous UUID files in the encrypted archive. Failure aborts the backup. Increase bounded work-memory deliberately when necessary. Restore rejects an occupied target prefix and compares the complete decrypted inventory with the restored database before conditional uploads. An object-store failure may leave an isolated restored database and some uploaded objects: keep the application stopped, inspect locally, and use a fresh isolated target for another attempt. No production database/prefix is overwritten automatically.
+
+To migrate existing local receipts, take a verified encrypted backup and restore it into an **empty isolated database and private S3 prefix** with the target storage variables enabled. Compare counts/hashes and exercise authorized receipt/revision downloads before switching the deployment. Merely changing the storage setting on an existing local installation does not copy its files. Reverse migration likewise requires a tested restore into an empty local target. Retain the previous deployment until owner acceptance.
+
+The synthetic storage fixture uses pinned Moto server solely for isolated acceptance; it is not a production storage recommendation. Build it before container/storage recovery checks:
+
+```
+docker build -t cums-backup:local -f deploy/Dockerfile.backup deploy
+docker build -t cums-storage-test:local -f deploy/Dockerfile.storage-test deploy
+pwsh -File scripts/backup-restore-drill.ps1 -S3
+```
+
+SDK configuration follows the [AWS SDK S3 guide](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/examples-s3.html) and [endpoint configuration](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/endpoint-config.html). Private real-bucket policy/TLS/credentials and an owner off-site recovery drill remain deployment acceptance requirements.

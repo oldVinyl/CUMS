@@ -1,0 +1,6 @@
+# Synthetic S3 protocol acceptance only; not a production storage service.
+FROM cums-backup:local
+RUN apk add --no-cache py3-pip
+RUN pip3 install --break-system-packages 'moto[server]==5.2.2'
+ENV S3_IGNORE_SUBDOMAIN_BUCKETNAME=true
+ENTRYPOINT ["moto_server", "-H", "0.0.0.0", "-p", "9000"]

@@ -1,6 +1,6 @@
 FROM postgres:16-alpine
 RUN apk add --no-cache age bash aws-cli python3
 RUN apk add --no-cache tar
-COPY backup.sh restore.sh retention.py /opt/cums/
+COPY backup.sh restore.sh retention.py receipt_archive.py /opt/cums/
 RUN chmod 755 /opt/cums/*.sh
 WORKDIR /opt/cums

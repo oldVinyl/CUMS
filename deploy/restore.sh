@@ -9,6 +9,11 @@ umask 077
 [[ $# == 2 && -f "$1" && -f "$2" ]] || { echo 'Usage: restore.sh encrypted-archive age-identity-file' >&2; exit 1; }
 [[ "$(psql -Atqc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")" == 0 ]] || { echo 'Refusing to restore over a populated database.' >&2; exit 1; }
 [[ -z "$(find /uploads -mindepth 1 -print -quit)" ]] || { echo 'Refusing to restore over existing uploads.' >&2; exit 1; }
+case "${APP_RECEIPT_STORAGE:-local}" in
+  local) ;;
+  s3) python3 /opt/cums/receipt_archive.py empty ;;
+  *) echo "Invalid receipt storage driver." >&2; exit 1 ;;
+esac
 stage=$(mktemp -d /work/restore.XXXXXXXX)
 trap 'rm -rf -- "$stage"' EXIT
 age -d -i "$2" "$1" > "$stage/archive.tar"
@@ -28,6 +33,10 @@ tar -xf "$stage/archive.tar" -C "$stage"
 pg_restore --exit-on-error --single-transaction --no-owner --no-acl --dbname="$PGDATABASE" "$stage/database.dump"
 # The original application's keys must be provisioned separately before starting it.
 [[ -d "$stage/uploads" ]] || { echo 'Uploads directory missing.' >&2; exit 1; }
-cp -a "$stage/uploads/." /uploads/
-chown -R 10001:10001 /uploads
+if [[ "${APP_RECEIPT_STORAGE:-local}" == s3 ]]; then
+  python3 /opt/cums/receipt_archive.py restore "$stage/uploads"
+else
+  cp -a "$stage/uploads/." /uploads/
+  chown -R 10001:10001 /uploads
+fi
 printf 'Database and private uploads restored. Verify keys, health and reconciliation before startup.\n'

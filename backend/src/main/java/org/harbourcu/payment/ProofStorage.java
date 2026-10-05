@@ -18,9 +18,9 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class ProofStorage {
  public record Proof(UUID id, String contentType, byte[] bytes) {}
- private final Path root; private final JdbcTemplate jdbc; private final PermissionService permissions; private final ReceiptScanner scanner;
- public ProofStorage(@Value("${APP_UPLOAD_DIR:./private-uploads}") String dir, JdbcTemplate jdbc, PermissionService permissions, ReceiptScanner scanner) {
-  this.root=Path.of(dir).toAbsolutePath().normalize(); this.jdbc=jdbc; this.permissions=permissions; this.scanner=scanner;
+ private final org.harbourcu.storage.ReceiptObjectStore store; private final JdbcTemplate jdbc; private final PermissionService permissions; private final ReceiptScanner scanner;
+ public ProofStorage(org.harbourcu.storage.ReceiptObjectStore store, JdbcTemplate jdbc, PermissionService permissions, ReceiptScanner scanner) {
+  this.store=store; this.jdbc=jdbc; this.permissions=permissions; this.scanner=scanner;
  }
  @Transactional public UUID upload(UUID actor, UUID member, MultipartFile file) {
   ownOrStaff(actor,member,true);
@@ -54,22 +54,26 @@ public class ProofStorage {
    if(clean.length>10485760) throw new IllegalArgumentException("Normalized receipt exceeds 10 MB.");
    scanner.requireClean(clean);
    String hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(clean));
-   UUID id=UUID.randomUUID(),key=UUID.randomUUID(); Files.createDirectories(root); Path path=root.resolve(key.toString());
-   Files.write(path,clean,StandardOpenOption.CREATE_NEW);
+   UUID id=UUID.randomUUID(),key=UUID.randomUUID(); store.create(key,clean,type);
    org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization(){
-    @Override public void afterCompletion(int status){if(status!=STATUS_COMMITTED) try{Files.deleteIfExists(path);}catch(IOException ignored){}}
+    @Override public void afterCompletion(int status){if(status!=STATUS_COMMITTED) try{store.delete(key);}catch(IOException ignored){}}
    });
    jdbc.update("INSERT INTO attachments(id,member_id,uploaded_by,storage_key,sha256,content_type,byte_size) VALUES(?,?,?,?,?,?,?)",id,member,actor,key,hash,type,clean.length);
    return id;
   } catch(IOException|NoSuchAlgorithmException e){throw new IllegalStateException("Receipt could not be stored. Try again.",e);}
  }
  @Transactional public Proof download(UUID actor,UUID id){
-  var rows=jdbc.queryForList("SELECT member_id,storage_key,content_type FROM attachments WHERE id=?",id);
+  var rows=jdbc.queryForList("SELECT member_id,storage_key,content_type,sha256,byte_size FROM attachments WHERE id=?",id);
   if(rows.isEmpty()) throw new IllegalArgumentException("Receipt not found."); var row=rows.getFirst();
   ownOrStaff(actor,(UUID)row.get("member_id"),false);
   jdbc.update("INSERT INTO audit_log(actor_id,action,entity_type,entity_id) VALUES(?,'FILE_DOWNLOADED','ATTACHMENT',?)",actor,id);
-  try{return new Proof(id,(String)row.get("content_type"),Files.readAllBytes(root.resolve(row.get("storage_key").toString())));}
-  catch(IOException e){throw new IllegalStateException("Receipt is temporarily unavailable.");}
+  try{
+   byte[] bytes=store.read((UUID)row.get("storage_key"));
+   String hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+   if(bytes.length!=((Number)row.get("byte_size")).longValue()||!hash.equals(row.get("sha256")))throw new IOException("Receipt integrity check failed.");
+   return new Proof(id,(String)row.get("content_type"),bytes);
+  }
+  catch(IOException|NoSuchAlgorithmException e){throw new IllegalStateException("Receipt is temporarily unavailable.");}
  }
  public void ownOrStaff(UUID actor,UUID member,boolean writing){
   if(permissions.hasPermission(actor,"PAYMENT_VERIFY") || (!writing && permissions.hasPermission(actor,"APPROVE"))) return;
