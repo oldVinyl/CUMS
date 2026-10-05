@@ -387,9 +387,32 @@ At this earlier pass recovery and financial browser/coverage gates remained open
 
 Additional master-brief gaps identified during final comparison:
 
-- [ ] Configurable S3-compatible private receipt storage adapter and its backup/restore integration (current receipt storage uses the private local volume)
-- [ ] Move member/account name and email searches from query strings into protected request bodies
+- [x] Configurable private S3-compatible receipt storage adapter and encrypted backup/restore integration; real-bucket IAM/TLS/off-site owner acceptance remains open
+- [x] Move member/account name and email searches from query strings into protected request bodies
 
 The master prompt is not complete. Historical investment/allocation imports, historical payment posting, moved-cycle reconstruction, retention/anonymization and final privacy/security acceptance remain implementation work. Live providers, SMTP, scanner, NVD analysis, hosted CI, reviewed private migration and owner production/restore acceptance remain delivery gates.
 
 - [x] Refresh ten synthetic role-guide screenshots, reset scroll before capture, visually inspect audit/ledger and pass all 11 desktop guide scenarios
+
+## Protected search and private storage — 2026-10-05
+
+- [x] Member directory/pickers and account administration use POST search bodies; URLs retain only safe pagination values
+- [x] Reject legacy identifying query searches with generic responses; preserve session, current permission, CSRF, same-origin and no-store checks
+- [x] Captured synthetic search sentinel is absent from application logs; response errors do not echo submitted identifiers
+- [x] Unsigned/ordinary-member denial acceptance across 21 existing union read routes; the broader mutation/log-payload review remains open
+- [x] Missing routes return a generic 404 instead of an internal error
+- [x] Private local/S3 object-store interface, anonymous conditional S3 creates, bounded reads, server-only ownership checks and generic storage errors
+- [x] Downloads verify original SHA-256/size; tampered/missing receipts fail and unauthorized requests never contact object storage
+- [x] Production S3 configuration rejects HTTP and disabled encryption overrides; default development storage remains local
+- [x] Six Python backup/retention checks pass, including complete inventory verification before upload and generic subprocess diagnostics
+- [x] Clean 208-test backend regression plus 250 generated allocation cases; coverage ledger 92.21%, allocation 92.00%, dashboard 95.95%, approval 91.18%, payment 88.33%
+- [x] Three additional storage-configuration tests and the focused object/integrity tests pass
+- [x] Frontend 76 tests, production build/lint and 28 focused mobile-light/desktop-dark Playwright/axe checks pass
+- [x] Real financial browser/API workflow passes with protected search and receipt integrity checks
+- [x] Updated encrypted local recovery drill passes: exact 1200.0000 ledger total, receipts, occupied-target and wrong-key rejection
+- [x] S3 protocol container acceptance: exact bytes, conditional collision rejection, anonymous denial and missing-object errors; encrypted separate-bucket recovery and occupied-prefix rejection
+- [x] Final clean 211 backend tests plus 250 generated allocation cases, two container tests (PostgreSQL/S3), all 38 migrations and financial coverage gates pass
+
+Remaining internal work is still historical investment/allocation imports, historical payment posting, moved-cycle reconstruction, retention/anonymization, settlement matching and complete privacy/security acceptance. Provider credentials, SMTP (owner-deferred), live scanner/NVD/hosted CI, independently reviewed private migration and owner production/off-site restore acceptance remain external delivery gates. No real member balances were posted in this pass.
+
+- [x] Development backend restored with the verified private-storage/search build; health UP

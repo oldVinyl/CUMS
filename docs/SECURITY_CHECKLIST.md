@@ -73,3 +73,15 @@ Do not tag v1.0.0 or mark the master prompt complete while these gates remain op
 - [x] Changed-security rejection, affected-account exclusion, concurrent completion/reset and transaction rollback acceptance
 - [x] Responsive reset/admin review with matching-password confirmation and secret-fragment removal
 - [ ] Live recovery-email delivery and owner identity-verification acceptance
+
+## Search and private receipt acceptance — 2026-10-05
+
+- [x] Identifying member/account searches use protected POST bodies, CSRF/origin/permission guards and no-store; legacy query searches are rejected without reflection
+- [x] Synthetic search sentinel absent from captured application logs; unsigned and ordinary-member denial across 21 union read routes
+- [x] Local/S3 receipt adapter uses anonymous keys, conditional creates, bounded reads and SHA-256/size validation after ownership checks
+- [x] Production configuration rejects HTTP/disabled encryption; no browser credentials, public ACLs or presigned links
+- [x] S3 protocol container confirms collision rejection, private anonymous denial, byte round-trip and missing-object handling
+- [x] Encrypted S3 receipt/database recovery into an isolated bucket verifies exact financial totals and rejects occupied prefixes
+- [ ] Real bucket policy/TLS/KMS/credentials and owner off-site recovery acceptance
+
+These checks do not complete the remaining mutation permission sweep, historical audit/free-text privacy review or retention/anonymization requirements.
