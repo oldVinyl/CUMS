@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.*;
  public record Invitation(UUID memberId,String email){}public record EmailInvitation(String email,String fullName){}public record Decision(String decision,String comment){}
  private final UserAdminService service;private final SessionService sessions;private final String origin;
  public UserAdminController(UserAdminService service,SessionService sessions,@Value("${APP_ALLOWED_ORIGIN:http://localhost:5173}")String origin){this.service=service;this.sessions=sessions;this.origin=origin;}
- @GetMapping public ResponseEntity<?> list(@RequestParam(defaultValue="")String search,@RequestParam(defaultValue="0")int page,HttpServletRequest r){return call(r,false,a->ResponseEntity.ok(service.list(a,search,page)));}
+ public record Search(String search) {}
+ @PostMapping("/search") public ResponseEntity<?> search(@RequestBody Search b,@RequestParam(defaultValue="0")int page,HttpServletRequest r){return call(r,true,a->ResponseEntity.ok(service.list(a,b.search()==null?"":b.search(),page)));}
+ @GetMapping public ResponseEntity<?> list(@RequestParam(defaultValue="")String search,@RequestParam(defaultValue="0")int page,HttpServletRequest r){return call(r,false,a->{if(!search.isBlank())throw new IllegalArgumentException("Use the protected search endpoint.");return ResponseEntity.ok(service.list(a,search,page));});}
  @PostMapping("/invitations") public ResponseEntity<?> invite(@RequestBody Invitation b,HttpServletRequest r){return call(r,true,a->ResponseEntity.ok(service.invite(a,b.memberId(),b.email())));}
  @PostMapping("/invitations/email") public ResponseEntity<?> inviteEmail(@RequestBody EmailInvitation b,HttpServletRequest r){return call(r,true,a->ResponseEntity.ok(service.inviteEmail(a,b.email(),b.fullName())));}
  @PostMapping("/roles") public ResponseEntity<?> role(@RequestBody JsonNode b,HttpServletRequest r){return call(r,true,a->ResponseEntity.ok(Map.of("approvalRequestId",service.role(a,b))));}

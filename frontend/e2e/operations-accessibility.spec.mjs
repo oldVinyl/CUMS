@@ -36,7 +36,9 @@ async function fixtures(page) {
  await page.route('**/api/v1/**',async route=>{
   const request=route.request(), path=new URL(request.url()).pathname;
   let body=responses[path],status=200;
-  if(request.method()!=='GET'||body===undefined){unexpected.push(`${request.method()} ${path}`);status=404;body={message:'Unmapped isolated fixture request'};}
+  if(path==='/api/v1/members/search'&&request.method()==='POST') body=responses['/api/v1/members'];
+  if(path==='/api/v1/users/search'&&request.method()==='POST') body=responses['/api/v1/users'];
+  if((request.method()!=='GET'&&!['/api/v1/members/search','/api/v1/users/search'].includes(path))||body===undefined){unexpected.push(`${request.method()} ${path}`);status=404;body={message:'Unmapped isolated fixture request'};}
   await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
  });
  return unexpected;

@@ -69,6 +69,19 @@ public class MemberController {
         this.allowedOrigin = allowedOrigin;
     }
 
+    public record SearchRequest(String search) {}
+    @PostMapping("/search")
+    public ResponseEntity<?> search(@RequestBody SearchRequest body,
+        @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="25") int size,
+        @CookieValue(name="cu_access",required=false) String access,
+        @RequestHeader(name="X-CSRF-Token",required=false) String csrf,HttpServletRequest request) {
+        var identity=sessions.resolveAccess(access).orElse(null);
+        if(identity==null)return error(HttpStatus.UNAUTHORIZED,"AUTH_REQUIRED",request);
+        if(!sameOrigin(request)||!sessions.csrfMatches(identity.sessionId(),csrf))return error(HttpStatus.FORBIDDEN,"ACCESS_DENIED",request);
+        try {return ResponseEntity.ok().header("Cache-Control","no-store").body(members.list(identity.userId(),body.search()==null?"":body.search(),page,size));}
+        catch(SecurityException failure){return error(HttpStatus.FORBIDDEN,"ACCESS_DENIED",request);}
+        catch(IllegalArgumentException failure){return ResponseEntity.badRequest().body(new ApiError("VALIDATION_ERROR","Choose valid search and pagination values.",List.of(),TraceIdFilter.traceId(request)));}
+    }
     @GetMapping
     public ResponseEntity<?> list(@RequestParam(defaultValue = "") String search,
                                    @RequestParam(defaultValue = "0") int page,
@@ -78,6 +91,7 @@ public class MemberController {
         SessionService.SessionIdentity identity = sessions.resolveAccess(access).orElse(null);
         if (identity == null) return error(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", request);
         try {
+            if(!search.isBlank())throw new IllegalArgumentException("Use the protected search endpoint.");
             return ResponseEntity.ok(members.list(identity.userId(), search, page, size));
         } catch (SecurityException exception) {
             return error(HttpStatus.FORBIDDEN, "ACCESS_DENIED", request);

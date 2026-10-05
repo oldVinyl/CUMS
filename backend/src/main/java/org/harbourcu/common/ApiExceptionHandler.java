@@ -45,7 +45,8 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(new ApiError("FILE_TOO_LARGE",
             "Receipt files must be no larger than 10 MB.", List.of(), TraceIdFilter.traceId(request)));
     }
-    @ExceptionHandler(org.springframework.dao.EmptyResultDataAccessException.class)
+    @ExceptionHandler({org.springframework.dao.EmptyResultDataAccessException.class,
+        org.springframework.web.servlet.resource.NoResourceFoundException.class})
     ResponseEntity<ApiError> missing(Exception exception, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError("NOT_FOUND",
             "This record is unavailable.", List.of(), TraceIdFilter.traceId(request)));

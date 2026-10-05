@@ -78,6 +78,7 @@ test("independent account recovery review requires confirmation in the responsiv
   await page.route("**/api/v1/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
     let body = responses[path];
+    if (path === "/api/v1/users/search" && route.request().method() === "POST") body = responses["/api/v1/users"];
     if (path === "/api/v1/account-recovery") body = decision ? [] : [request];
     else if (path === "/api/v1/account-recovery/anonymous-request/decide") {
       decision = route.request().postDataJSON();

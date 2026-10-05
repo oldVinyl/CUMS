@@ -95,8 +95,10 @@ export default function LiveMembers({ profile, asAt }: { profile: Profile; asAt:
     setLoading(true)
     try {
       const params = new URLSearchParams({ page: String(page), size: '25' })
-      if (search) params.set('search', search)
-      const response = await fetch(`/api/v1/members?${params}`, { credentials: 'same-origin' })
+      const response = await fetch(`/api/v1/members${search ? '/search' : ''}?${params}`, {
+        credentials: 'same-origin',
+        ...(search ? { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfCookie() }, body: JSON.stringify({ search }) } : {}),
+      })
       if (!response.ok) throw await apiError(response)
       const result = await response.json() as MemberPage
       setMembers(result.items)

@@ -124,10 +124,10 @@ describe('live member directory', () => {
       { target: { value: 'CU-101' } })
     fireEvent.click(screen.getByRole('button', { name: 'Search' }))
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/members?page=0&size=25&search=CU-101', { credentials: 'same-origin' }))
+      '/api/v1/members/search?page=0&size=25', expect.objectContaining({ method: 'POST', body: JSON.stringify({ search: 'CU-101' }) })))
     fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/members?page=1&size=25&search=CU-101', { credentials: 'same-origin' }))
+      '/api/v1/members/search?page=1&size=25', expect.objectContaining({ method: 'POST', body: JSON.stringify({ search: 'CU-101' }) })))
   })
 
   it('uses server records after authentication and opens an audited detail route', async () => {

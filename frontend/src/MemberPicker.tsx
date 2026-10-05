@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { csrfCookie } from "./auth-api";
 import { Search, Check } from "lucide-react";
 export type PickedMember = { id: string; fullName: string; memberNumber: string };
 export default function MemberPicker({ label = "Find member", onSelect, required = true }: {
@@ -12,7 +13,7 @@ export default function MemberPicker({ label = "Find member", onSelect, required
     if (!focused || selected) return;
     const controller = new AbortController(); setLoading(true); setError(""); setResults([]); setActive(0);
     const timer = window.setTimeout(() => {
-      fetch(`/api/v1/members?search=${encodeURIComponent(query.trim())}&size=10`, { credentials: "same-origin", signal: controller.signal })
+      fetch("/api/v1/members/search?size=10", { method: "POST", credentials: "same-origin", signal: controller.signal, headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfCookie() }, body: JSON.stringify({ search: query.trim() }) })
         .then(async response => { if (!response.ok) throw new Error("Members could not be loaded. Try searching again."); return response.json() as Promise<{ items: PickedMember[] }>; })
         .then(data => { if (!controller.signal.aborted) setResults(data.items); })
         .catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Please retry."); })

@@ -37,7 +37,7 @@ it("shows search results as typed, supports keyboard selection and clears stale 
  const input = screen.getByRole("combobox", { name: "Find member" });
  fireEvent.focus(input); fireEvent.change(input, { target: { value: "Ama" } });
  expect(await screen.findByRole("option", { name: /Ama Test.*CU-000001/ })).toBeTruthy();
- expect(fetchMock).toHaveBeenCalledWith("/api/v1/members?search=Ama&size=10", expect.objectContaining({ signal: expect.any(AbortSignal) }));
+ expect(fetchMock).toHaveBeenCalledWith("/api/v1/members/search?size=10", expect.objectContaining({ signal: expect.any(AbortSignal), method: "POST", body: JSON.stringify({ search: "Ama" }) }));
  fireEvent.keyDown(input, { key: "Enter" }); expect(select).toHaveBeenLastCalledWith(member);
  fireEvent.change(input, { target: { value: "Someone else" } }); expect(select).toHaveBeenLastCalledWith(null);
 });
@@ -100,7 +100,7 @@ it("places contacts and the statement before transactions, with only own export 
 });
 
 it("invites a new recipient by email without requiring an existing member", async () => {
- const fetchMock = vi.fn(async (url: string, init?: RequestInit) => response(init?.method === "POST" ? { url: "https://invalid.example/accept-invitation#token=fixture", expiresAt: "2026-10-06T12:00:00Z" } : url.includes("/pending") ? [] : { users: [], hasNext: false })); vi.stubGlobal("fetch", fetchMock);
+ const fetchMock = vi.fn(async (url: string, init?: RequestInit) => response(init?.method === "POST" && !url.includes("/search") ? { url: "https://invalid.example/accept-invitation#token=fixture", expiresAt: "2026-10-06T12:00:00Z" } : url.includes("/pending") ? [] : { users: [], hasNext: false })); vi.stubGlobal("fetch", fetchMock);
  wrap(<UserAdministration profile={{ ...profile, permissions: ["USER_ADMIN", "MEMBER_WRITE"] }} />);
  fireEvent.change(screen.getByLabelText("Recipient full name"), { target: { value: "New Member" } });
  fireEvent.change(screen.getByLabelText("Recipient email"), { target: { value: "new@invalid.example" } });

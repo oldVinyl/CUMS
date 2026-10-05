@@ -460,7 +460,7 @@ try {
   await expect(
     rolePage.getByRole("heading", { level: 1, name: "Reports", exact: true }),
   ).toBeVisible();
-  const accounts = await call(maker, "GET", "/users?search=member-a%40invalid.example");
+  const accounts = await call(maker, "POST", "/users/search", {search:"member-a@invalid.example"});
   const assignment = accounts.users
     .find((account) => account.id === memberProfile.userId)
     .roles.find((role) => role.code === "TREASURER");

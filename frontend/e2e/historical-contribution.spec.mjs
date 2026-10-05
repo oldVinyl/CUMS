@@ -57,12 +57,13 @@ test("historical contribution preview, review and stale-input reset are accessib
     const request = route.request(),
       path = new URL(request.url()).pathname;
     let body = responses[path];
+    if (path === "/api/v1/members/search" && request.method() === "POST") body = responses["/api/v1/members"];
     if (request.method() === "POST" && path === "/api/v1/ledger/contributions/preview")
       body = impact;
     else if (request.method() === "POST" && path === "/api/v1/ledger/contributions/historical") {
       submitted = request.postDataJSON();
       body = { approvalRequestId: "anonymous-request" };
-    } else if (request.method() !== "GET" || body === undefined) {
+    } else if ((request.method() !== "GET" && path !== "/api/v1/members/search") || body === undefined) {
       unexpected.push(`${request.method()} ${path}`);
       body = { message: "Unexpected isolated request" };
     }

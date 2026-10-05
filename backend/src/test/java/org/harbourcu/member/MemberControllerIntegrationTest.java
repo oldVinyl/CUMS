@@ -64,7 +64,7 @@ class MemberControllerIntegrationTest {
         UUID generatedId = UUID.fromString(json.readTree(generatedResponse).get("id").asText());
         assertThat(jdbc.queryForObject("SELECT member_number FROM members WHERE id = ?",
             String.class, generatedId)).matches("CU-[0-9]{6,}");
-        mvc.perform(get("/api/v1/members").param("search", number).param("size", "1")
+        mvc.perform(post("/api/v1/members/search").param("size", "1").header("X-CSRF-Token", officerTokens.csrf()).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("search",number)))
             .cookie(new Cookie("cu_access", officerTokens.access())))
             .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].id").value(id.toString()))
             .andExpect(jsonPath("$.hasNext").value(false));
