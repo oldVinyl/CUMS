@@ -1,7 +1,8 @@
+import { financialFetch } from "./financial-fetch";
 import { csrfCookie } from "./auth-api";
 
 export async function ledgerRequest<T>(path: string, method = "GET", body?: object, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`/api/v1/ledger${path}`, { method, credentials: "same-origin", signal,
+  const response = await financialFetch(`/api/v1/ledger${path}`, { method, credentials: "same-origin", signal,
     headers: method === "GET" ? undefined : { "Content-Type": "application/json", "X-CSRF-Token": csrfCookie() },
     body: body ? JSON.stringify(body) : undefined });
   if (!response.ok) {

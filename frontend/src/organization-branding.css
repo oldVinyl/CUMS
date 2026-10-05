@@ -1,0 +1,42 @@
+:root {
+  --brand-primary: #083a4f;
+}
+html:root .primary-button,
+html:root .brand-mark {
+  background: var(--brand-primary);
+  color: #fff;
+}
+.organization-logo {
+  object-fit: contain;
+  width: 100%;
+  height: 100%;
+}
+.public-brand .organization-logo {
+  width: 28px;
+  height: 28px;
+}
+.brand > div:last-child {
+  min-width: 0;
+}
+.brand strong {
+  overflow-wrap: anywhere;
+}
+.organization-preferences {
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.organization-preferences .organization-logo {
+  width: 96px;
+  height: 96px;
+  margin: 12px 0;
+}
+.organization-preferences input[type="color"] {
+  width: 100%;
+  min-height: 44px;
+  padding: 4px;
+}
+
+.public-brand { min-width: 0; max-width: calc(100% - 110px); }
+.public-brand strong, .auth-brand strong { overflow-wrap: anywhere; }
+.auth-brand > div { min-width: 0; }

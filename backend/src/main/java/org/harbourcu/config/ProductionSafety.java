@@ -47,6 +47,9 @@ public class ProductionSafety {
         if (!"paystack".equalsIgnoreCase(env.getProperty("PAYMENT_PROVIDER", ""))) {
             throw new IllegalStateException("Production requires the configured real payment provider.");
         }
+        if (env.getProperty("CLAMAV_HOST", "").isBlank()) {
+            throw new IllegalStateException("Production requires a private receipt malware scanner (CLAMAV_HOST).");
+        }
         if (Boolean.parseBoolean(env.getProperty("APP_MAIL_ENABLED", "false"))
                 && !Boolean.parseBoolean(env.getProperty("SMTP_STARTTLS", "false"))) {
             throw new IllegalStateException("Production SMTP requires TLS.");

@@ -1,3 +1,5 @@
+import BackupInformation from "./BackupInformation";
+import { OrganizationName } from "./OrganizationBranding";
 import { Copy, ExternalLink, Fingerprint, Globe, LogOut } from "lucide-react";
 import type { Profile } from "./auth-api";
 import { linkGoogle } from "./auth-api";
@@ -32,7 +34,7 @@ export default function SettingsPage({
     <>
       <header className="page-heading">
         <div>
-          <div className="eyebrow">HARBOUR CREDIT UNION</div>
+          <div className="eyebrow"><OrganizationName /></div>
           <h1>Settings</h1>
           <p>Your union’s policies and workspace details.</p>
         </div>
@@ -41,6 +43,7 @@ export default function SettingsPage({
         {profile?.permissions.includes("SETTINGS_WRITE") && (
           <FinancialPolicySettings profile={profile} />
         )}
+        {profile?.permissions.includes("SETTINGS_WRITE") && <BackupInformation />}
         {profile ? (
           <AccountSecurity onSessionEnded={onSessionEnded} />
         ) : (

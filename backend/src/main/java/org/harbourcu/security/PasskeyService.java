@@ -69,7 +69,13 @@ public class PasskeyService {
                         .residentKey(ResidentKeyRequirement.REQUIRED)
                         .userVerification(UserVerificationRequirement.REQUIRED).build())
                     .timeout(120_000).build());
-            return store("REGISTER", userId, request.toJson(), request.toCredentialsCreateJson());
+            var mapper=new com.fasterxml.jackson.databind.ObjectMapper();
+            String name=jdbc.queryForObject("SELECT organisation_name FROM organisation_settings WHERE singleton=true",String.class);
+            var stored=mapper.readTree(request.toJson());
+            ((com.fasterxml.jackson.databind.node.ObjectNode)stored.path("rp")).put("name",name);
+            var browser=mapper.readTree(request.toCredentialsCreateJson());
+            ((com.fasterxml.jackson.databind.node.ObjectNode)browser.path("publicKey").path("rp")).put("name",name);
+            return store("REGISTER", userId, stored.toString(), browser.toString());
         } catch (Exception exception) {
             throw new IllegalStateException("Could not start passkey registration", exception);
         }

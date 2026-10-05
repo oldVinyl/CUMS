@@ -23,3 +23,8 @@ Back up PostgreSQL, private uploads and recoverable versioned encryption keys to
 `deploy/backup-host.sh` stops the backend under a host lock and restarts it on success/failure. `backup.sh` encrypts a PostgreSQL dump and private uploads with age, uploads to S3-compatible storage and retains 30 daily/12 monthly generated archives. Plaintext staging is confined to tmpfs; private keys are stored separately. `restore.sh` refuses populated database/upload targets, validates archive paths/types and restores the database in one transaction. The synthetic local drill passed exact ledger/receipt recovery, wrong-key rejection and populated-target refusal. Off-site delivery, actual-key recovery, monitoring and owner acceptance remain release gates; see DEPLOYMENT.
 
 Preserve audit/approval/provider references during incidents. Audit events now capture request IP and trace metadata at database insert; background operations have no fabricated client address. Production trusts forwarded client addresses only from the configured gateway. Financial corrections use approved compensation, not editing prior rows. Historical corrections, resets, recovery administration and retention procedures still need implementation. Local tests and fixtures do not establish production or external-service acceptance.
+
+
+## Owner handoff
+
+See [OWNER_ACTIONS.md](OWNER_ACTIONS.md) for the central credential, union-policy, private migration, email, scanner, hosting, off-site recovery and release steps. Main-build implementation is separate from the next isolated test pass and owner production acceptance.

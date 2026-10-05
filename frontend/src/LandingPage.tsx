@@ -1,12 +1,14 @@
+import { useOrganization } from "./OrganizationBranding";
 import { NavLink } from "react-router-dom";
 import { ArrowRight, Landmark, Mail, ShieldCheck, WalletCards } from "lucide-react";
 
 export default function LandingPage() {
+  const organization = useOrganization();
   return <div className="landing-page">
     <section className="landing-intro">
-      <div className="landing-mark" aria-hidden="true"><Landmark size={42} strokeWidth={1.5} /></div>
-      <span className="eyebrow">Harbour Credit Union</span>
-      <h1>Harbour Credit Union</h1>
+      <div className="landing-mark" aria-hidden="true">{organization.logoDataUrl ? <img className="organization-logo" src={organization.logoDataUrl} alt="" /> : <Landmark size={42} strokeWidth={1.5} />}</div>
+      <span className="eyebrow">{organization.organisationName}</span>
+      <h1>{organization.organisationName}</h1>
       <p>Sign in to view your membership, follow contributions and manage your account.</p>
       <NavLink className="primary-button landing-login" to="/sign-in">Log in <ArrowRight size={20} /></NavLink>
       <p className="landing-access">Need an account? Ask the union for an email invitation.</p>

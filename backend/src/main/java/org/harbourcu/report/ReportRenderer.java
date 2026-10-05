@@ -19,6 +19,10 @@ import org.springframework.stereotype.Component;
 /** Both formats consume the same authorized report and exact decimal values. */
 @Component
 public class ReportRenderer {
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+    public ReportRenderer() {}
+    @org.springframework.beans.factory.annotation.Autowired
+    public ReportRenderer(org.springframework.jdbc.core.JdbcTemplate jdbc) { this.jdbc=jdbc; }
     public record Column(String label, int width, boolean numeric) {}
     public record Group(String label, int first, int last) {}
     public record Report(String title, String subtitle, List<Column> columns, List<Group> groups,
@@ -119,6 +123,9 @@ public class ReportRenderer {
     }
 
     private byte[] pdf(Report report) throws IOException {
+        String organization=jdbc==null?"Harbour Credit Union":jdbc.queryForObject("SELECT organisation_name FROM organisation_settings WHERE singleton=true",String.class);
+        organization=organization.replaceAll("[\\p{Cntrl}]", " ");
+        if(organization.codePointCount(0,organization.length())>80)organization=organization.substring(0,organization.offsetByCodePoints(0,80))+"…";
         try (PDDocument document = new PDDocument(); var out = new ByteArrayOutputStream();
              var resource = ReportRenderer.class.getResourceAsStream("/fonts/NotoSans-Regular.ttf")) {
             PDFont font = PDType0Font.load(document, resource);
@@ -151,7 +158,7 @@ public class ReportRenderer {
                         for (String line : wrap(font, report.subtitle(), 8, usable)) {
                             text(stream, font, line, 32, y, 8, NAVY); y -= 11;
                         }
-                        text(stream, font, "Harbour Credit Union | GHS | Page " + pageNumber, 32, 22, 8, NAVY);
+                        text(stream, font, organization + " | GHS | Page " + pageNumber, 32, 22, 8, NAVY);
                         y -= 8;
                         fill(stream, 32, y - 22, usable, 22, AQUA);
                         for (Group g : report.groups()) {

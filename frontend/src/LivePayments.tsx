@@ -1,3 +1,5 @@
+import { OrganizationName } from "./OrganizationBranding";
+import { financialFetch } from "./financial-fetch";
 import HistoricalPaymentPosting, { PaymentPostingImpact } from "./HistoricalPaymentPosting";
 import ReceiptAmendment from "./ReceiptAmendment";
 import ResponsiveOverlay from "./ResponsiveOverlay";
@@ -56,7 +58,7 @@ async function api<T>(
 ): Promise<T> {
   const form = body instanceof FormData;
 
-  const r = await fetch(`/api/v1/payments${path}`, {
+  const r = await financialFetch(`/api/v1/payments${path}`, {
     method,
     credentials: "same-origin",
     signal,
@@ -346,7 +348,7 @@ export default function LivePayments({ profile }: { profile: Profile }) {
     <>
       <header className="page-heading">
         <div>
-          <span className="eyebrow">Harbour Credit Union</span>
+          <span className="eyebrow"><OrganizationName /></span>
           <h1>Payments</h1>
           <p>Submit a receipt, follow its review, and see when your contribution is posted.</p>
         </div>

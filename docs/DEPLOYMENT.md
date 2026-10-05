@@ -14,7 +14,7 @@ docker compose --env-file .env.production -f deploy/docker-compose.prod.yml buil
 docker compose --env-file .env.production -f deploy/docker-compose.prod.yml up -d postgres
 ```
 
-The `prod` profile rejects development accounts/samples, malformed/placeholder key material, short database passwords, insecure cookies, a non-HTTPS/mismatched passkey host, fake payments and enabled SMTP without TLS. It cannot determine whether externally supplied credentials actually work; test them separately. Keep both encryption keys recoverable in an independent protected secret store. Changing APP_ENCRYPTION_KEY without a planned migration makes existing encrypted fields unreadable.
+The `prod` profile rejects development accounts/samples, malformed/placeholder key material, short database passwords, insecure cookies, a non-HTTPS/mismatched passkey host, fake payments and enabled SMTP without TLS and an unconfigured private malware scanner. It cannot determine whether externally supplied credentials actually work; test them separately. Keep both encryption keys recoverable in an independent protected secret store. Changing APP_ENCRYPTION_KEY without a planned migration makes existing encrypted fields unreadable.
 
 ## First leadership accounts
 
@@ -88,3 +88,10 @@ pwsh -File scripts/backup-restore-drill.ps1 -S3
 ```
 
 SDK configuration follows the [AWS SDK S3 guide](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/examples-s3.html) and [endpoint configuration](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/endpoint-config.html). Private real-bucket policy/TLS/credentials and an owner off-site recovery drill remain deployment acceptance requirements.
+
+
+## Owner handoff
+
+See [OWNER_ACTIONS.md](OWNER_ACTIONS.md) for the central credential, union-policy, private migration, email, scanner, hosting, off-site recovery and release steps. Main-build implementation is separate from the next isolated test pass and owner production acceptance.
+
+Production Compose starts the bundled private `scanner` service, persists its signatures and waits for its health check before starting the backend. Allocate enough RAM for its 4 GB limit as well as the application/database. Signature updates require outbound access; no scanner port is published. CLAMAV_HOST defaults to scanner. Scanner configuration alone does not establish actual malware rejection or outage acceptance; record those in the release checks.

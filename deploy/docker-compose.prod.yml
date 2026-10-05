@@ -47,7 +47,7 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
-      CLAMAV_HOST: ${CLAMAV_HOST:-}
+      CLAMAV_HOST: ${CLAMAV_HOST:-scanner}
       CLAMAV_PORT: ${CLAMAV_PORT:-3310}
       APP_MAIL_ENABLED: ${APP_MAIL_ENABLED:-false}
       SMTP_HOST: ${SMTP_HOST:-}
@@ -62,11 +62,24 @@ services:
     volumes: [uploads:/app/private-uploads]
     depends_on:
       postgres: {condition: service_healthy}
+      scanner: {condition: service_healthy}
     networks:
       private:
         aliases: [backend-private]
       outbound:
     mem_limit: 1536m
+  scanner:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    volumes: [scanner_signatures:/var/lib/clamav]
+    networks: [private, outbound]
+    healthcheck:
+      test: [CMD, clamdcheck.sh]
+      interval: 30s
+      timeout: 10s
+      start_period: 5m
+      retries: 10
+    mem_limit: 4096m
   frontend:
     build: ../frontend
     restart: unless-stopped
@@ -118,6 +131,7 @@ services:
     networks: [private, outbound]
     entrypoint: [/bin/bash]
 volumes:
+  scanner_signatures:
   database:
   uploads:
   backups:

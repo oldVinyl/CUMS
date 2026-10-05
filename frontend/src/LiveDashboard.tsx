@@ -1,3 +1,4 @@
+import { OrganizationName } from "./OrganizationBranding";
 import EquityChart from "./EquityChart";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Search, Users, WalletCards, ChevronDown, RefreshCw } from "lucide-react";
@@ -53,7 +54,7 @@ export default function LiveDashboard({ asAt, canExport = false, onAsAtChange }:
     { label: "Income earned", value: data.totals.total.income, detail: `${Number(data.totals.roePercent).toFixed(2)}% return on principal`, icon: ArrowUpRight, color: "gold" },
   ] : [];
   return <div className="live-dashboard">
-    <header className="page-heading"><div><div className="eyebrow">HARBOUR CREDIT UNION</div><h1>Overview</h1>
+    <header className="page-heading"><div><div className="eyebrow"><OrganizationName /></div><h1>Overview</h1>
       <p>Your union at a glance. Balances as at {new Date(`${asAt}T12:00:00`).toLocaleDateString("en-GH", { day: "numeric", month: "long", year: "numeric" })}.</p></div>
       <div className="investment-action-bar">{onAsAtChange && <label className="dashboard-sort">Fiscal year<select value={Number(asAt.slice(0, 4))} onChange={event => onAsAtChange(Number(event.target.value) === currentYear ? today : `${event.target.value}-12-31`)}>{Array.from({ length: currentYear - 1999 }, (_, index) => currentYear - index).map(year => <option key={year} value={year}>{year}</option>)}</select></label>}
       <NavLink to="/members" className="primary-button"><Users size={18} /> View members</NavLink></div></header>

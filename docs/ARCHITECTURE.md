@@ -16,7 +16,7 @@ The interface uses a navy frame (#083a4f), teal controls (#407e8c), aqua surface
 
 ## Decisions
 
-- Financial actions remain server-authoritative and require idempotency keys.
+- Financial actions remain server-authoritative. Payment initiation requires an idempotency key; reviewed financial JSON commands also accept actor/route/body-bound keys, recording only UUID acknowledgements atomically with their successful effects.
 - Distinguish economic `effective_date` from immutable `recorded_at`.
 - Treat the UI as a view of the backend, never as the source of balances or permissions.
 - All data in seeds and tests is obviously fake.
@@ -27,7 +27,7 @@ The interface uses a navy frame (#083a4f), teal controls (#407e8c), aqua surface
 - `ContributionReversalHandler` accepts only a current-day manual contribution and a mandatory reason. Approval inserts its exact negative amount with `reversal_of` set to the original entry. Historical corrections will use the separate backdating and period workflow so past investment ratios are not silently changed.
 - `FiscalYearCloseHandler` records cumulative principal, income, and equity snapshots for members who joined by year end, then closes the year and audits it in the approval transaction. All current financial posting handlers and year-end close lock the fiscal-year row before they write, serializing those operations. Period unlock and snapshot recomputation remain separate work.
 - `RoleChangeApprovalHandler` grants or revokes assignments only through maker-checker approval. It locks the role row before applying a change, denies recipient self-approval, and blocks revoking the last currently active ADMIN or PRESIDENT. Future account-disable and assignment-expiry paths must preserve that invariant too.
-- Authentication uses Argon2id password hashes. The session service issues random 256-bit access, refresh, and CSRF tokens; PostgreSQL stores only SHA-256 token hashes. Access lasts 15 minutes, refresh lasts 7 days, and idle sessions expire after 30 minutes. Refresh rotation invalidates the previous tokens, and replay of a consumed refresh token revokes the session. The HTTP cookie and authentication flows are still pending.
+- Authentication uses Argon2id password hashes. The session service issues random 256-bit access, refresh, and CSRF tokens; PostgreSQL stores only SHA-256 token hashes. Access lasts 15 minutes, refresh lasts 7 days, and idle sessions expire after the configured organization timeout (30 minutes by default). Refresh rotation invalidates the previous tokens, and replay of a consumed refresh token revokes the session. Cookie authentication, first-sign-in protected-method setup, CSRF/origin checks and factor/account recovery are implemented.
 - `TotpCodes` implements RFC 6238 HMAC-SHA1 with 30-second steps and accepts at most one adjacent step for clock drift. It is checked against the RFC test vectors. Enrollment, encrypted secret storage, replay prevention, and login challenges remain pending.
 - `LoginThrottleService` stores HMAC-SHA256 digests of normalized account identifiers and remote IPs, with account backoff after five failed password attempts and an IP limit. `PasswordLoginService` uses a dummy Argon2id hash for unknown accounts and returns a generic failure; it yields only the next required step after a correct password. Browser-facing challenges and completion of login remain pending.
 
@@ -43,3 +43,7 @@ HEIC preparation runs in a bounded browser worker with a self-hosted CSP decoder
 
 
 Historical economic corrections retain original immutable investment revisions. V42 appends correction allocations and links each original-date income adjustment to its exact offset at the independently approved compensation date. The shared chronological planner feeds historical contributions, receipt posting, original ledger reversals and proceeds corrections. Financial source checksums and the transaction-wide financial lock prevent stale approval execution. V41 retention uses independent approval, durable tombstones, narrowly authorized private-field redactions and retried receipt deletion, preserving financial amounts and links.
+
+Non-production /api/docs generates an OpenAPI route/request-schema catalogue from actual controller mappings and is absent/denied in production. Public branding exposes only union identity/logo/display and the password-length floor. Administrative organization preferences require SETTINGS_WRITE and audited CSRF-protected updates. Currency display does not change the GHS accounting unit. Password floor and idle timeout are read from organization settings at enforcement time.
+
+Production script CSP does not permit inline scripts or arbitrary eval. The current style policy permits inline styles for React Hot Toast positioning and Google Identity UI; this is an explicit UI compatibility choice to review during production CSP acceptance, not a claim that all CSP directives disallow inline styling.

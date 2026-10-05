@@ -1,3 +1,4 @@
+import OrganizationPreferences from "./OrganizationPreferences";
 import MemberRetentionSettings from "./MemberRetentionSettings";
 import type { Profile } from "./auth-api";
 import { useEffect, useState } from "react";
@@ -188,6 +189,7 @@ export default function FinancialPolicySettings({ profile }: { profile?: Profile
           {busy ? "Saving policies…" : "Save organization policies"}
         </button>
       </form>
+      <OrganizationPreferences />
       <div className="organization-rollover">
         <h3>Investment rollover</h3>
         <RolloverSettings />

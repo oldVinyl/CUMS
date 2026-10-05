@@ -1,3 +1,4 @@
+import { financialFetch } from "./financial-fetch";
 import { useEffect, useRef, useState } from "react";
 import { csrfCookie } from "./auth-api";
 import { ContributionImpact, type Impact } from "./ContributionForm";
@@ -9,7 +10,7 @@ async function request<T>(
   body?: object,
   signal?: AbortSignal,
 ): Promise<T> {
-  const response = await fetch(`/api/v1/payments/${paymentId}/${action}`, {
+  const response = await financialFetch(`/api/v1/payments/${paymentId}/${action}`, {
     method: body ? "POST" : "GET",
     credentials: "same-origin",
     signal,

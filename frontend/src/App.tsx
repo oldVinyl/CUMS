@@ -1,3 +1,4 @@
+import { OrganizationProvider, useOrganization } from "./OrganizationBranding";
 import ResetPasswordPage from "./ResetPasswordPage";
 import LandingPage from "./LandingPage";
 import ResponsiveOverlay from "./ResponsiveOverlay";
@@ -76,6 +77,7 @@ function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: () => void }
 const financePaths = ["/investments", "/ledger", "/approvals", "/reconciliation", "/imports"];
 const adminPaths = ["/accounts", "/audit"];
 function Sidebar({ close, items }: { close: () => void; items: NavItem[] }) {
+  const organization = useOrganization();
   const location = useLocation();
   const [financeOpen, setFinanceOpen] = useState(financePaths.includes(location.pathname));
   const [adminOpen, setAdminOpen] = useState(adminPaths.includes(location.pathname));
@@ -85,11 +87,11 @@ function Sidebar({ close, items }: { close: () => void; items: NavItem[] }) {
     <>
       <div className="brand">
         <div className="brand-mark">
-          <Landmark size={23} strokeWidth={2.2} />
+          {organization.logoDataUrl ? <img className="organization-logo" src={organization.logoDataUrl} alt="" /> : <Landmark size={23} strokeWidth={2.2} />}
         </div>
         <div>
-          <strong>Harbour</strong>
-          <span>Credit Union</span>
+          <strong>{organization.organisationName}</strong>
+          <span>Member workspace</span>
         </div>
       </div>
       <div className="side-label">WORKSPACE</div>
@@ -113,7 +115,8 @@ function Sidebar({ close, items }: { close: () => void; items: NavItem[] }) {
 }
 
 function PageHeader({ title, subtitle, action }: { title: string; subtitle: string; action?: ReactNode }) {
-  return <div className="page-heading"><div><div className="eyebrow">HARBOUR CREDIT UNION</div><h1>{title}</h1><p>{subtitle}</p></div>{action}</div>
+  const organization = useOrganization();
+  return <div className="page-heading"><div><div className="eyebrow">{organization.organisationName}</div><h1>{title}</h1><p>{subtitle}</p></div>{action}</div>
 }
 
 function PreviewBanner() {
@@ -134,7 +137,8 @@ function SimplePage({ title, subtitle, icon: Icon, heading, description }: { tit
   return <><PageHeader title={title} subtitle={subtitle} /><PreviewBanner /><div className="surface empty-page"><div className="empty-illustration"><Icon size={34} strokeWidth={1.6} /></div><h2>{heading}</h2><p>{description}</p><span className="phase-label">Financial workflows are being implemented</span></div></>
 }
 
-function App() {
+function AppContent() {
+  const organization = useOrganization();
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark" || (!localStorage.getItem("theme") && matchMedia("(prefers-color-scheme: dark)").matches));
   useEffect(() => { document.documentElement.dataset.theme = dark ? "dark" : "light"; }, [dark]);
   useEffect(() => {
@@ -250,7 +254,7 @@ function App() {
             >
               <Menu size={22} />
             </button>}
-            {!profile && <NavLink to="/" className="public-brand"><Landmark size={22} /><strong>Harbour</strong></NavLink>}
+            {!profile && <NavLink to="/" className="public-brand"><Landmark size={22} /><strong>{organization.organisationName}</strong></NavLink>}
             {profile && <span className="breadcrumb">
               <span className="breadcrumb-root">
                 Workspace <span>/</span>
@@ -369,4 +373,4 @@ function App() {
   );
 }
 
-export default App
+export default function App() { return <OrganizationProvider><AppContent /></OrganizationProvider>; }

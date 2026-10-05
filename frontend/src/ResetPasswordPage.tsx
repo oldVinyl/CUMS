@@ -1,8 +1,10 @@
+import { useOrganization } from "./OrganizationBranding";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Landmark, LockKeyhole } from "lucide-react";
 import { usePromiseToast } from "./toast-context";
 export default function ResetPasswordPage() {
+  const organization = useOrganization();
   const [token, setToken] = useState(
       () => new URLSearchParams(window.location.hash.slice(1)).get("token") ?? "",
     ),
@@ -56,11 +58,11 @@ export default function ResetPasswordPage() {
       <aside className="auth-side">
         <div className="auth-brand">
           <span>
-            <Landmark size={25} />
+            {organization.logoDataUrl ? <img className="organization-logo" src={organization.logoDataUrl} alt="" /> : <Landmark size={25} />}
           </span>
           <div>
-            <strong>Harbour</strong>
-            <small>Credit Union</small>
+            <strong>{organization.organisationName}</strong>
+            <small>Member account</small>
           </div>
         </div>
         <div className="auth-side-copy">
@@ -116,7 +118,7 @@ export default function ResetPasswordPage() {
                         required
                         type="password"
                         autoComplete="new-password"
-                        minLength={12}
+                        minLength={organization.passwordMinLength}
                         maxLength={128}
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}

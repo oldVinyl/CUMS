@@ -1,3 +1,4 @@
+import { financialFetch } from "./financial-fetch";
 import { useEffect, useState } from "react";
 import Decimal from "decimal.js";
 import type { Profile } from "./auth-api";
@@ -33,7 +34,7 @@ type Match = {
 };
 type Page = { payments: Payment[]; matches: Match[]; hasNext: boolean };
 async function api<T>(path: string, signal?: AbortSignal, body?: object): Promise<T> {
-  const response = await fetch(`/api/v1/reconciliations/settlements${path}`, {
+  const response = await financialFetch(`/api/v1/reconciliations/settlements${path}`, {
     credentials: "same-origin",
     signal,
     method: body ? "POST" : "GET",

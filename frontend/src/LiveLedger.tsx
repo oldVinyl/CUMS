@@ -1,3 +1,4 @@
+import { OrganizationName } from "./OrganizationBranding";
 import HistoricalLedgerReversal from "./HistoricalLedgerReversal";
 import ResponsiveOverlay from "./ResponsiveOverlay";
 import ContributionForm from "./ContributionForm";
@@ -142,7 +143,7 @@ export default function LiveLedger({ profile, asAt }: { profile: Profile; asAt: 
     <>
       <header className="page-heading">
         <div>
-          <span className="eyebrow">Harbour Credit Union</span>
+          <span className="eyebrow"><OrganizationName /></span>
           <h1>Ledger</h1>
           <p>Approved movements, with a permanent record of every correction.</p>
         </div>

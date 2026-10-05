@@ -84,7 +84,7 @@ Do not tag v1.0.0 or mark the master prompt complete while these gates remain op
 - [x] Encrypted S3 receipt/database recovery into an isolated bucket verifies exact financial totals and rejects occupied prefixes
 - [ ] Real bucket policy/TLS/KMS/credentials and owner off-site recovery acceptance
 
-These checks do not complete the remaining mutation permission sweep, historical audit/free-text privacy review or retention/anonymization requirements.
+These earlier checks do not certify the later retention/anonymization implementation or the remaining full mutation/log acceptance suite.
 
 ## Bank settlement acceptance — 2026-10-05
 
@@ -95,3 +95,17 @@ These checks do not complete the remaining mutation permission sweep, historical
 - [x] Ledger equity unchanged by settlement; real mobile submission and independent browser approval verified
 - [x] PostgreSQL 16 verifies V39 and financial immutability; 215 backend tests, 79 frontend tests and financial coverage gates pass
 - [ ] Actual bank/provider evidence and live settlement acceptance with the owner
+
+
+## Main-build security wiring — implementation, not suite acceptance
+
+- [x] Retention, historical-income and organization routes reach their guarded controllers through the outer deny-by-default filter
+- [x] New money command retries use actor/route/body fingerprints and retain only opaque UUID acknowledgements in the same transaction
+- [x] Replay requires a current session, current CSRF/origin and unchanged current permission set
+- [x] Configurable password floor / idle timeout are enforced on the backend; passive profile polling and refresh rotation do not extend inactivity
+- [x] Public organization branding excludes member/account/contact records and authentication secrets; logo is bounded, scanned when configured and normalized as PNG
+- [x] Non-production API docs are absent and denied in production
+- [x] Production refuses blank scanner configuration; Compose supplies a private health-gated daemon without publishing its port
+- [ ] Regression/new-workflow route, log, transaction, replay, financial, retention and responsive acceptance after the implementation pass
+
+Owner-supplied external setup and release checks are centralized in OWNER_ACTIONS.md. Earlier test checkpoints do not certify new unrun workflows.

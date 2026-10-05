@@ -61,6 +61,9 @@ public class InvestmentController {
         catch (SecurityException exception) { return denied(request); }
     }
 
+    @PostMapping("/search")
+    public ResponseEntity<?> search(@RequestBody InvestmentService.Search body,@CookieValue(name="cu_access",required=false)String access,@RequestHeader(name="X-CSRF-Token",required=false)String csrf,HttpServletRequest request){var identity=verified(access,csrf,request);if(identity==null)return accessFailure(access,request);try{return ResponseEntity.ok().header("Cache-Control","no-store").body(investments.search(identity.userId(),body));}catch(SecurityException e){return denied(request);}catch(IllegalArgumentException e){return validation(e,request);}}
+
     @GetMapping("/{id}")
     public ResponseEntity<?> get(@PathVariable UUID id,
                                  @CookieValue(name = "cu_access", required = false) String access,

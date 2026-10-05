@@ -151,3 +151,8 @@ Leadership with PERIOD_UNLOCK can request a missing year from 2000 through last 
 V37 adds append-only financial change records at the database layer. They capture approved and direct application financial row writes in the same transaction, use explicit scalar field allowlists and preserve numeric precision as strings. Existing events are not backfilled. Authenticated actor context is bound at connection checkout and cleared for invalid-session/background work. Actorless provider/background events remain system events. Audit UI/CSV can read the safe changes with AUDIT_READ; arbitrary audit payloads stay private. The disposable financial harness additionally checks profitable maturity, exact earned-income repost, a separately approved loss and checker-attributed payment state changes.
 
 V38 adds immutable payment receipt revisions. The disposable financial harness now requests more information, replaces a receipt through the mobile UI, downloads the retained original, verifies owned history and rejects replacement after posting. Vite ignores generated test artifacts to prevent unrelated browser trace writes from reloading forms.
+
+
+## Owner handoff
+
+See [OWNER_ACTIONS.md](OWNER_ACTIONS.md) for the central credential, union-policy, private migration, email, scanner, hosting, off-site recovery and release steps. Main-build implementation is separate from the next isolated test pass and owner production acceptance.

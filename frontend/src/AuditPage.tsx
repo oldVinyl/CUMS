@@ -1,3 +1,4 @@
+import { OrganizationName } from "./OrganizationBranding";
 import Pagination from "./Pagination";
 import { Fragment, useEffect, useState } from "react";
 import { Download, ShieldCheck } from "lucide-react";
@@ -67,7 +68,7 @@ export default function AuditPage({ profile }: { profile: Profile }) {
   if (!allowed) return <section className="surface investment-panel"><ShieldCheck size={28} /><h1>Audit access required</h1><p>Your account cannot view union audit records.</p></section>;
   const field = (key: keyof Filters, value: string) => setDraft(current => ({ ...current, [key]: value }));
   return <>
-    <header className="page-heading"><div><span className="eyebrow">Harbour Credit Union</span><h1>Audit log</h1><p>Trace recorded actions, actors and affected records. Posted events cannot be edited.</p></div></header>
+    <header className="page-heading"><div><span className="eyebrow"><OrganizationName /></span><h1>Audit log</h1><p>Trace recorded actions, actors and affected records. Posted events cannot be edited.</p></div></header>
     <section className="surface investment-panel"><h2>Find events</h2><p>Date filters use Africa/Accra. Event timestamps show your local time. Exports contain up to 5,000 matching events across all pages.</p>
       <form className="investment-form" onSubmit={event => { event.preventDefault(); setFilters({ ...draft }); setPage(0); setRetry(value => value + 1); }}>
         <label>From<input type="date" required min="2000-01-01" max={draft.to || today} value={draft.from} onChange={event => field("from", event.target.value)} /></label>

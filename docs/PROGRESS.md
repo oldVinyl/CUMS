@@ -21,7 +21,7 @@ Check implemented items after their recorded verification. This pass follows the
 - [x] Signed-in navigation follows current profile permissions; sign-in lands on the Overview route, with own membership figures for ordinary members
 - [x] Hide restricted menu links before profile load; guard signed-in direct routes and refresh permissions on focus/once per minute; dev retains all known permissions
 - [x] Flyway V1–V21 core financial, role, approval, fiscal snapshot, authentication, member identity, Google link, passkey, investment allocation, maturity, rollover, settings, and admin investment-read migrations tested against PostgreSQL 16
-- [x] Remaining implemented workflow tables through V42: reviewed investment imports, retention controls and archived economic corrections (new migrations verified by application startup; tests skipped at owner request)
+- [x] Remaining implemented workflow tables through V43: reviewed investment imports, retention controls, archived economic corrections, organization security and financial replay records (new migrations verified by application startup; tests skipped at owner request)
 - [x] Structured API validation and access errors with trace IDs
 - [x] Append-only ledger and audit triggers with database tests
 - [x] AES-256-GCM private-field encryption, versioned keys, and blind indexes with tests
@@ -473,3 +473,25 @@ The owner explicitly requested implementation instead of another test pass. No a
 Implementation status: the outstanding historical workflows and retention function identified in this checklist are implemented. Moved-cycle corrections now reconstruct independently approved economic segments rather than inventing missing dates. New financial/destructive workflows are build-verified, not newly test-verified: the owner explicitly waived tests on this pass. Production delivery remains separate from local feature completion.
 
 External delivery requirements: owner-deferred SMTP/MailHog; Google/payment credentials; live private ClamAV and NVD/hosted CI acceptance; independent review of real balances and missing source dates; production hosting, private bucket/IAM, keys and owner off-site restore acceptance. Existing original workbooks and earlier encrypted backups are managed by the owner’s documented retention process; local application anonymization cannot erase other copies.
+
+
+## Final main-build wiring and handoff — 2026-10-05
+
+- [x] Include retention, historical-income correction and organization controllers in the outer deny-by-default security route/CSRF configuration; inner session, current permission and ownership checks remain required
+- [x] V43 configurable minimum password length and session idle timeout, enforced at password changes and every access/refresh resolution
+- [x] Organization name/logo applied to landing/header/page subtitles; PNG normalization and bounded public logo, primary-colour contrast validation and GHS symbol/code display
+- [x] Keep branding and security controls within the organization policies block; separate permission-protected storage/backup information card makes no backup-freshness claim
+- [x] Generated non-production OpenAPI route/request-schema document at /api/docs, denied and absent under prod
+- [x] Actor/body/route-bound successful financial JSON replay records commit atomically with financial effects; only opaque UUID acknowledgements are retained, with current session/CSRF/origin/permission rechecks
+- [x] Shared frontend in-memory retry keys survive ambiguous network/server failures without retaining form values or storing keys on disk
+- [x] Investment institution/reference search, status/sort filters and server pagination; safe page/status/sort filters persist in the URL while search text stays in the protected request body
+- [x] Production Compose provisions private ClamAV with persistent signatures, bounded memory and health-gated startup; production rejects an unconfigured scanner
+- [x] Central OWNER_ACTIONS.md specifies owner/client credentials, assumptions, SMTP deferral, scanner/hosting/storage setup, repository and production acceptance
+
+Build/startup verification is recorded after packaging. No test suite was run during this implementation pass; next work is the isolated suite and fixes it identifies. It is not possible to guarantee that unrun tests will identify zero defects. All private source and production acceptance remain in OWNER_ACTIONS.md rather than being marked passed.
+
+
+- [x] Final backend package with tests skipped, frontend production build and production Compose configuration succeed
+- [x] Development startup reports health UP with V43; local /api/docs serves OpenAPI 3.0.3 and retention/income-correction/organization routes return 401 unsigned
+- [x] Add explicit TEST_PLAN.md for the isolated regression and new financial/privacy/UI checks that follow implementation
+- [x] Preserve pre-existing frontend working edits; stage only the new functional changes in mixed files

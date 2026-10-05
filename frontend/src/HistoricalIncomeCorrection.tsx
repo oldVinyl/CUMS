@@ -1,3 +1,4 @@
+import { financialFetch } from "./financial-fetch";
 import { useEffect, useRef, useState } from "react";
 import type { Profile } from "./auth-api";
 import { csrfCookie } from "./auth-api";
@@ -17,7 +18,7 @@ type Pending = {
   archivedRevision: number | null;
 };
 async function request<T>(path: string, body?: object, signal?: AbortSignal): Promise<T> {
-  const r = await fetch(`/api/v1/investment-corrections${path}`, {
+  const r = await financialFetch(`/api/v1/investment-corrections${path}`, {
     method: body ? "POST" : "GET",
     credentials: "same-origin",
     signal,

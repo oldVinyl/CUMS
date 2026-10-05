@@ -1,3 +1,5 @@
+import { OrganizationName } from "./OrganizationBranding";
+import { financialFetch } from "./financial-fetch";
 import { useEffect, useState } from "react";
 import { Download, Upload } from "lucide-react";
 import type { Profile } from "./auth-api";
@@ -43,7 +45,7 @@ type Batch = {
   reversalReason: string | null;
 };
 async function api<T>(path: string, body?: object | FormData, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`/api/v1/imports${path}`, {
+  const response = await financialFetch(`/api/v1/imports${path}`, {
     credentials: "same-origin",
     signal,
     method: body ? "POST" : "GET",
@@ -272,7 +274,7 @@ export default function ImportsPage({ profile }: { profile: Profile }) {
     <>
       <header className="page-heading">
         <div>
-          <span className="eyebrow">Harbour Credit Union</span>
+          <span className="eyebrow"><OrganizationName /></span>
           <h1>Imports</h1>
           <p>Check source rows and totals before submitting a batch for independent approval.</p>
         </div>

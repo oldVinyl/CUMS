@@ -1,10 +1,11 @@
+import { currentOrganizationName } from "./OrganizationBranding";
 export type AuthStage = 'AUTHENTICATED' | 'PASSWORD_CHANGE' | 'TOTP_SETUP' | 'TOTP_VERIFY'
 export type AuthStep = { stage: AuthStage; challenge: string | null; secret: string | null; recoveryCodes: string[] | null }
 export type Profile = { userId: string; email: string; permissions: string[];
   preferredSignInMethod: 'TOTP' | 'PASSKEY' | 'GOOGLE' | null }
 
 export function totpUri(secret: string, email: string) {
-  const issuer = 'Harbour Credit Union'
+  const issuer = currentOrganizationName()
   return `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(email)}`
     + `?secret=${encodeURIComponent(secret)}&issuer=${encodeURIComponent(issuer)}`
     + '&algorithm=SHA1&digits=6&period=30'

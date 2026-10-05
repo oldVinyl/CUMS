@@ -20,7 +20,7 @@ public class SessionService {
     public static final String AUDIT_ACTOR_ATTRIBUTE = "cums.authenticatedActor";
     private static final Duration ACCESS_LIFETIME = Duration.ofMinutes(15);
     private static final Duration REFRESH_LIFETIME = Duration.ofDays(7);
-    private static final Duration IDLE_TIMEOUT = Duration.ofMinutes(30);
+    private Duration idleTimeout() { return Duration.ofMinutes(jdbc.queryForObject("SELECT session_idle_minutes FROM organisation_settings WHERE singleton=true", Integer.class)); }
     private final JdbcTemplate jdbc;
     private final SecureRandom random = new SecureRandom();
 
@@ -84,7 +84,7 @@ public class SessionService {
         Instant now = Instant.now();
         if (session.revokedAt() != null || !"ACTIVE".equals(session.userStatus())
             || !session.refreshExpiresAt().isAfter(now)
-            || !session.lastSeenAt().plus(IDLE_TIMEOUT).isAfter(now)) {
+            || !session.lastSeenAt().plus(idleTimeout()).isAfter(now)) {
             jdbc.update("UPDATE auth_sessions SET revoked_at = now() WHERE id = ? AND revoked_at IS NULL",
                 session.id());
             return Optional.empty();
@@ -97,7 +97,7 @@ public class SessionService {
         jdbc.update("""
             UPDATE auth_sessions
             SET access_token_hash = ?, refresh_token_hash = ?, csrf_token_hash = ?,
-                access_expires_at = ?, refresh_expires_at = ?, last_seen_at = now()
+                access_expires_at = ?, refresh_expires_at = ?
             WHERE id = ?
             """, digest(next.access()), digest(next.refresh()), digest(next.csrf()),
             dbTime(next.accessExpiresAt()), dbTime(next.refreshExpiresAt()), session.id());
@@ -116,7 +116,7 @@ public class SessionService {
             JOIN users u ON u.id = s.user_id
             WHERE s.access_token_hash = ? AND s.revoked_at IS NULL
               AND s.access_expires_at > now() AND s.refresh_expires_at > now()
-              AND s.last_seen_at > now() - interval '30 minutes'
+              AND s.last_seen_at > now() - (SELECT session_idle_minutes * interval '1 minute' FROM organisation_settings WHERE singleton=true)
               AND u.status = 'ACTIVE'
             """, (row, ignored) -> new SessionIdentity(row.getObject("id", UUID.class),
                 row.getObject("user_id", UUID.class)), hash);
@@ -124,7 +124,8 @@ public class SessionService {
             return Optional.empty();
         }
         SessionIdentity identity = rows.getFirst();
-        jdbc.update("UPDATE auth_sessions SET last_seen_at = now() WHERE id = ?", identity.sessionId());
+        boolean passive = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes currentRequest && "/api/v1/auth/me".equals(currentRequest.getRequest().getRequestURI());
+        if (!passive) jdbc.update("UPDATE auth_sessions SET last_seen_at = now() WHERE id = ?", identity.sessionId());
         if (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes attributes) attributes.getRequest().setAttribute(AUDIT_ACTOR_ATTRIBUTE, identity.userId());
         return Optional.of(identity);
     }

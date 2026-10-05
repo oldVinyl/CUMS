@@ -60,3 +60,19 @@ No production deployment or successful external service delivery is claimed.
 - [x] Backend/frontend builds and development startup with V42; no test suites run as explicitly requested
 
 These checks record implementation and build/startup verification. They do not certify unrun tests or production financial/privacy acceptance. Remaining unchecked items require external credentials, private source review, deployment or release acceptance, rather than another generic implementation continuation.
+
+
+## Final main-build completion
+
+- [x] Missing outer route registration for retention/historical income fixed
+- [x] Branding/logo, primary colour, currency display, password policy and session idle timeout implemented
+- [x] Current union identity applied consistently across page headings and first-password setup
+- [x] Non-production OpenAPI catalogue and financial Idempotency-Key replay support
+- [x] Paginated/searchable/sortable investment directory beyond the previous 100-cycle cap
+- [x] Production scanner provisioning and configuration guards
+- [x] Owner tasks consolidated in OWNER_ACTIONS.md
+- [ ] Isolated regression and new-workflow acceptance after this implementation pass
+
+Remaining owner inputs and deployment acceptance: follow [OWNER_ACTIONS.md](OWNER_ACTIONS.md). Build success does not mark the pending suite or owner gates as passed.
+
+Final build checkpoint: backend/frontend builds and production Compose configuration succeed; the development server is healthy with V43. Unsigned new administration routes require sign-in. The next verification work is documented in TEST_PLAN.md; no suite result is invented.

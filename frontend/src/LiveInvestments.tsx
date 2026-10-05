@@ -1,7 +1,11 @@
+import { useSearchParams } from "react-router-dom";
+import Pagination from "./Pagination";
+import { OrganizationName } from "./OrganizationBranding";
+import { financialFetch } from "./financial-fetch";
 import HistoricalIncomeCorrection from "./HistoricalIncomeCorrection";
 import ArchivedInvestmentEvidence from "./ArchivedInvestmentEvidence";
 import ResponsiveOverlay from "./ResponsiveOverlay";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Landmark, Plus } from "lucide-react";
 import ReportDownloads from "./ReportDownloads";
 import type { Profile } from "./auth-api";
@@ -81,7 +85,7 @@ type MaturityPreview = {
 const businessToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Accra" });
 
 async function request<T>(path: string, method = "GET", body?: object): Promise<T> {
-  const response = await fetch(`/api/v1/investments${path}`, {
+  const response = await financialFetch(`/api/v1/investments${path}`, {
     method,
     credentials: "same-origin",
     headers:
@@ -107,6 +111,13 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
   const canReverse = canWrite && profile.permissions.includes("CYCLE_REPOST");
   const canApprove = profile.permissions.includes("APPROVE") && canRead;
   const [items, setItems] = useState<Summary[]>([]);
+  const [urlFilters,setUrlFilters] = useSearchParams();
+  const page = Math.max(0, Math.min(10000, Math.trunc(Number(urlFilters.get("page")) || 0)));
+  const cycleStatus = ["DRAFT","POSTED","MATURED","ROLLED_OVER","SETTLED","REVERSED"].includes(urlFilters.get("status")??"") ? urlFilters.get("status")! : "";
+  const cycleSort = ["purchase_desc","purchase_asc","maturity_asc","cost_desc"].includes(urlFilters.get("sort")??"") ? urlFilters.get("sort")! : "purchase_desc";
+  const [cycleSearch,setCycleSearch] = useState("");
+  const [hasNext,setHasNext] = useState(false);
+  const updateFilter = (name: string,value: string) => setUrlFilters(current=>{const next=new URLSearchParams(current);if(value)next.set(name,value);else next.delete(name);if(name!=="page")next.delete("page");return next;});
   const [pending, setPending] = useState<Pending[]>([]);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -134,14 +145,18 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
   const [actualProceeds, setActualProceeds] = useState("");
   const [maturityPreview, setMaturityPreview] = useState<MaturityPreview | null>(null);
 
+  const loadGeneration = useRef(0);
   const load = useCallback(async () => {
+    const generation = ++loadGeneration.current;
     if (!canRead) return;
     try {
       const [list, approvals] = await Promise.all([
-        request<Summary[]>(""),
+        request<{entries:Summary[];hasNext:boolean}>("/search","POST",{page,size:50,status:cycleStatus,sort:cycleSort,search:cycleSearch}),
         canApprove ? request<Pending[]>("/approvals/pending") : Promise.resolve([]),
       ]);
-      setItems(list);
+      if(generation!==loadGeneration.current)return;
+      setItems(list.entries);
+      setHasNext(list.hasNext);
       setPending(approvals);
     } catch (error) {
       showToast("Could not load investments", {
@@ -149,11 +164,13 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
         tone: "error",
       });
     } finally {
-      setLoaded(true);
+      if(generation===loadGeneration.current)setLoaded(true);
     }
-  }, [canRead, canApprove, showToast]);
+  }, [canRead, canApprove, showToast,page,cycleStatus,cycleSort,cycleSearch]);
   useEffect(() => {
-    void load();
+    setLoaded(false);
+    const timeout = window.setTimeout(() => void load(),200);
+    return ()=>window.clearTimeout(timeout);
   }, [load]);
 
   const open = async (id: string) => {
@@ -346,7 +363,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
     setFormOpen(true);
     setSettleConfirm(false);
     try {
-      const response = await fetch("/api/v1/settings/rollover", { credentials: "same-origin" });
+      const response = await financialFetch("/api/v1/settings/rollover", { credentials: "same-origin" });
       if (!response.ok) throw new Error("The default policy could not be loaded.");
       const setting = (await response.json()) as { defaultRolloverPolicy: string };
       if (setting.defaultRolloverPolicy === "ROLL_PRINCIPAL_ONLY") {
@@ -456,7 +473,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
     <>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">HARBOUR CREDIT UNION</div>
+          <div className="eyebrow"><OrganizationName /></div>
           <h1>Investments</h1>
           <p>Plan, review, and approve treasury bill allocations.</p>
         </div>
@@ -580,12 +597,17 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
         <div className="card-title-row">
           <div>
             <h2>Investment cycles</h2>
-            <p>{loaded ? `${items.length} recorded cycles` : "Loading cycles…"}</p>
+            <p>{loaded ? `${items.length} cycles on this page` : "Loading cycles…"}</p>
           </div>
+        </div>
+        <div className="investment-form-grid">
+          <label>Find investment<input type="search" value={cycleSearch} onChange={e=>{setCycleSearch(e.target.value);updateFilter("page","")}} placeholder="Institution or reference" /></label>
+          <label>Status<select value={cycleStatus} onChange={e=>updateFilter("status",e.target.value)}><option value="">All statuses</option>{["DRAFT","POSTED","MATURED","ROLLED_OVER","SETTLED","REVERSED"].map(v=><option key={v} value={v}>{v.replaceAll("_"," ")}</option>)}</select></label>
+          <label>Sort cycles<select value={cycleSort} onChange={e=>updateFilter("sort",e.target.value)}><option value="purchase_desc">Newest purchase</option><option value="purchase_asc">Oldest purchase</option><option value="maturity_asc">Earliest maturity</option><option value="cost_desc">Largest cost</option></select></label>
         </div>
         {loaded && items.length === 0 ? (
           <p className="investment-empty">
-            No investments yet. Create a draft when member funds are ready.
+            No investments match these filters. Clear the filters or create a draft when member funds are ready.
           </p>
         ) : (
           <div className="table-scroll">
@@ -624,6 +646,7 @@ export default function LiveInvestments({ profile }: { profile: Profile }) {
             </table>
           </div>
         )}
+        <Pagination page={page} hasNext={hasNext} loading={!loaded} onPageChange={n=>updateFilter("page",String(n))} count={items.length} pageSize={50} label="Investment pages" />
       </section>
       {detail && (
         <section className="surface investment-panel">

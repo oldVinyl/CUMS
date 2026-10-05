@@ -1,3 +1,4 @@
+import { useOrganization } from "./OrganizationBranding";
 import { useEffect, useState } from "react";
 import { Fingerprint, KeyRound, LockKeyhole, RefreshCw } from "lucide-react";
 import ResponsiveOverlay from "./ResponsiveOverlay";
@@ -22,6 +23,7 @@ async function request<T>(path = "", body?: object): Promise<T> {
 }
 const dateLabel = (value: string) => new Date(value).toLocaleDateString("en-GH", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Accra" });
 export default function AccountSecurity({ onSessionEnded }: { onSessionEnded: () => void }) {
+  const organization = useOrganization();
   const toast = useToast(); const promiseToast = usePromiseToast();
   const [data, setData] = useState<Summary | null>(null);
   const [failed, setFailed] = useState(false); const [retry, setRetry] = useState(0);
@@ -67,7 +69,7 @@ export default function AccountSecurity({ onSessionEnded }: { onSessionEnded: ()
       {codes.length ? <><ul className="recovery-codes security-recovery-codes">{codes.map(value => <li key={value}><code>{value}</code></li>)}</ul><button className="secondary-button" onClick={() => { void navigator.clipboard.writeText(codes.join("\n")).then(() => toast("Recovery codes copied", { tone: "success" })).catch(() => toast("Could not copy codes", { detail: "Save them manually before closing this panel.", tone: "error" })); }}>Copy codes</button><label className="security-saved"><input type="checkbox" checked={saved} onChange={event => setSaved(event.target.checked)} /> I have saved these codes securely</label><button className="primary-button" disabled={!saved} onClick={close}>Done</button></> : <form className="security-form" onSubmit={event => { event.preventDefault(); void submit(); }}>
         <p>{action?.kind === "remove" ? "This passkey will stop working for this account, and all sessions will be signed out. Another protected sign-in method must remain." : action?.kind === "codes" ? "All old recovery codes will stop working. Save the replacement codes before closing the panel." : "All active sessions will end after the password changes."}</p>
         <label>Current password<input type="password" autoComplete="current-password" required maxLength={1024} value={password} onChange={event => setPassword(event.target.value)} /></label>
-        {action?.kind === "password" && <><label>New password<input type="password" autoComplete="new-password" required minLength={12} maxLength={1024} value={newPassword} onChange={event => setNewPassword(event.target.value)} /></label><label>Confirm new password<input type="password" autoComplete="new-password" required minLength={12} maxLength={1024} value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label></>}
+        {action?.kind === "password" && <><label>New password<input type="password" autoComplete="new-password" required minLength={organization.passwordMinLength} maxLength={1024} value={newPassword} onChange={event => setNewPassword(event.target.value)} /></label><label>Confirm new password<input type="password" autoComplete="new-password" required minLength={organization.passwordMinLength} maxLength={1024} value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label></>}
         <label>Security verification<select value={factor} onChange={event => setFactor(event.target.value as "code" | "passkey")}><option value="code" disabled={!data?.totpEnabled}>Authenticator or recovery code</option><option value="passkey" disabled={!data?.passkeys.length}>Passkey</option></select></label>
         {factor === "code" ? <label>Authenticator or recovery code<input autoComplete="one-time-code" required maxLength={22} value={code} onChange={event => setCode(event.target.value.trim())} /></label> : <p className="setting-help">Your device will ask you to verify your passkey when you confirm.</p>}
         <div className="security-actions"><button type="button" className="secondary-button" onClick={close}>Cancel</button><button className="primary-button" disabled={busy}>{busy ? "Verifying…" : "Confirm"}</button></div>

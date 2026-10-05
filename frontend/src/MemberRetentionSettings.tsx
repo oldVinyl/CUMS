@@ -1,3 +1,4 @@
+import { financialFetch } from "./financial-fetch";
 import { useEffect, useState } from "react";
 import { csrfCookie, type Profile } from "./auth-api";
 import ResponsiveOverlay from "./ResponsiveOverlay";
@@ -37,7 +38,7 @@ type Preview = {
   consequence: string;
 };
 async function request<T>(path: string, body?: object, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`/api/v1/retention${path}`, {
+  const response = await financialFetch(`/api/v1/retention${path}`, {
     method: body ? "POST" : "GET",
     credentials: "same-origin",
     signal,

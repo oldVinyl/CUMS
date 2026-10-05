@@ -1,3 +1,4 @@
+import { OrganizationName } from "./OrganizationBranding";
 import { useState } from "react";
 import { FileChartColumnIncreasing } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -12,7 +13,7 @@ export default function ReportsPage({ profile, asAt }: { profile: Profile; asAt:
   const canStatement = canExport && profile.permissions.includes("LEDGER_READ") && profile.permissions.includes("MEMBER_READ");
   const [selected, setSelected] = useState<Member | null>(null);
   return <>
-    <header className="page-heading"><div><span className="eyebrow">Harbour Credit Union</span><h1>Reports</h1><p>Reliable figures as at {asAt}. Downloads include every member, regardless of overview search filters.</p></div></header>
+    <header className="page-heading"><div><span className="eyebrow"><OrganizationName /></span><h1>Reports</h1><p>Reliable figures as at {asAt}. Downloads include every member, regardless of overview search filters.</p></div></header>
     {!canExport ? <section className="surface investment-panel"><FileChartColumnIncreasing size={28} /><h2>Report access required</h2><p>Your account does not have permission to export union reports.</p></section> : <>
       {profile.permissions.includes("DASHBOARD_READ_ALL") && <section className="surface investment-panel"><h2>Member equity · Sheet B</h2><p>Balance forward, year to date and total balances, with ROE and equity share.</p>
         <ReportDownloads path={`/api/v1/reports/dashboard?asAt=${asAt}`} filename={`sheet-b-${asAt}`} /></section>}

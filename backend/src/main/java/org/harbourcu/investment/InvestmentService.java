@@ -77,6 +77,17 @@ public class InvestmentService {
             """, (row, ignored) -> summary(row));
     }
 
+    public record Search(int page,int size,String sort,String status,String search) {}
+    public record SearchPage(List<Summary> entries,int page,int size,boolean hasNext) {}
+    public SearchPage search(UUID actor,Search input) {
+        require(actor,"INVESTMENT_READ");
+        var sorts=java.util.Map.of("purchase_desc","purchase_date DESC,created_at DESC,id DESC","purchase_asc","purchase_date ASC,created_at ASC,id ASC","maturity_asc","maturity_date ASC,id ASC","cost_desc","cost DESC,id ASC");
+        if(input==null||input.page()<0||input.page()>10000||input.size()<1||input.size()>100||!sorts.containsKey(input.sort())||input.search()==null||input.search().length()>200||input.status()==null||!List.of("","DRAFT","POSTED","MATURED","ROLLED_OVER","SETTLED","REVERSED").contains(input.status()))throw new IllegalArgumentException("Choose valid investment filters and a page size up to 100.");
+        String term="%"+input.search().trim()+"%";
+        List<Summary> rows=jdbc.query("SELECT id,tenor,institution,reference_number,purchase_date,maturity_date,cost,maturity_value,actual_proceeds,status,revision FROM investments WHERE (?='' OR status=?) AND (coalesce(institution,'') ILIKE ? OR coalesce(reference_number,'') ILIKE ?) ORDER BY "+sorts.get(input.sort())+" LIMIT ? OFFSET ?",(r,n)->summary(r),input.status(),input.status(),term,term,input.size()+1,input.page()*input.size());
+        return new SearchPage(rows.size()>input.size()?rows.subList(0,input.size()):rows,input.page(),input.size(),rows.size()>input.size());
+    }
+
     public List<PendingApproval> pendingApprovals(UUID actor) {
         require(actor, "APPROVE");
         require(actor, "INVESTMENT_READ");

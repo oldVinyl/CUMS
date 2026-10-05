@@ -26,8 +26,8 @@ public final class PaystackProvider implements PaymentProvider {
   String status=switch(d.path("status").asText()){case "success"->"CONFIRMED";case "failed"->"FAILED";case "abandoned"->"ABANDONED";default->"PENDING";};
   UUID member;try{member=UUID.fromString(d.path("metadata").path("memberId").asText());}catch(IllegalArgumentException e){throw new IllegalStateException("Provider member confirmation is missing.");}
   Instant paid=null;if(status.equals("CONFIRMED"))try{paid=Instant.parse(d.path("paid_at").asText());}catch(DateTimeException e){throw new IllegalStateException("Provider confirmation date is invalid.");}
-  if(!d.path("amount").isIntegralNumber()||!d.path("fees").isIntegralNumber())throw new IllegalStateException("Provider amount or fees are invalid.");
-  return new Verification(d.path("reference").asText(),member,BigDecimal.valueOf(d.path("amount").longValue()).movePointLeft(2),d.path("currency").asText(),status,BigDecimal.valueOf(d.path("fees").longValue()).movePointLeft(2),paid);
+  if(!d.path("amount").isIntegralNumber()||(status.equals("CONFIRMED")&&!d.path("fees").isIntegralNumber()))throw new IllegalStateException("Provider amount or fees are invalid.");
+  return new Verification(d.path("reference").asText(),member,BigDecimal.valueOf(d.path("amount").longValue()).movePointLeft(2),d.path("currency").asText(),status,(status.equals("CONFIRMED")?BigDecimal.valueOf(d.path("fees").longValue()).movePointLeft(2):BigDecimal.ZERO),paid);
  }
  public String parseWebhook(byte[] bytes,String signature){
   if(!enabled()||bytes.length>65536||signature==null||!signature.matches("[A-Fa-f0-9]{128}"))throw new SecurityException("Invalid payment signature.");

@@ -155,3 +155,10 @@ In Ledger, an eligible original manual contribution or opening balance offers **
 ### Correct moved or reversed investment income
 
 Open an archived revision in Investments. Its original dates and allocations remain read-only. Eligible received-income revisions offer a correction form: enter the corrected received proceeds and preview. The approved economic correction is recorded separately from the original revision, with linked earned-income adjustments at maturity and exact offsets at its compensation date. Later affected cycles and snapshots are recomputed. The archive shows the approved correction history and your data export includes your own shares and adjustment links.
+
+
+## Union branding and account policy
+
+Administrators use the organization policies block in Settings to upload a public PNG logo, choose a primary colour with readable white button text, select GH₵ or GHS display and set password minimum/idle timeout. Passwords remain at least 12 characters with common-password checks. An idle-timeout change applies to existing sessions on their next request. Display preferences do not convert money. The Storage and backups card reports configuration only; obtain the last successful off-site backup/restore record from the operator.
+
+Investments supports institution/reference search, status filters, sorting and paginated results. Page/status/sort survive a page reload; identifying search text is never placed in the URL.
