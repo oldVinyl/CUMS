@@ -33,7 +33,7 @@ jobs:
       - name: Backend tests
         working-directory: backend
         run: bash ./mvnw --batch-mode -Pcontainer-tests,financial-coverage verify
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: backend-coverage
@@ -80,7 +80,7 @@ jobs:
         run: |
           npm run build
           node scripts/heic-acceptance.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: browser-fixture-results
@@ -161,7 +161,7 @@ jobs:
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: bash ./mvnw --batch-mode -Psecurity-audit -DskipTests verify
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: dependency-audit
