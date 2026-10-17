@@ -172,7 +172,7 @@
         <executions><execution><goals><goal>check</goal></goals></execution></executions>
     </plugin></plugins></build></profile>
     <profile><id>container-tests</id><build><plugins><plugin>
-        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><version>3.5.4</version>
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-failsafe-plugin</artifactId><version>3.6.0</version>
         <executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions>
         <configuration><includes><include>**/ContainerPostgresSmokeIT.java</include><include>**/S3ReceiptObjectStoreIT.java</include></includes></configuration>
     </plugin></plugins></build></profile></profiles>
