@@ -4,59 +4,116 @@ import LandingPage from "./LandingPage";
 import ResponsiveOverlay from "./ResponsiveOverlay";
 import ImportsPage from "./ImportsPage";
 import { canSeeRoute } from "./navigation";
-import { useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
-import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import {
-  ArrowRight, CalendarDays, ChartNoAxesCombined,
-  ChevronDown, CircleHelp, ClipboardCheck, CreditCard, FileChartColumnIncreasing,
-  Landmark, LayoutDashboard, Menu, Moon, Plus, Search, Settings, ShieldCheck, Sun,
-  Users, WalletCards,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import { formatMoney } from './money'
-import { useToast } from './toast-context'
-import AuthPage from './AuthPage'
-import { currentProfile, logout } from './auth-api'
-import type { Profile } from './auth-api'
-import LiveMembers from './LiveMembers'
-import LiveInvestments from './LiveInvestments'
-import LiveDashboard from './LiveDashboard'
-import ReportsPage from './ReportsPage'
-import LiveLedger from './LiveLedger'
-import LivePayments from './LivePayments'
-import MemberPortal from './MemberPortal'
-import ReconciliationPage from './ReconciliationPage'
-import AcceptInvitation from './AcceptInvitation'
-import UserAdministration from './UserAdministration'
-import ApprovalsPage from './ApprovalsPage'
-import SettingsPage from './SettingsPage'
-import AuditPage from './AuditPage'
+  NavLink,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+import {
+  ArrowRight,
+  CalendarDays,
+  ChartNoAxesCombined,
+  ChevronDown,
+  CircleHelp,
+  ClipboardCheck,
+  CreditCard,
+  FileChartColumnIncreasing,
+  Landmark,
+  LayoutDashboard,
+  Menu,
+  Moon,
+  Plus,
+  Search,
+  Settings,
+  ShieldCheck,
+  Sun,
+  Users,
+  WalletCards,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { formatMoney } from "./money";
+import { useToast } from "./toast-context";
+import AuthPage from "./AuthPage";
+import { currentProfile, logout } from "./auth-api";
+import type { Profile } from "./auth-api";
+import LiveMembers from "./LiveMembers";
+import LiveInvestments from "./LiveInvestments";
+import LiveDashboard from "./LiveDashboard";
+import ReportsPage from "./ReportsPage";
+import LiveLedger from "./LiveLedger";
+import LivePayments from "./LivePayments";
+import MemberPortal from "./MemberPortal";
+import AcceptInvitation from "./AcceptInvitation";
+import UserAdministration from "./UserAdministration";
+import ReconciliationPage from "./ReconciliationPage";
+import ApprovalsPage from "./ApprovalsPage";
+import SettingsPage from "./SettingsPage";
+import AuditPage from "./AuditPage";
 
-type NavItem = { label: string; path: string; icon: LucideIcon }
+type NavItem = { label: string; path: string; icon: LucideIcon };
 
 const nav: NavItem[] = [
-  { label: 'Overview', path: '/', icon: LayoutDashboard },
-  { label: 'Members', path: '/members', icon: Users },
-  { label: 'Investments', path: '/investments', icon: ChartNoAxesCombined },
-  { label: 'Ledger', path: '/ledger', icon: WalletCards },
-  { label: 'Payments', path: '/payments', icon: CreditCard },
-  { label: 'My membership', path: '/portal', icon: Users },
-  { label: 'Approvals', path: '/approvals', icon: ClipboardCheck },
-  { label: 'Reports', path: '/reports', icon: FileChartColumnIncreasing },
-  { label: 'Reconciliation', path: '/reconciliation', icon: ClipboardCheck },
-  { label: 'Accounts and roles', path: '/accounts', icon: ShieldCheck },
-  { label: 'Audit log', path: '/audit', icon: ShieldCheck },
-  { label: 'Imports', path: '/imports', icon: FileChartColumnIncreasing },
-  { label: 'Settings', path: '/settings', icon: Settings },
-]
+  { label: "Overview", path: "/", icon: LayoutDashboard },
+  { label: "Members", path: "/members", icon: Users },
+  { label: "Investments", path: "/investments", icon: ChartNoAxesCombined },
+  { label: "Ledger", path: "/ledger", icon: WalletCards },
+  { label: "Payments", path: "/payments", icon: CreditCard },
+  { label: "My membership", path: "/portal", icon: Users },
+  { label: "Approvals", path: "/approvals", icon: ClipboardCheck },
+  { label: "Reports", path: "/reports", icon: FileChartColumnIncreasing },
+  { label: "Reconciliation", path: "/reconciliation", icon: ClipboardCheck },
+  { label: "Accounts and roles", path: "/accounts", icon: ShieldCheck },
+  { label: "Audit log", path: "/audit", icon: ShieldCheck },
+  { label: "Imports", path: "/imports", icon: FileChartColumnIncreasing },
+  { label: "Settings", path: "/settings", icon: Settings },
+];
 
 const previewMembers = [
-  { number: 'CU-001', name: 'Ama Example', initials: 'AE', tone: 'peach', principal: '30000.00', income: '4796.87', equity: '34796.87', ratio: '12.01%' },
-  { number: 'CU-002', name: 'Kojo Sample', initials: 'KS', tone: 'blue', principal: '24000.00', income: '3600.00', equity: '27600.00', ratio: '9.53%' },
-  { number: 'CU-003', name: 'Esi Demo', initials: 'ED', tone: 'mint', principal: '18000.00', income: '2700.00', equity: '20700.00', ratio: '7.15%' },
-  { number: 'CU-004', name: 'Kofi Example', initials: 'KE', tone: 'gold', principal: '15000.00', income: '2250.00', equity: '17250.00', ratio: '5.96%' },
-]
+  {
+    number: "CU-001",
+    name: "Ama Example",
+    initials: "AE",
+    tone: "peach",
+    principal: "30000.00",
+    income: "4796.87",
+    equity: "34796.87",
+    ratio: "12.01%",
+  },
+  {
+    number: "CU-002",
+    name: "Kojo Sample",
+    initials: "KS",
+    tone: "blue",
+    principal: "24000.00",
+    income: "3600.00",
+    equity: "27600.00",
+    ratio: "9.53%",
+  },
+  {
+    number: "CU-003",
+    name: "Esi Demo",
+    initials: "ED",
+    tone: "mint",
+    principal: "18000.00",
+    income: "2700.00",
+    equity: "20700.00",
+    ratio: "7.15%",
+  },
+  {
+    number: "CU-004",
+    name: "Kofi Example",
+    initials: "KE",
+    tone: "gold",
+    principal: "15000.00",
+    income: "2250.00",
+    equity: "17250.00",
+    ratio: "5.96%",
+  },
+];
 
 function ThemeButton({ dark, onToggle }: { dark: boolean; onToggle: () => void }) {
   const showToast = useToast();
@@ -114,27 +171,187 @@ function Sidebar({ close, items }: { close: () => void; items: NavItem[] }) {
   );
 }
 
-function PageHeader({ title, subtitle, action }: { title: string; subtitle: string; action?: ReactNode }) {
+function PageHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle: string;
+  action?: ReactNode;
+}) {
   const organization = useOrganization();
-  return <div className="page-heading"><div><div className="eyebrow">{organization.organisationName}</div><h1>{title}</h1><p>{subtitle}</p></div>{action}</div>
+  return (
+    <div className="page-heading">
+      <div>
+        <div className="eyebrow">{organization.organisationName}</div>
+        <h1>{title}</h1>
+        <p>{subtitle}</p>
+      </div>
+      {action}
+    </div>
+  );
 }
 
 function PreviewBanner() {
-  return <div className="preview-banner" role="status"><span className="preview-dot" /><div><strong>Design preview</strong><span>This workspace uses sample figures and member names. Financial actions are unavailable until the secure backend is complete.</span></div></div>
+  return (
+    <div className="preview-banner" role="status">
+      <span className="preview-dot" />
+      <div>
+        <strong>Design preview</strong>
+        <span>
+          This workspace uses sample figures and member names. Financial actions
+          are unavailable until the secure backend is complete.
+        </span>
+      </div>
+    </div>
+  );
 }
 
-function MemberTable({ members = previewMembers }: { members?: typeof previewMembers }) {
-  return <><div className="table-scroll"><table><thead><tr><th>Member</th><th>Member no.</th><th className="numeric">Principal</th><th className="numeric">Income</th><th className="numeric">Total equity</th><th className="numeric">Equity ratio</th></tr></thead><tbody>{members.map(member => <tr key={member.number}><td><div className="member-cell"><span className={`avatar ${member.tone}`}>{member.initials}</span><strong>{member.name}</strong></div></td><td className="muted">{member.number}</td><td className="numeric">{formatMoney(member.principal)}</td><td className="numeric">{formatMoney(member.income)}</td><td className="numeric strong">{formatMoney(member.equity)}</td><td className="numeric">{member.ratio}</td></tr>)}</tbody></table></div><div className="mobile-member-list">{members.map(member => <div className="mobile-member" key={member.number}><div className="mobile-member-top"><div className="member-cell"><span className={`avatar ${member.tone}`}>{member.initials}</span><div><strong>{member.name}</strong><small>{member.number}</small></div></div><span className="ratio">{member.ratio}</span></div><div className="mobile-member-bottom"><span>Total equity</span><strong>{formatMoney(member.equity)}</strong></div></div>)}</div></>
+function MemberTable({
+  members = previewMembers,
+}: {
+  members?: typeof previewMembers;
+}) {
+  return (
+    <>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Member no.</th>
+              <th className="numeric">Principal</th>
+              <th className="numeric">Income</th>
+              <th className="numeric">Total equity</th>
+              <th className="numeric">Equity ratio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.map((member) => (
+              <tr key={member.number}>
+                <td>
+                  <div className="member-cell">
+                    <span className={`avatar ${member.tone}`}>
+                      {member.initials}
+                    </span>
+                    <strong>{member.name}</strong>
+                  </div>
+                </td>
+                <td className="muted">{member.number}</td>
+                <td className="numeric">{formatMoney(member.principal)}</td>
+                <td className="numeric">{formatMoney(member.income)}</td>
+                <td className="numeric strong">{formatMoney(member.equity)}</td>
+                <td className="numeric">{member.ratio}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mobile-member-list">
+        {members.map((member) => (
+          <div className="mobile-member" key={member.number}>
+            <div className="mobile-member-top">
+              <div className="member-cell">
+                <span className={`avatar ${member.tone}`}>
+                  {member.initials}
+                </span>
+                <div>
+                  <strong>{member.name}</strong>
+                  <small>{member.number}</small>
+                </div>
+              </div>
+              <span className="ratio">{member.ratio}</span>
+            </div>
+            <div className="mobile-member-bottom">
+              <span>Total equity</span>
+              <strong>{formatMoney(member.equity)}</strong>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
 }
 
 function Members() {
-  const [query, setQuery] = useState('')
-  const filtered = previewMembers.filter(member => `${member.name} ${member.number}`.toLowerCase().includes(query.toLowerCase()))
-  return <><PageHeader title="Members" subtitle="A clear view of everyone in the union." action={<button className="primary-button" disabled><Plus size={18} /> Add member</button>} /><PreviewBanner /><div className="surface list-card"><div className="list-toolbar"><div><h2>Member directory</h2><p>{filtered.length} sample members</p></div><label className="search-box"><Search size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search members" aria-label="Search members" /></label></div>{filtered.length ? <MemberTable members={filtered} /> : <div className="empty-state"><Users size={28} /><strong>No matching members</strong><span>Try another name or member number.</span></div>}</div></>
+  const [query, setQuery] = useState("");
+  const filtered = previewMembers.filter((member) =>
+    `${member.name} ${member.number}`
+      .toLowerCase()
+      .includes(query.toLowerCase()),
+  );
+  return (
+    <>
+      <PageHeader
+        title="Members"
+        subtitle="A clear view of everyone in the union."
+        action={
+          <button className="primary-button" disabled>
+            <Plus size={18} /> Add member
+          </button>
+        }
+      />
+      <PreviewBanner />
+      <div className="surface list-card">
+        <div className="list-toolbar">
+          <div>
+            <h2>Member directory</h2>
+            <p>{filtered.length} sample members</p>
+          </div>
+          <label className="search-box">
+            <Search size={18} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search members"
+              aria-label="Search members"
+            />
+          </label>
+        </div>
+        {filtered.length ? (
+          <MemberTable members={filtered} />
+        ) : (
+          <div className="empty-state">
+            <Users size={28} />
+            <strong>No matching members</strong>
+            <span>Try another name or member number.</span>
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
 
-function SimplePage({ title, subtitle, icon: Icon, heading, description }: { title: string; subtitle: string; icon: LucideIcon; heading: string; description: string }) {
-  return <><PageHeader title={title} subtitle={subtitle} /><PreviewBanner /><div className="surface empty-page"><div className="empty-illustration"><Icon size={34} strokeWidth={1.6} /></div><h2>{heading}</h2><p>{description}</p><span className="phase-label">Financial workflows are being implemented</span></div></>
+function SimplePage({
+  title,
+  subtitle,
+  icon: Icon,
+  heading,
+  description,
+}: {
+  title: string;
+  subtitle: string;
+  icon: LucideIcon;
+  heading: string;
+  description: string;
+}) {
+  return (
+    <>
+      <PageHeader title={title} subtitle={subtitle} />
+      <PreviewBanner />
+      <div className="surface empty-page">
+        <div className="empty-illustration">
+          <Icon size={34} strokeWidth={1.6} />
+        </div>
+        <h2>{heading}</h2>
+        <p>{description}</p>
+        <span className="phase-label">
+          Financial workflows are being implemented
+        </span>
+      </div>
+    </>
+  );
 }
 
 function AppContent() {
@@ -148,7 +365,6 @@ function AppContent() {
     return () => media.removeEventListener?.("change", update);
   }, []);
   const toggleTheme = () => { localStorage.setItem("theme", dark ? "light" : "dark"); setDark(!dark); };
-
 
   const showToast = useToast();
   const navigate = useNavigate();
@@ -372,5 +588,6 @@ function AppContent() {
     </div>
   );
 }
+
 
 export default function App() { return <OrganizationProvider><AppContent /></OrganizationProvider>; }

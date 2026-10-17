@@ -1,54 +1,90 @@
 import { currentOrganizationName } from "./OrganizationBranding";
-export type AuthStage = 'AUTHENTICATED' | 'PASSWORD_CHANGE' | 'TOTP_SETUP' | 'TOTP_VERIFY'
-export type AuthStep = { stage: AuthStage; challenge: string | null; secret: string | null; recoveryCodes: string[] | null }
-export type Profile = { userId: string; email: string; permissions: string[];
-  preferredSignInMethod: 'TOTP' | 'PASSKEY' | 'GOOGLE' | null }
+export type AuthStage =
+  "AUTHENTICATED" | "PASSWORD_CHANGE" | "TOTP_SETUP" | "TOTP_VERIFY";
+export type AuthStep = {
+  stage: AuthStage;
+  challenge: string | null;
+  secret: string | null;
+  recoveryCodes: string[] | null;
+};
+export type Profile = {
+  userId: string;
+  email: string;
+  permissions: string[];
+  preferredSignInMethod: "TOTP" | "PASSKEY" | "GOOGLE" | null;
+};
 
 export function totpUri(secret: string, email: string) {
-  const issuer = currentOrganizationName()
-  return `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(email)}`
-    + `?secret=${encodeURIComponent(secret)}&issuer=${encodeURIComponent(issuer)}`
-    + '&algorithm=SHA1&digits=6&period=30'
+  const issuer = currentOrganizationName();
+  return (
+    `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(email)}` +
+    `?secret=${encodeURIComponent(secret)}&issuer=${encodeURIComponent(issuer)}` +
+    "&algorithm=SHA1&digits=6&period=30"
+  );
 }
 
 export async function authPost(path: string, body?: object): Promise<AuthStep> {
   const response = await fetch(`/api/v1/auth/${path}`, {
-    method: 'POST', credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body ?? {}),
-  })
+  });
   if (!response.ok) {
-    const error = await response.json().catch(() => null) as { message?: string } | null
-    throw new Error(error?.message ?? 'Could not complete authentication. Please try again.')
+    const error = (await response.json().catch(() => null)) as {
+      message?: string;
+    } | null;
+    throw new Error(
+      error?.message ?? "Could not complete authentication. Please try again.",
+    );
   }
-  return response.json() as Promise<AuthStep>
+  return response.json() as Promise<AuthStep>;
 }
 
 export async function currentProfile(): Promise<Profile | null> {
-  const response = await fetch('/api/v1/auth/me', { credentials: 'same-origin' })
-  return response.ok ? response.json() as Promise<Profile> : null
+  const response = await fetch("/api/v1/auth/me", {
+    credentials: "same-origin",
+  });
+  return response.ok ? (response.json() as Promise<Profile>) : null;
 }
 
 export function csrfCookie() {
-  return document.cookie.split('; ').find(cookie => cookie.startsWith('cu_csrf='))?.split('=')[1] ?? ''
+  return (
+    document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith("cu_csrf="))
+      ?.split("=")[1] ?? ""
+  );
 }
 
 export async function logout(allDevices = false) {
-  const response = await fetch(`/api/v1/auth/${allDevices ? 'logout-all' : 'logout'}`, {
-    method: 'POST', credentials: 'same-origin',
-    headers: { 'X-CSRF-Token': csrfCookie() },
-  })
-  if (!response.ok) throw new Error('Could not sign out. Please try again.')
+  const response = await fetch(
+    `/api/v1/auth/${allDevices ? "logout-all" : "logout"}`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "X-CSRF-Token": csrfCookie() },
+    },
+  );
+  if (!response.ok) throw new Error("Could not sign out. Please try again.");
 }
 
 export async function linkGoogle(idToken: string) {
-  const response = await fetch('/api/v1/auth/google/link', {
-    method: 'POST', credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfCookie() },
+  const response = await fetch("/api/v1/auth/google/link", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrfCookie(),
+    },
     body: JSON.stringify({ idToken }),
-  })
+  });
   if (!response.ok) {
-    const error = await response.json().catch(() => null) as { message?: string } | null
-    throw new Error(error?.message ?? 'Could not link Google. Please try again.')
+    const error = (await response.json().catch(() => null)) as {
+      message?: string;
+    } | null;
+    throw new Error(
+      error?.message ?? "Could not link Google. Please try again.",
+    );
   }
 }
